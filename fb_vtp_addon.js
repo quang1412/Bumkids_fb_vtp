@@ -72,9 +72,9 @@ function isVNPhone(number) {
     }
 
     document.onmouseup = function(e){
-        window.clearTimeout(clickTimeout);
-        infoCard.remove();
-        clickTimeout = setTimeout(doSomethingWithSelectedText, 200);
+     //   window.clearTimeout(clickTimeout);
+       // infoCard.remove();
+       // clickTimeout = setTimeout(doSomethingWithSelectedText, 200);
     };
 
 
@@ -82,7 +82,7 @@ function isVNPhone(number) {
         constructor(container){
             this.container = container;
             this.card = document.createElement('div');
-            this.card.setAttribute('style', `position: absolute; bottom: calc(100% + 3px); left: 10px; min-width: 50px; min-height: 20px; background: white; border: 1px solid #dedede; border-radius: 5px; padding: 5px; background-image: linear-gradient( 174.2deg,  rgba(255,244,228,1) 7.1%, rgba(240,246,238,1) 67.4% );`);
+            this.card.setAttribute('style', `/*backdrop-filter: blur(32px);*/ position: absolute; bottom: calc(100% + 3px); left: 10px; min-width: 250px; min-height: 20px; background: white; border: 1px solid #dedede; border-radius: 5px; padding: 5px; background-image: linear-gradient( 174.2deg,  rgba(255,244,228,1) 7.1%, rgba(240,246,238,1) 67.4% );`);
             this.card.classList = 'infoCard';
 
             let h = container.querySelector('a[aria-label][href][role="link"]');
@@ -96,20 +96,30 @@ function isVNPhone(number) {
             this.infoList.setAttribute('style', 'margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid #dedede;');
             this.refreshInfo();
 
-//            this.card.innerHTML = `<ul><li>Name: ${this.name}</li><li>Id: ${this.id}</li><li>xxxxxxx</li><li>xxxxxxx</li><li>xxxxxxx</li><li>xxxxxxx</li></ul>`
-
             this.searchBtn = document.createElement('a');
             this.searchBtn.innerText = 'Tìm sđt!';
             this.searchBtn.onclick = () => { this.phoneSearching() };
 
+            let pinMesBtn = document.createElement('a');
+            pinMesBtn.innerText = 'Xem tn ghim';
+            pinMesBtn.onclick = () => { this.getPinMes() };
+
             let toolBar = document.createElement('div');
-            toolBar.append(this.searchBtn);
+            toolBar.append(this.searchBtn, pinMesBtn);
             this.card.append(this.infoList, toolBar);
 
             container.append(this.card);
+            this.phoneSearching();
         }
         async refreshInfo(){
-            this.infoList.innerHTML = `<li>ID: ${this.id}</li><li>Name: ${this.name}</li><li>Phone: ${this.phone || '---'}</li><!-- <li>xxxxxxx</li><li>xxxxxxx</li><li>xxxxxxx</li> -->`;
+            this.infoList.innerHTML = `<li>ID: ${this.id}</li><li>Name: ${this.name}</li><li>Phone: ${this.phone || '---'}</li><li>Địa chỉ: ${this.addr || '---'}</li><li>Tỷ lệ nhận: ${this.rate || '---'}</li><!-- <li>xxxxxxx</li> -->`;
+        }
+        getPinMes(){
+            try{
+                window.document.querySelectorAll('div[aria-label="Cài đặt tab Chat"][role="menu"] span').forEach(e => {console.log(e.innerText)})
+                let d = this.container.querySelector('div[aria-label="Cài đặt chat"] > div');
+                d.click();
+            } catch(e){}
         }
         phoneSearching(){
             let stop = () => {
