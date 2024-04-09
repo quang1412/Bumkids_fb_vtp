@@ -51,10 +51,21 @@ function isVNPhone(number) {
 
     const vtp_deviceId = GM_getValue('vtp_deviceId');
     const vtp_tokenKey = GM_getValue('vtp_tokenKey');
-    const fb_phoneBook = GM_getValue('fb_phoneBook') || {};
+  //  const fb_phoneBook = GM_getValue('fb_phoneBook') || {};
 
-    console.log(fb_phoneBook);
+//    console.log(fb_phoneBook);
 
+    function getPhoneBook(id){
+        let pb = GM_getValue('fb_phoneBook') || {};
+        return pb[id];
+    }
+
+    function setPhoneBook(id, phone){
+        if(!id || !phone) return;
+        let pb = GM_getValue('fb_phoneBook') || {};
+        pb[id] = phone;
+        GM_setValue('fb_phoneBook', pb);
+    }
 
     function getFormatedDate(i = 0) {
         const today = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
@@ -108,7 +119,8 @@ function isVNPhone(number) {
                         "GM_xmlhttpRequest() response is:\n",
                         response.responseText.substring (0, 80) + '...'
                     );
-                    return resolve(response.responseText)
+                    let json = JSON.parse(response.responseText);
+                    return resolve(json);
                 }
 
             })
@@ -124,7 +136,10 @@ function isVNPhone(number) {
             let h = container.querySelector('a[aria-label][href][role="link"]');
             this.name = h.getAttribute('aria-label');
             this.id = h.getAttribute('href').replaceAll('\/', '');
-            this.phone = fb_phoneBook[this.id];
+
+//            let pb = GM_getValue('fb_phoneBook') || {};
+//            this.phone = pb[this.id];
+            this.phone = getPhoneBook(this.id);
             this.deliveryRate = 0;
 
             if(!this.id || !this.name){ return container.classList.remove('added') }
@@ -154,13 +169,13 @@ function isVNPhone(number) {
             await phone2Recievers(this.phone)
             .then(res => JSON.parse(res))
             .then(vtpInfo => {
-                console.log(vtpInfo);
+               // console.log(vtpInfo);
+            })
+            .then(() => {
+               // let dr = getDeliveryRate(this.phone);
             })
             .catch(e => {
 //                alert(e.message || e);
-            })
-            .then(() => {
-
             })
             .finally(() => {
                 this.infoList.innerHTML = `<li>ID: ${this.id}</li><li>Name: ${this.name}</li><li>Phone: ${this.phone || '---'}</li><li>Địa chỉ: ${this.addr || '---'}</li><li>Tỷ lệ nhận: ${this.rate || '---'}</li><!-- <li>xxxxxxx</li> -->`;
@@ -180,7 +195,7 @@ function isVNPhone(number) {
                     d.scrollTop = 0;
                 })
                 this.container.querySelectorAll('div.__fb-light-mode[role="row"]:not(.scanned)').forEach( m => {
-                    let text = m.innerText.replaceAll(/(\W\D)/g, '');
+                    let text = m.innerText.replaceAll(/(\W|\D)/g, '');
                     console.log(text);
                     let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/s);
                     m.classList.add('scanned');
@@ -201,8 +216,7 @@ function isVNPhone(number) {
                 return;
             }
             this.phone = phone;
-            fb_phoneBook[this.id] = phone;
-            GM_setValue('fb_phoneBook', fb_phoneBook);
+            setPhoneBook(this.id, this.phone);
             this.refreshInfo();
         }
     }
