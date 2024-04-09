@@ -180,7 +180,7 @@ function isVNPhone(number) {
 //                alert(e.message || e);
             })
             .finally(() => {
-                this.infoList.innerHTML = `<li>ID: ${this.id}</li><li>Name: ${this.name}</li><li>Phone: ${this.phone || '---'}</li><li>Tỷ lệ nhận: ${this.deliveryRate || '---'}</li><li>Đơn giữ: ${'---'}<!-- </li><li>xxxxxxx</li> -->`;
+                this.infoList.innerHTML = `<li>ID: ${this.id}</li><li>Tên: ${this.name}</li><li>Sdt: ${this.phone || '---'}</li><li>Tỷ lệ nhận: ${this.deliveryRate || '---'}</li><li>Đơn giữ: ${'---'}<!-- </li><li>xxxxxxx</li> -->`;
             })
         }
         phoneSearching(){
@@ -190,6 +190,7 @@ function isVNPhone(number) {
                 this.searchBtn.innerText = 'Tìm sđt!';
                 return;
             }
+
             if(this.searchLoop){ return stop(); }
 
             this.searchLoop = setInterval(() => {
@@ -199,16 +200,18 @@ function isVNPhone(number) {
                 this.container.querySelectorAll('div.__fb-light-mode[role="row"]:not(.scanned)').forEach( m => {
                     let text = m.innerText.replaceAll(/(\W|\D)/g, '');
                     // console.log(text);
-                    let match = text.match(/(03|05|07|08|09[2|6|8|9])+([0-9]{7})/s);
+                    let match = text.match(/((03|05|07|08|09)[2|6|8|9])+([0-9]{7})/s);
                     m.classList.add('scanned');
                     if(match && match[0] != '0966628989'){
                         stop();
+                        console.log(match);
                         m.scrollIntoView();
                         !this.phone && this.setPhone(match[0]);
-                        this.refreshInfo();
                         return false;
                     }
                 })
+                let ta = this.container.querySelector('img[alt="'+this.name+'"]');
+                ta && stop();
             }, 500);
             this.searchBtn.innerText = 'Stop.';
         }
