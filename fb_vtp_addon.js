@@ -92,6 +92,29 @@ function isVNPhone(number) {
         })
     }
 
+    function getDeliveryRate(phone){
+        return new Promise((resolve, reject) => {
+            if(!phone) return reject('chưa có sdt');
+            if (!vtp_tokenKey || !vtp_deviceId) return reject('Lỗi 0012');
+
+            GM_xmlhttpRequest({
+            method: "GET",
+                headers: {
+                    'Authorization': 'Bearer ' + vtp_tokenKey
+                },
+                url:  "https://io.okd.viettelpost.vn/order/v1.0/kyc/" + phone,
+                onload: function (response) {
+                    console.log (
+                        "GM_xmlhttpRequest() response is:\n",
+                        response.responseText.substring (0, 80) + '...'
+                    );
+                    return resolve(response.responseText)
+                }
+
+            })
+        })
+    }
+
     class InfoCard{
         constructor(container){
             this.container = container;
@@ -102,6 +125,7 @@ function isVNPhone(number) {
             this.name = h.getAttribute('aria-label');
             this.id = h.getAttribute('href').replaceAll('\/', '');
             this.phone = fb_phoneBook[this.id];
+            this.deliveryRate = 0;
 
             if(!this.id || !this.name){ return container.classList.remove('added') }
 
@@ -134,6 +158,9 @@ function isVNPhone(number) {
             })
             .catch(e => {
 //                alert(e.message || e);
+            })
+            .then(() => {
+
             })
             .finally(() => {
                 this.infoList.innerHTML = `<li>ID: ${this.id}</li><li>Name: ${this.name}</li><li>Phone: ${this.phone || '---'}</li><li>Địa chỉ: ${this.addr || '---'}</li><li>Tỷ lệ nhận: ${this.rate || '---'}</li><!-- <li>xxxxxxx</li> -->`;
