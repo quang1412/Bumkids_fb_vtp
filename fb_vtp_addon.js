@@ -137,8 +137,6 @@ function isVNPhone(number) {
             this.name = h.getAttribute('aria-label');
             this.id = h.getAttribute('href').replaceAll('\/', '');
 
-//            let pb = GM_getValue('fb_phoneBook') || {};
-//            this.phone = pb[this.id];
             this.phone = getPhoneBook(this.id);
             this.deliveryRate = 0;
 
@@ -166,19 +164,23 @@ function isVNPhone(number) {
             !this.phone && this.phoneSearching();
         }
         async refreshInfo(){
-            await phone2Recievers(this.phone)
-            .then(res => JSON.parse(res))
-            .then(vtpInfo => {
-               // console.log(vtpInfo);
-            })
-            .then(() => {
-               // let dr = getDeliveryRate(this.phone);
+//            await phone2Recievers(this.phone)
+          //  await phone2Recievers(this.phone)
+          //  .then(Recievers => {
+          //      console.log(Recievers);
+          //      return getDeliveryRate(this.phone);
+        //    })
+
+            getDeliveryRate(this.phone)
+            .then(rate => {
+                console.log(rate)
+                this.deliveryRate = rate.deliveryRate && (rate.deliveryRate * 100).toFixed(2) + '% (' + rate.order501 + '/' + rate.totalOrder + ')';
             })
             .catch(e => {
 //                alert(e.message || e);
             })
             .finally(() => {
-                this.infoList.innerHTML = `<li>ID: ${this.id}</li><li>Name: ${this.name}</li><li>Phone: ${this.phone || '---'}</li><li>Địa chỉ: ${this.addr || '---'}</li><li>Tỷ lệ nhận: ${this.rate || '---'}</li><!-- <li>xxxxxxx</li> -->`;
+                this.infoList.innerHTML = `<li>ID: ${this.id}</li><li>Name: ${this.name}</li><li>Phone: ${this.phone || '---'}</li><li>Tỷ lệ nhận: ${this.deliveryRate || '---'}</li><!-- <li>Địa chỉ: ${this.addr || '---'}</li><li>xxxxxxx</li> -->`;
             })
         }
         phoneSearching(){
@@ -196,10 +198,10 @@ function isVNPhone(number) {
                 })
                 this.container.querySelectorAll('div.__fb-light-mode[role="row"]:not(.scanned)').forEach( m => {
                     let text = m.innerText.replaceAll(/(\W|\D)/g, '');
-                    console.log(text);
+                    // console.log(text);
                     let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/s);
                     m.classList.add('scanned');
-                    if(match){
+                    if(match && match[0] != '0966628989'){
                         stop();
                         m.scrollIntoView();
                         !this.phone && this.setPhone(match[0]);
