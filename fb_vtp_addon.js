@@ -26,7 +26,12 @@ const vnPhoneRegex = '';
     min-height: 20px;
     border: 1px solid #dedede;
     border-radius: 5px;
-    padding: 5px;}`,
+    padding: 5px;}
+
+    body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
+    body.vt-post.custom button {text-wrap: nowrap;}
+    body.vt-post.custom #content {width: 100% !important; margin-left: 0;}`,
+
         head = document.head || document.getElementsByTagName('head')[0],
         style = document.createElement('style');
 
@@ -61,8 +66,8 @@ function getFormatedDate(i = 0) {
 
 function getListOrdersVTP(phone = '0966628989') {
     return new Promise((resolve, reject) => {
-
-        if (!phone || !vtp_tokenKey || !vtp_deviceId) return reject('Lỗi Viettel Post');
+        if(!phone) return reject('Chưa có sdt');
+        if (!vtp_tokenKey || !vtp_deviceId) return reject('Lỗi Viettel Post');
 
         GM_xmlhttpRequest({
             url:  "https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2",
@@ -119,8 +124,6 @@ function getListOrdersVTP(phone = '0966628989') {
         GM_setValue('fb_phoneBook', pb);
     }
 
-
-
     function phone2Recievers(phone = null) {
         return new Promise((resolve, reject) => {
             if(!phone) return reject('chưa có sdt');
@@ -137,8 +140,12 @@ function getListOrdersVTP(phone = '0966628989') {
                         "GM_xmlhttpRequest() response is:\n",
                         response.responseText.substring (0, 80) + '...'
                     );
-                    return resolve(response.responseText)
+                    return resolve(JSON.parse(response.responseText));
 
+                },
+                onerror: function(reponse) {
+                    console.log("error: ", reponse);
+                    return reject(reponse)
                 }
 
             })
@@ -147,8 +154,8 @@ function getListOrdersVTP(phone = '0966628989') {
 
     function getDeliveryRate(phone){
         return new Promise((resolve, reject) => {
-            if(!phone) return reject('chưa có sdt');
-            if (!vtp_tokenKey || !vtp_deviceId) return reject('Lỗi 0012');
+            if(!phone) return reject('Chưa có sdt');
+            if (!vtp_tokenKey || !vtp_deviceId) return reject('Lỗi viettel');
 
             GM_xmlhttpRequest({
             method: "GET",
@@ -163,8 +170,11 @@ function getListOrdersVTP(phone = '0966628989') {
                     );
                     let json = JSON.parse(response.responseText);
                     return resolve(json);
+                },
+                onerror: function(reponse) {
+                    console.log("error: ", reponse);
+                    return reject(reponse)
                 }
-
             })
         })
     }
@@ -187,57 +197,63 @@ function getListOrdersVTP(phone = '0966628989') {
                 return this.container.classList.remove('added');
             }
 
-            this.infoList = document.createElement('ul');
+            this.infoList = document.createElement('table');
             this.infoList.setAttribute('style', 'margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid #dedede;');
             this.refreshInfo();
 
             this.searchBtn = document.createElement('a');
-            this.searchBtn.innerText = 'Tìm sđt!';
+            this.searchBtn.innerText = 'Tìm sđt';
             this.searchBtn.onclick = () => { this.phoneSearching() };
 
-            this.setPhoneBtn = document.createElement('a');
-            this.setPhoneBtn.innerText = 'Sửa sđt!';
-            this.setPhoneBtn.style.color = 'red';
-            this.setPhoneBtn.style['margin-left'] = '5px';
-            this.setPhoneBtn.onclick = () => { this.setPhone() };
+            let btn_2 = document.createElement('a');
+            btn_2.innerText = 'Sửa sđt';
+            btn_2.style.color = 'red';
+            btn_2.style['margin-left'] = '5px';
+            btn_2.onclick = () => { this.setPhone() };
+
+            let btn_3 = document.createElement('a');
+            btn_3.innerText = 'Tạo đơn';
+            btn_3.style.color = 'green';
+            btn_3.style['margin-left'] = '5px';
+            btn_3.onclick = () => { this.createOrder() };
 
             let toolBar = document.createElement('div');
-            toolBar.append(this.searchBtn, this.setPhoneBtn);
+            toolBar.append(this.searchBtn, btn_2, btn_3);
             this.card.append(this.infoList, toolBar);
 
             container.append(this.card);
            // !this.phone && this.phoneSearching();
 
-            this.container.onclick = () => {
-                let text = this.container.textContent.replaceAll(/\D\W/g,'')
-                console.log(text);
-                let match = this.container.textContent.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/s);
-                if(match){
-                    match = match.filter((word) => word !== '0966628989');
-                    console.log(match);
-                    this.phone && this.setPhone(match[0]);
-                    //alert(match[0]);
-                }
+            this.container.onmouseup = () => {
+//                if(this.phone || !window.getSelection) return;
+                if(!window.getSelection) return;
+
+                let phone = window.getSelection().toString().replaceAll(/\D/g,'');
+
+                if(!isVNPhone(phone) || phone == this.phone) return;
+
+                this.setPhone(phone);
             }
         }
         async refreshInfo(){
            // await phone2Recievers(this.phone)
+            this.infoList.innerHTML = '<tr><td style="text-align:center;">Updating...</td></tr>';
+
             await getListOrdersVTP(this.phone).then(orders => {
                 console.log(orders);
                 this.penddingOrders = orders.data.totalElements;
                 return getDeliveryRate(this.phone);
             }).then(rate => {
                 console.log(rate)
-                this.deliveryRate = !!~rate.deliveryRate && (rate.deliveryRate * 100).toFixed(2) + '% (' + rate.order501 + '/' + rate.totalOrder + ')';
+                this.deliveryRate = rate.deliveryRate != -1 ? (rate.deliveryRate * 100).toFixed(2) + '% (' + rate.order501 + '/' + rate.totalOrder + ')' : 'Chưa có.';
             }).catch(e => {
-              //  alert(e.message || e);
+                this.penddingOrders = e.message;
+                this.deliveryRate = e.message;
             }).finally(() => {
-                this.infoList.innerHTML = `<li>ID: ${this.id}</li>
-                <li>Tên: ${this.name}</li>
-                <li>Sdt: ${this.phone || '---'}</li>
-                <li>Tỷ lệ nhận: ${this.deliveryRate || '---'}</li>
-                <li>Đơn giữ: ${this.penddingOrders}
-                <!-- </li><li>xxxxxxx</li> -->`;
+                this.infoList.innerHTML = `<tr><td>Tên:</td><td>${this.name}</td></tr>
+                <tr><td>Sdt:</td><td>${this.phone || '---'}</td></tr>
+                <tr><td>Tỷ lệ nhận:</td><td>${this.deliveryRate || '---'}</td></tr>
+                <tr><td>Đơn giữ:</td><td>${this.penddingOrders ? 'Có.' : 'Không.'}`;
             })
         }
         phoneSearching(){
@@ -261,14 +277,10 @@ function getListOrdersVTP(phone = '0966628989') {
                     m.classList.add('scanned');
                     if(match && match[0] != '0966628989'){
                         stop();
-                      //  console.log(match);
                         m.scrollIntoView();
-                      //  !this.phone && this.setPhone(match[0]);
                         return false;
                     }
                 })
-                //let ta = this.container.querySelector('img[alt="'+this.name+'"]');
-                //ta && stop();
             }, 500);
             this.searchBtn.innerText = 'Stop.';
         }
@@ -280,9 +292,38 @@ function getListOrdersVTP(phone = '0966628989') {
             setPhoneBook(this.id, this.phone);
             this.refreshInfo();
         }
+        async createOrder(){
+            if(!this.phone) return alert('❌ Chưa có sdt!');
+
+            phone2Recievers(this.phone).then(r => {
+                console.log(r);
+
+                let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
+                if(r.items.length){
+                    let numb = prompt("Chọn địa chỉ \n" + r.items.map((l, i) => `[${i}] ${l.addr.substring (0, 50) + '...'}`).join('\n'), 0);
+                    if (numb == null) {
+                        return false;
+                    } else if(numb == "" || !r.items[numb]){
+                        return alert('❌ địa chỉ không hợp lệ!');
+                    }
+                    url += '&addr=' + r.items[numb].addr;
+                } else {
+                    let addr = prompt("Nhập địa chỉ", '');
+                    if (price == null) { return false }
+                    url += '&addr=' + addr;
+
+                }
+                let price = prompt("Nhập giá", 100000);
+                if (price == null) { return false }
+                url += '&price=' + price;
+
+                window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
+//                alert(url);
+            })
+        }
     }
-//        document.onmousemove = function(){
-document.onmouseup = function(){
+    //document.onmousemove = function(){
+    document.onmouseup = function(){
         document.querySelectorAll('div.__fb-light-mode:not(.added)').forEach(function(e){
             e.classList.add('added');
             let s = e.querySelector('div[aria-label="Cài đặt chat"]');
@@ -308,33 +349,9 @@ document.onmouseup = function(){
         return event;
     }
 
-    let c = 0;
-    $(document).on('change click', 'input#productPrice', function(e){
-        if(window.location.href.indexOf('tao-don-le') == -1) return;
-        let price = parseInt(this.value.replaceAll('.', '')|| 0);
-        let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
-        let cod = price + fee;
-
-        let ci = document.querySelector('input#cod');
-        ci.value = cod;
-        ci.dispatchEvent(customEvent('input'));
-        ci.dispatchEvent(customEvent('change'));
-
-        let n = document.querySelector('.box-product-info + div .ng-star-inserted .custom-switch input#switch1');
-        n.checked = true;
-        n.dispatchEvent(customEvent('change'));
-
-        let no = document.querySelector('input#orderNo');
-        no.value = Math.floor(Math.random() * (9999999999 - 1000000000 + 1) + 1000000000);
-        no.dispatchEvent(customEvent('input'));
-        no.dispatchEvent(customEvent('change'));
-
-        c = price;
-        console.warn('update');
-    })
 
     $(document).ready(async function(){
-        if(window.location.href.indexOf('tao-don-le') == -1) return;
+        if(window.location.href.indexOf('/order/tao-don-le') == -1) return;
 
         let test = await getListOrdersVTP();
         let status = test?.status == 200
@@ -362,6 +379,30 @@ document.onmouseup = function(){
             this.dispatchEvent(customEvent('input'));
   //          this.dispatchEvent(customEvent('change'));
         });
+
+        let c = 0;
+        $(document).on('change click', 'input#productPrice', function(e){
+            let price = parseInt(this.value.replaceAll('.', '')|| 0);
+            let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
+            let cod = price + fee;
+
+            let ci = document.querySelector('input#cod');
+            ci.value = cod;
+            ci.dispatchEvent(customEvent('input'));
+            ci.dispatchEvent(customEvent('change'));
+
+            let n = document.querySelector('.box-product-info + div .ng-star-inserted .custom-switch input#switch1');
+            n.checked = true;
+            n.dispatchEvent(customEvent('change'));
+
+            /*
+            let no = document.querySelector('input#orderNo');
+            no.value = Math.floor(Math.random() * (9999999999 - 1000000000 + 1) + 1000000000);
+            no.dispatchEvent(customEvent('input'));
+            no.dispatchEvent(customEvent('change'));
+            */
+        });
+
         $(document).keyup(function(e) {
             if (e.key === "Escape") { // escape key maps to keycode `27`
                 $('button.close').click();
@@ -370,5 +411,45 @@ document.onmouseup = function(){
                 $('#confirmCreateOrder button.btn.btn-viettel.btn-sm').click();
             }
         });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let fbid = urlParams.get('fbid');
+        if(fbid){
+            let phone = urlParams.get('phone');
+            let addr = urlParams.get('addr');
+            let name = urlParams.get('name');
+            let price = urlParams.get('price');
+
+            window.document.body.classList.add('custom');
+            let s = $('div.box-sender');
+            let p = s.parent();
+            s.appendTo(p);
+
+            $('input#phoneNo').val()
+
+            let ci = document.querySelector('input#phoneNo');
+            ci.value = phone;
+
+            let fn = document.querySelector('input#fullName');
+            fn.value = name;
+
+            let adr = document.querySelector('input#autoAddress');
+            adr.value = addr;
+
+            let pn = document.querySelector('input#productName');
+            pn.value = 'Quần Áo';
+
+            let pr = document.querySelector('input#productPrice');
+            pr.value = price;
+
+            let pw = document.querySelector('input#productWeight');
+            pw.value = 200;
+
+            let on = document.querySelector('input#orderNo');
+            // on.value = fbid + '-' + (new Date().getTime());
+
+            [ci, fn, adr, pr, pn, pw, on].map(i => {i.dispatchEvent(customEvent('click')); i.dispatchEvent(customEvent('input')); i.dispatchEvent(customEvent('change'))});
+
+        }
     })
 })($);
