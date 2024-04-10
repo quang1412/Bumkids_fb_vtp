@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    http://tampermonkey.net/
-// @version      2024-04-08
+// @version      2024-04-11
 // @description  try to take over the world!
 // @author       You
 // @match        https://viettelpost.vn/*
