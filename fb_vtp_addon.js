@@ -29,6 +29,7 @@ const vnPhoneRegex = '';
     padding: 5px;}
 
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
+    body.vt-post #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: limegreen !important; font-size: 30px;}
     body.vt-post.custom button {text-wrap: nowrap;}
     body.vt-post.custom #content {width: 100% !important; margin-left: 0;}`,
 
@@ -380,20 +381,25 @@ function getListOrdersVTP(phone = '0966628989') {
   //          this.dispatchEvent(customEvent('change'));
         });
 
-        let c = 0;
-        $(document).on('change click', 'input#productPrice', function(e){
-            let price = parseInt(this.value.replaceAll('.', '')|| 0);
-            let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
-            let cod = price + fee;
-
-            let ci = document.querySelector('input#cod');
-            ci.value = cod;
-            ci.dispatchEvent(customEvent('input'));
-            ci.dispatchEvent(customEvent('change'));
+        function updateCOD(price, fee){
+            let input = document.querySelector('input#cod'),
+                p = parseInt(price),
+                f = parseInt(fee)
+            input.value = p + f;
+            input.dispatchEvent(customEvent('input'));
+            input.dispatchEvent(customEvent('change'));
 
             let n = document.querySelector('.box-product-info + div .ng-star-inserted .custom-switch input#switch1');
             n.checked = true;
             n.dispatchEvent(customEvent('change'));
+        }
+
+        $(document).on('change click', 'input#productPrice', function(e){
+            let price = parseInt(this.value.replaceAll('.', '')|| 0);
+            let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
+            if(!fee) return;
+
+            updateCOD(price, fee)
 
             /*
             let no = document.querySelector('input#orderNo');
@@ -402,6 +408,12 @@ function getListOrdersVTP(phone = '0966628989') {
             no.dispatchEvent(customEvent('change'));
             */
         });
+
+        $(document).mousemove(function(){
+            let m = $('#createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel');
+            let l = $('#createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.text-muted');
+            m.attr('style', 'color: ' + ((l.text().includes('trả')) ? 'limegreen' : 'orangered') + ' !important;')
+        })
 
         $(document).keyup(function(e) {
             if (e.key === "Escape") { // escape key maps to keycode `27`
@@ -425,7 +437,7 @@ function getListOrdersVTP(phone = '0966628989') {
             let p = s.parent();
             s.appendTo(p);
 
-            $('input#phoneNo').val()
+            $('#custom_selectbox > div > div > ul.d-flex.flex-column.tab-list > li:nth-child(2) > label').click();
 
             let ci = document.querySelector('input#phoneNo');
             ci.value = phone;
@@ -445,11 +457,15 @@ function getListOrdersVTP(phone = '0966628989') {
             let pw = document.querySelector('input#productWeight');
             pw.value = 200;
 
-            let on = document.querySelector('input#orderNo');
-            // on.value = fbid + '-' + (new Date().getTime());
+            [ci, fn, adr, pr, pn, pw].map(i => {i.dispatchEvent(customEvent('click')); i.dispatchEvent(customEvent('input')); i.dispatchEvent(customEvent('change'))});
 
-            [ci, fn, adr, pr, pn, pw, on].map(i => {i.dispatchEvent(customEvent('click')); i.dispatchEvent(customEvent('input')); i.dispatchEvent(customEvent('change'))});
+            let iv = setInterval(function(){
+                let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
+                if(!fee) return;
 
+                updateCOD(price, fee);
+                clearInterval(iv);
+            }, 1000)
         }
     })
 })($);
