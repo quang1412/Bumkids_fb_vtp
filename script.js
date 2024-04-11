@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
-// @namespace    http://tampermonkey.net/
+// @namespace    https://github.com/quang1412/Bumkids_fb_vtp
 // @version      2024-04-12
 // @description  try to take over the world!
-// @author       You
+// @author       QuangPlus
 // @match        https://viettelpost.vn/*
 // @match        https://www.facebook.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
