@@ -29,7 +29,8 @@ const vnPhoneRegex = '';
     padding: 5px;}
 
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
-    body.vt-post #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: limegreen !important; font-size: 30px;}
+    body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
+    body.vt-post.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}
     body.vt-post.custom button {text-wrap: nowrap;}
     body.vt-post.custom #content {width: 100% !important; margin-left: 0;}`,
 
@@ -397,9 +398,8 @@ function getListOrdersVTP(phone = '0966628989') {
         $(document).on('change click', 'input#productPrice', function(e){
             let price = parseInt(this.value.replaceAll('.', '')|| 0);
             let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
-            if(!fee) return;
 
-            updateCOD(price, fee)
+            fee && updateCOD(price, fee);
 
             /*
             let no = document.querySelector('input#orderNo');
@@ -408,12 +408,6 @@ function getListOrdersVTP(phone = '0966628989') {
             no.dispatchEvent(customEvent('change'));
             */
         });
-
-        $(document).mousemove(function(){
-            let m = $('#createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel');
-            let l = $('#createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.text-muted');
-            m.attr('style', 'color: ' + ((l.text().includes('trả')) ? 'limegreen' : 'orangered') + ' !important;')
-        })
 
         $(document).keyup(function(e) {
             if (e.key === "Escape") { // escape key maps to keycode `27`
@@ -461,10 +455,8 @@ function getListOrdersVTP(phone = '0966628989') {
 
             let iv = setInterval(function(){
                 let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
-                if(!fee) return;
 
-                updateCOD(price, fee);
-                clearInterval(iv);
+                fee && (updateCOD(price, fee), clearInterval(iv));
             }, 1000)
         }
     })
