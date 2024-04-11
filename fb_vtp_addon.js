@@ -30,6 +30,7 @@ const vnPhoneRegex = '';
 
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
     body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
+    body.vt-post.custom div.box-receiver div.card-body { max-height: 310px; overflow: auto; }
     body.vt-post.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}
     body.vt-post.custom button {text-wrap: nowrap;}
     body.vt-post.custom #content {width: 100% !important; margin-left: 0;}`,
@@ -287,9 +288,9 @@ function getListOrdersVTP(phone = '0966628989') {
             this.searchBtn.innerText = 'Stop.';
         }
         setPhone(phone = window.prompt("Nhập sđt cho " + this.name, "")){
-            if (phone == null || phone == "" || !isVNPhone(phone)) {
-                return;
-            }
+
+            if (phone == null || phone == "" || !isVNPhone(phone)) return false;
+
             this.phone = phone;
             setPhoneBook(this.id, this.phone);
             this.refreshInfo();
@@ -301,21 +302,18 @@ function getListOrdersVTP(phone = '0966628989') {
                 console.log(r);
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
+                let addr = '';
                 if(r.items.length){
-                    let numb = prompt("Chọn địa chỉ \n" + r.items.map((l, i) => `[${i}] ${l.addr.substring (0, 50) + '...'}`).join('\n'), 0);
-                    if (numb == null) {
-                        return false;
-                    } else if(numb == "" || !r.items[numb]){
-                        return alert('❌ địa chỉ không hợp lệ!');
-                    }
-                    url += '&addr=' + r.items[numb].addr;
-                } else {
-                    let addr = prompt("Nhập địa chỉ", '');
-                    if (price == null) { return false }
-                    url += '&addr=' + addr;
+                    let numb = prompt("B1 - Chọn địa chỉ, hoặc nhập địa chỉ mới \n" + r.items.map((l, i) => `[${i}] ${l.addr.substring (0, 50) + '...'}`).join('\n'), 0);
 
+                    if (numb == null) return false;
+
+                    addr = r.items[numb]?.addr || numb;
                 }
-                let price = prompt("Nhập giá", 100000);
+
+
+                url += '&addr=' + addr;
+                let price = prompt("B1 - Chọn địa chỉ, hoặc nhập địa chỉ mới \n" + addr + "\n\nB2 - Nhập giá", 100000);
                 if (price == null) { return false }
                 url += '&price=' + price;
 
@@ -427,9 +425,9 @@ function getListOrdersVTP(phone = '0966628989') {
             let price = urlParams.get('price');
 
             window.document.body.classList.add('custom');
-            let s = $('div.box-sender');
+            let s = $('div.box-receiver');
             let p = s.parent();
-            s.appendTo(p);
+            s.prependTo(p);
 
             $('#custom_selectbox > div > div > ul.d-flex.flex-column.tab-list > li:nth-child(2) > label').click();
 
