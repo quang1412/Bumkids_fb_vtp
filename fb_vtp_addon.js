@@ -255,7 +255,7 @@ function getListOrdersVTP(phone = '0966628989') {
             }).finally(() => {
                 this.infoList.innerHTML = `<tr><td>Tên:</td><td>${this.name}</td></tr>
                 <tr><td>Sdt:</td><td>${this.phone || '---'}</td></tr>
-                <tr><td>Tỷ lệ nhận:</td><td>${this.deliveryRate || '---'}</td></tr>
+                <tr><td>Uy tín:</td><td>${this.deliveryRate || '---'}</td></tr>
                 <tr><td>Đơn giữ:</td><td>${this.penddingOrders ? 'Có.' : 'Không.'}`;
             })
         }
@@ -304,18 +304,21 @@ function getListOrdersVTP(phone = '0966628989') {
                 let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
                 let addr = '';
                 if(r.items.length){
-                    let numb = prompt("B1 - Chọn địa chỉ, hoặc nhập địa chỉ mới \n" + r.items.map((l, i) => `[${i}] ${l.addr.substring (0, 50) + '...'}`).join('\n'), 0);
-
-                    if (numb == null) return false;
-
-                    addr = r.items[numb]?.addr || numb;
                 }
+                let numb = prompt("B1 - Chọn địa chỉ, hoặc nhập địa chỉ mới \n" + r.items.map((l, i) => `[${i}] ${l.addr.substring (0, 50) + '...'}`).join('\n'), 0);
+
+                if (numb == null) return false;
+
+                addr = r.items[numb]?.addr || numb;
 
 
                 url += '&addr=' + addr;
-                let price = prompt("B1 - Chọn địa chỉ, hoặc nhập địa chỉ mới \n" + addr + "\n\nB2 - Nhập giá", 100000);
-                if (price == null) { return false }
-                url += '&price=' + price;
+                let t = prompt("B1 - Chọn địa chỉ, hoặc nhập địa chỉ mới \n" + addr + "\n\nB2 - Nhập giá (đv: 000đ)", 1000);
+                if (t == null) { return false }
+
+                let price = t.split(' ').reduce((pv, cv) => pv + parseInt(cv), 0);
+
+                url += '&price=' + (price*1000);
 
                 window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
 //                alert(url);
@@ -429,7 +432,7 @@ function getListOrdersVTP(phone = '0966628989') {
             let p = s.parent();
             s.prependTo(p);
 
-            $('#custom_selectbox > div > div > ul.d-flex.flex-column.tab-list > li:nth-child(2) > label').click();
+            //$('#custom_selectbox > div > div > ul.d-flex.flex-column.tab-list > li:nth-child(2) > label').click();
 
             let ci = document.querySelector('input#phoneNo');
             ci.value = phone;
@@ -441,7 +444,7 @@ function getListOrdersVTP(phone = '0966628989') {
             adr.value = addr;
 
             let pn = document.querySelector('input#productName');
-            pn.value = 'Quần Áo';
+            pn.value = 'Trịnh Hiền - Bumkids';
 
             let pr = document.querySelector('input#productPrice');
             pr.value = price;
@@ -449,8 +452,8 @@ function getListOrdersVTP(phone = '0966628989') {
             let pw = document.querySelector('input#productWeight');
             pw.value = 200;
 
-            [ci, fn, adr, pr, pn, pw].map(i => {i.dispatchEvent(customEvent('click')); i.dispatchEvent(customEvent('input')); i.dispatchEvent(customEvent('change'))});
 
+            setTimeout(() => {[ci, fn, adr, pr, pn, pw].map(i => {i.dispatchEvent(customEvent('click')); i.dispatchEvent(customEvent('input')); i.dispatchEvent(customEvent('change'))});}, 1000)
             let iv = setInterval(function(){
                 let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
 
