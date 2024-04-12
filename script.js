@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-04-12.1
+// @version      2024-04-12.2
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -34,6 +34,7 @@ let vtp_deviceId, vtp_tokenKey, myPhone = '0966628989';
     body.vt-post.custom div.box-receiver div.card-body { max-height: 310px; overflow: auto; }
     body.vt-post.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}
     body.vt-post.custom button {text-wrap: nowrap;}
+    body.vt-post.custom div.box-receiver div.card-body group small {color: red !important;}
     body.vt-post.custom #content {width: 100% !important; margin-left: 0;}`,
 
         head = document.head || document.getElementsByTagName('head')[0],
