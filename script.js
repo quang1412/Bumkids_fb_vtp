@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-04-12
+// @version      2024-04-12.1
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -12,8 +12,7 @@
 // @grant       GM_xmlhttpRequest
 
 // ==/UserScript==
-let vtp_deviceId, vtp_tokenKey;
-const vnPhoneRegex = '';
+let vtp_deviceId, vtp_tokenKey, myPhone = '0966628989';
 
 (function(){
     var css = `.infoCard{
@@ -53,13 +52,10 @@ const vnPhoneRegex = '';
 
 })();
 
-function isVNPhone(number) {
-  return /(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/.test(number);
-}
+function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 
 function getFormatedDate(i = 0) {
     const today = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
-
     const yyyy = today.getFullYear();
     let mm = today.getMonth() + 1; // Months start at 0!
     let dd = today.getDate();
@@ -69,7 +65,7 @@ function getFormatedDate(i = 0) {
     return formattedToday;
 }
 
-function getListOrdersVTP(phone = '0966628989') {
+function getListOrdersVTP(phone = myPhone) {
     return new Promise((resolve, reject) => {
         if(!phone) return reject('Chưa có sdt');
         if (!vtp_tokenKey || !vtp_deviceId) return reject('Lỗi Viettel Post');
@@ -117,16 +113,22 @@ function getListOrdersVTP(phone = '0966628989') {
     vtp_deviceId = GM_getValue('vtp_deviceId');
     vtp_tokenKey = GM_getValue('vtp_tokenKey');
 
-    function getPhoneBook(id){
-        let pb = GM_getValue('fb_phoneBook') || {};
-        return pb[id];
-    }
-
-    function setPhoneBook(id, phone){
-        if(!id || !phone) return;
-        let pb = GM_getValue('fb_phoneBook') || {};
-        pb[id] = phone;
-        GM_setValue('fb_phoneBook', pb);
+    const phoneBook = {
+        key: 'fb_phoneBook',
+        get: function(id = 0){
+            let pb = GM_getValue(this.key) || {};
+            return pb[id];
+        },
+        set: function(id = 0, phone = 0){
+            let pb = GM_getValue(this.key) || {};
+            pb[id] = phone;
+            GM_setValue(this.key, pb);
+            this.save();
+            return true;
+        },
+        save: function(){
+            // backup to server
+        }
     }
 
     function phone2Recievers(phone = null) {
@@ -146,7 +148,6 @@ function getListOrdersVTP(phone = '0966628989') {
                         response.responseText.substring (0, 80) + '...'
                     );
                     return resolve(JSON.parse(response.responseText));
-
                 },
                 onerror: function(reponse) {
                     console.log("error: ", reponse);
@@ -194,7 +195,7 @@ function getListOrdersVTP(phone = '0966628989') {
             this.name = h.getAttribute('aria-label');
             this.id = h.getAttribute('href').replaceAll('\/', '');
 
-            this.phone = getPhoneBook(this.id);
+            this.phone = phoneBook.get(this.id);
             this.penddingOrders = 0;
             this.deliveryRate = 0;
 
@@ -208,18 +209,19 @@ function getListOrdersVTP(phone = '0966628989') {
 
             this.searchBtn = document.createElement('a');
             this.searchBtn.innerText = 'Tìm sđt';
+            this.searchBtn.style.color = 'blue';
             this.searchBtn.onclick = () => { this.phoneSearching() };
 
             let btn_2 = document.createElement('a');
             btn_2.innerText = 'Sửa sđt';
             btn_2.style.color = 'red';
-            btn_2.style['margin-left'] = '5px';
+            btn_2.style['margin-left'] = '10px';
             btn_2.onclick = () => { this.setPhone() };
 
             let btn_3 = document.createElement('a');
             btn_3.innerText = 'Tạo đơn';
             btn_3.style.color = 'green';
-            btn_3.style['margin-left'] = '5px';
+            btn_3.style['margin-left'] = '10px';
             btn_3.onclick = () => { this.createOrder() };
 
             let toolBar = document.createElement('div');
@@ -229,24 +231,19 @@ function getListOrdersVTP(phone = '0966628989') {
             this.card.append(this.infoList, toolBar);
 
             container.append(this.card);
-           // !this.phone && this.phoneSearching();
 
             this.container.onmouseup = () => {
-//                if(this.phone || !window.getSelection) return;
                 if(!window.getSelection) return;
-
                 let phone = window.getSelection().toString().replaceAll(/\D/g,'');
-
-                if(!isVNPhone(phone) || phone == this.phone) return;
-
+                if(!isVNPhone(phone) || phone == this.phone || phone == myPhone) return;
                 this.setPhone(phone);
             }
         }
-        async refreshInfo(){
+        refreshInfo(){
            // await phone2Recievers(this.phone)
-            this.infoList.innerHTML = '<tr><td style="text-align:center;">Updating...</td></tr>';
+            this.infoList.innerHTML = '<tr><td colspan="2" style="text-align:center;">Updating...</td></tr>';
 
-            await getListOrdersVTP(this.phone).then(orders => {
+            getListOrdersVTP(this.phone).then(orders => {
                 console.log(orders);
                 this.penddingOrders = orders.data.totalElements;
                 return getDeliveryRate(this.phone);
@@ -281,7 +278,7 @@ function getListOrdersVTP(phone = '0966628989') {
                     console.log(text);
                     let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/s);
                     m.classList.add('scanned');
-                    if(match && match[0] != '0966628989'){
+                    if(match && match[0] != myPhone){
                         stop();
                         m.scrollIntoView();
                         return false;
@@ -295,7 +292,7 @@ function getListOrdersVTP(phone = '0966628989') {
             if (phone == null || phone == "" || !isVNPhone(phone)) return false;
 
             this.phone = phone;
-            setPhoneBook(this.id, this.phone);
+            phoneBook.set(this.id, this.phone);
             this.refreshInfo();
         }
         createOrder(){
@@ -313,7 +310,7 @@ function getListOrdersVTP(phone = '0966628989') {
 
                 // if(r.items.length){}
 
-                let numb = prompt("Danh sách địa chỉ:\n" + r.items.map((l, i) => `${i + 1}: ${l.addr.substring (0, 50) + '...'}`).join('\n') + "\n\nB1 - Chọn địa chỉ, hoặc nhập địa chỉ mới:", 1);
+                let numb = prompt("Danh sách địa chỉ:\n" + (!r.items.length ? 'Chưa có!' : r.items.map((l, i) => `${i + 1}/ ${l.addr.substring (0, 50) + '...'}`).join('\n')) + "\n\nB1 - Chọn địa chỉ, hoặc nhập địa chỉ mới:", 1);
 
                 if (numb == null) return false;
 
@@ -337,7 +334,6 @@ function getListOrdersVTP(phone = '0966628989') {
             })
         }
     }
-    //document.onmousemove = function(){
     document.onmouseup = function(){
         document.querySelectorAll('div.__fb-light-mode:not(.added)').forEach(function(e){
             e.classList.add('added');
