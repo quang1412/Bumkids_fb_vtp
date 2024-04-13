@@ -339,7 +339,8 @@ function getListOrdersVTP(phone = myPhone) {
 
                 url += '&price=' + (price*1000);
 
-                window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
+                window.childWin = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
+                window.childWin.focus();
 //                alert(url);
             }).catch(e => {
             }).finally(() => {
