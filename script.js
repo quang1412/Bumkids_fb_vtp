@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-04-12.2
+// @version      2024-04-12.1
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -131,6 +131,18 @@ function getListOrdersVTP(phone = myPhone) {
             // backup to server
         }
     }
+
+    const lastPrice = {
+        key: 'fb_lastPrice',
+        set: function(p){
+            GM_setValue(this.key, p);
+            return true;
+        },
+        get: function(){
+            return GM_getValue(this.key) || 1000;
+        }
+    }
+
 
     function phone2Recievers(phone = null) {
         return new Promise((resolve, reject) => {
@@ -318,10 +330,10 @@ function getListOrdersVTP(phone = myPhone) {
                 addr = r.items[numb - 1]?.addr || numb;
 
                 url += '&addr=' + addr;
-                let t = prompt("Địa chỉ: " + addr + "\n\nB2 - Nhập giá, phân tách bằng dấu cách để tính tổng (đv 1.000đ):", window.lastPrice || 1000);
+                let t = prompt("Địa chỉ: " + addr + "\n\nB2 - Nhập giá, phân tách bằng dấu cách để tính tổng (đv 1.000đ):", lastPrice.get());
                 if (t == null) { return false }
 
-                window.lastPrice = t;
+                lastPrice.set(t);
 
                 let price = t.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv), 0);
 
