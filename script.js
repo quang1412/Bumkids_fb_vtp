@@ -49,8 +49,6 @@ let vtp_deviceId, vtp_tokenKey, myPhone = '0966628989';
     } else {
         style.appendChild(document.createTextNode(css));
     }
-
-
 })();
 
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
@@ -355,6 +353,11 @@ function getListOrdersVTP(phone = myPhone) {
             s && new InfoCard(e);
         })
     }
+
+    window.addEventListener("beforeunload", function(e){
+        window.childWin && window.childWin.close();
+    });
+
 })();
 
 
