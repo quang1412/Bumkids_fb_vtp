@@ -323,19 +323,21 @@ function getListOrdersVTP(phone = myPhone) {
                 addr = r.items[numb - 1]?.addr || numb;
                 url += '&addr=' + addr;
 
-                let prdName = prompt("B2 - Nhập tên sản phẩm:", GM_getValue('fb_lastProductName') || 'Quần Áo - Trịnh Hiền Auth - Bumkids');
-                if(prdName == null || prdName == undefined) return false;
+                let prdList = ['Quần Áo - Trịnh Hiền Auth - Bumkids', 'My Pham - Trịnh Hiền Auth - Bumkids'];
+                let pl = prdList.map((p, i) => (i + 1) + '/ ' + p).join('\n');
+                var i = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Nhập tên sản phẩm:', 1);
+                let prdName = prdList[i - 1];
+                if(!prdName) return false;
                 url += '&prdName=' + prdName;
 
                 let itemsPrice = prompt("Địa chỉ: " + addr + "\nTên SP: " + prdName + "\n\nB3 - Nhập giá, phân tách bằng dấu cách để tính tổng (đv 1.000đ):", GM_getValue('fb_lastPrice') || 1000);
                 if (itemsPrice == null || itemsPrice == undefined) { return false }
                 let price = itemsPrice.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv), 0);
+                GM_setValue('fb_lastPrice', itemsPrice);
                 url += '&price=' + (price*1000);
 
                 window.childWin = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
                 window.childWin.focus();
-                GM_setValue('fb_lastProductName', prdName);
-                GM_setValue('fb_lastPrice', itemsPrice);
             }).catch(e => {
             }).finally(() => {
                 document.body.style.cursor = 'default';
