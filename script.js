@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-04-12.1
+// @version      2024-04-15-1
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -140,7 +140,6 @@ function getListOrdersVTP(phone = myPhone) {
             return GM_getValue(this.key) || 1000;
         }
     }
-
 
     function phone2Recievers(phone = null) {
         return new Promise((resolve, reject) => {
@@ -317,24 +316,22 @@ function getListOrdersVTP(phone = myPhone) {
                 console.log(r);
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
+
                 let addr = '';
-
-                // if(r.items.length){}
-
                 let numb = prompt("Danh sách địa chỉ:\n" + (!r.items.length ? 'Chưa có!' : r.items.map((l, i) => `${i + 1}/ ${l.addr.substring (0, 50) + '...'}`).join('\n')) + "\n\nB1 - Chọn địa chỉ, hoặc nhập địa chỉ mới:", 1);
-
-                if (numb == null) return false;
-
+                if (numb == null || numb == undefined) return false;
                 addr = r.items[numb - 1]?.addr || numb;
-
                 url += '&addr=' + addr;
-                let t = prompt("Địa chỉ: " + addr + "\n\nB2 - Nhập giá, phân tách bằng dấu cách để tính tổng (đv 1.000đ):", lastPrice.get());
-                if (t == null) { return false }
 
-                lastPrice.set(t);
+                let prdName = prompt("B2 - Nhập tên sản phẩm:", GM_getValue('fb_lastProductName') || 'Quần Áo - Trịnh Hiền Auth - Bumkids');
+                if(prdName == null || prdName == undefined) return false;
+                GM_setValue('fb_lastProductName', prdName);
+                url += '&prdName=' + prdName;
 
+                let t = prompt("Địa chỉ: " + addr + "\nTên SP: " + prdName + "\n\nB3 - Nhập giá, phân tách bằng dấu cách để tính tổng (đv 1.000đ):", GM_getValue('fb_lastPrice') || 1000);
+                if (t == null || t == undefined) { return false }
+                GM_setValue('fb_lastPrice', t)
                 let price = t.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv), 0);
-
                 url += '&price=' + (price*1000);
 
                 window.childWin = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
@@ -451,6 +448,7 @@ function getListOrdersVTP(phone = myPhone) {
             let addr = urlParams.get('addr');
             let name = urlParams.get('name');
             let price = urlParams.get('price');
+            let prdName = urlParams.get('prdName');
 
             window.document.body.classList.add('custom');
             let s = $('div.box-receiver');
@@ -469,7 +467,7 @@ function getListOrdersVTP(phone = myPhone) {
             adr.value = addr;
 
             let pn = document.querySelector('input#productName');
-            pn.value = 'Trịnh Hiền - Bumkids';
+            pn.value = prdName;
 
             let pr = document.querySelector('input#productPrice');
             pr.value = price;
