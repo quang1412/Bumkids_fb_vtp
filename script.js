@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-04-15-1
+// @version      2024-04-15-2
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -325,18 +325,17 @@ function getListOrdersVTP(phone = myPhone) {
 
                 let prdName = prompt("B2 - Nhập tên sản phẩm:", GM_getValue('fb_lastProductName') || 'Quần Áo - Trịnh Hiền Auth - Bumkids');
                 if(prdName == null || prdName == undefined) return false;
-                GM_setValue('fb_lastProductName', prdName);
                 url += '&prdName=' + prdName;
 
-                let t = prompt("Địa chỉ: " + addr + "\nTên SP: " + prdName + "\n\nB3 - Nhập giá, phân tách bằng dấu cách để tính tổng (đv 1.000đ):", GM_getValue('fb_lastPrice') || 1000);
-                if (t == null || t == undefined) { return false }
-                GM_setValue('fb_lastPrice', t)
-                let price = t.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv), 0);
+                let itemsPrice = prompt("Địa chỉ: " + addr + "\nTên SP: " + prdName + "\n\nB3 - Nhập giá, phân tách bằng dấu cách để tính tổng (đv 1.000đ):", GM_getValue('fb_lastPrice') || 1000);
+                if (itemsPrice == null || itemsPrice == undefined) { return false }
+                let price = itemsPrice.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv), 0);
                 url += '&price=' + (price*1000);
 
                 window.childWin = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
                 window.childWin.focus();
-//                alert(url);
+                GM_setValue('fb_lastProductName', prdName);
+                GM_setValue('fb_lastPrice', itemsPrice);
             }).catch(e => {
             }).finally(() => {
                 document.body.style.cursor = 'default';
