@@ -308,14 +308,20 @@ function getListOrdersVTP(phone = myPhone) {
                     d.scrollTop = 0;
                 })
                 this.container.querySelectorAll('div.__fb-light-mode[role="row"]:not(.scanned)').forEach( m => {
-                    let text = m.innerText.replaceAll(/(\W|\D)/g, '');
-                    console.log(text);
-                    let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/g);
+                    let text = m.innerText.replaceAll(/(\.|\,|\-|\s)/g, '');
+                    // let text = m.innerText;
+                    //console.log(text);
+                    let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
+                    // let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/g);
                     m.classList.add('scanned');
                     if(match && match[0] != myPhone){
                         stop();
                         m.style.cssText = "border: 2px dashed red; border-radius: 10px; overflow: hidden;";
-                        m.scrollIntoView( {block: "center", inline: "nearest"});
+                        for(let i = 0; i <= 10; i++){
+                            setTimeout(() => {
+                                m.scrollIntoView( {block: "center", inline: "nearest"});
+                            }, i * 200)
+                        }
                         return false;
                     }
                 })
