@@ -17,34 +17,28 @@ const myPhone = '0966628989';
 (function(){
     var css = `div.infoCard{
     font-weight: 500;
-
     color: darkblue;
     background-image: linear-gradient(240deg, #a1c4fd 0%, #c2e9fb 100%);
-    /* background-image: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%); */
-
-    /* backdrop-filter: blur(10px); */
-    /* background: radial-gradient(circle at 18.7% 37.8%, rgb(250, 250, 250) 0%, rgb(225, 234, 238) 90%); */
     position: absolute;
-    bottom: calc(100% + 3px);
+    bottom: calc(100% + 8px);
     left: 10px;
     min-width: 250px;
     min-height: 20px;
-    border: 1.5px solid #dedede;
+    border: 1px solid #fff;
     border-radius: 8px;
-    padding: 5px;
+    padding: 8px;
     box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1);
     }
+
     div.infoCard div.toolBar {
     text-align: center;
     background-color: rgb(245 245 245 / 60%);
     border-radius: 6px;
-    border: 1px solid #dedede;
-    padding: 5px;
     display: flex;
     justify-content: space-around;
     }
 
-    div.toolBar a { flex: 1; }
+    div.toolBar a { padding: 5px; flex: 1; }
     div.toolBar:hover a:not(:hover) { opacity: .5; }
 
     div.hasPhoneNum {
@@ -307,7 +301,6 @@ function getListOrdersVTP(phone = myPhone) {
             this.searchBtn = document.createElement('a');
             this.searchBtn.innerText = 'Tìm sđt';
             this.searchBtn.style.color = 'blue';
-            this.searchBtn.style['min-width'] = '48px';
             this.searchBtn.onclick = () => { this.phoneSearching() };
 
             let btn_2 = document.createElement('a');
@@ -423,7 +416,7 @@ function getListOrdersVTP(phone = myPhone) {
                 url += '&addr=' + addr;
 
                 let pl = prdList.map((p, i) => (i + 1) + '/ ' + p).join('\n');
-                var i = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Nhập tên sản phẩm:', 1);
+                var i = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn tên sản phẩm:', 1);
                 let prdName = prdList[i - 1];
                 if(!prdName) return false;
                 url += '&prdName=' + prdName;
