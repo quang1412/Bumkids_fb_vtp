@@ -24,7 +24,7 @@ const myPhone = '0966628989';
     left: 10px;
     min-width: 250px;
     min-height: 20px;
-    border: 1px solid #fff;
+    border: 2px solid #fff;
     border-radius: 8px;
     padding: 8px;
     box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1);
