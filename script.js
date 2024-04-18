@@ -7,9 +7,9 @@
 // @match        https://viettelpost.vn/*
 // @match        https://www.facebook.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
-// @grant       GM_setValue
-// @grant       GM_getValue
-// @grant       GM_xmlhttpRequest
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_xmlhttpRequest
 
 // ==/UserScript==
 let vtp_deviceId, vtp_tokenKey, myPhone = '0966628989';
@@ -27,7 +27,8 @@ let vtp_deviceId, vtp_tokenKey, myPhone = '0966628989';
     border: 1.5px solid #dedede;
     border-radius: 8px;
     padding: 5px;
-    /* background: radial-gradient(circle at 18.7% 37.8%, rgb(250, 250, 250) 0%, rgb(225, 234, 238) 90%); */}
+    /* background: radial-gradient(circle at 18.7% 37.8%, rgb(250, 250, 250) 0%, rgb(225, 234, 238) 90%); */
+    }
 
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
     body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
@@ -114,19 +115,19 @@ function getListOrdersVTP(phone = myPhone) {
 
     const phoneBook = {
         key: 'fb_phoneBook',
-        get: function(id = 0){
+        get: function(id){
             let pb = GM_getValue(this.key);
             //console.log(pb)
             return pb[id];
         },
-        set: function(id = 0, phone = 0){
+        set: function(id, phone){
             let pb = GM_getValue(this.key) || {};
             pb[id] = phone;
             GM_setValue(this.key, pb);
-            this.save(id, phone);
+            this.upload(id, phone);
             return true;
         },
-        save: function(id, phone){
+        upload: function(id, phone){
             GM_xmlhttpRequest({
                 url:  "https://bumluxury.com/bumkids/fid2phone.php",
                 method: "POST",
@@ -141,27 +142,33 @@ function getListOrdersVTP(phone = myPhone) {
         },
         sync: function(){
             let pb = GM_getValue(this.key);
+            if(pb) {
+                console.log('phoneBook available', pb);
+                return false;
+            }
+
             return new Promise((resolve, reject) => {
-                if(pb) return reject();
                 GM_xmlhttpRequest({
                     url:  "https://bumluxury.com/bumkids/fid2phone.php",
                     method: "GET",
                     responseType: 'json',
                     onload: function (response) {
-                        pb = response.response;
-                        return resolve(pb);
+                        return resolve(response.response);
                     },
                     onerror: function(reponse) {
-                        console.log("error: ", reponse);
-                        return resolve(pb);
-                        alert('Phonebook error: ' + reponse);
+                        return reject(reponse);
                     }
                 })
-            }).then(pb => {
-                console.log('phoneBook downloaded', pb);
-                GM_setValue(this.key, pb);
+            }).then(json => {
+                pb = json;
+                console.log('Phone Book downloaded', json);
             }).catch(e => {
-                console.log('phoneBook available', pb);
+                pb = new Object();
+                console.log("error: ", e.message);
+                alert('Phonebook error: ' + e.message);
+                console.log('Phone Book unavailable!');
+            }).then(() => {
+                GM_setValue(this.key, pb);
             })
         }
     }
@@ -278,7 +285,7 @@ function getListOrdersVTP(phone = myPhone) {
             }
         }
         refreshInfo(){
-            this.infoList.innerHTML = '<tr><td colspan="2" style="text-align:center;">Đang cập nhật...</td></tr>';
+            this.infoList.innerHTML = '<tr><td colspan="2" style="text-align:center;">Đang tải...</td></tr>';
             getListOrdersVTP(this.phone).then(orders => {
                 this.penddingOrders = orders.data.totalElements;
                 return getDeliveryRate(this.phone);
