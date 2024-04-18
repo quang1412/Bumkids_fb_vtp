@@ -12,7 +12,7 @@
 // @grant        GM_xmlhttpRequest
 
 // ==/UserScript==
-let vtp_deviceId, vtp_tokenKey, myPhone = '0966628989';
+const myPhone = '0966628989';
 
 (function(){
     var css = `div.infoCard{
@@ -29,7 +29,7 @@ let vtp_deviceId, vtp_tokenKey, myPhone = '0966628989';
     border-radius: 8px;
     padding: 5px;
     }
-    div.hasPhoneNo {border: 2px dashed red; border-radius: 10px; overflow: hidden;}
+    div.hasPhoneNo {border: 2px dashed red; border-radius: 10px; overflow: hidden; margin-bottom: 5px;}
 
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
     body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
@@ -55,6 +55,20 @@ let vtp_deviceId, vtp_tokenKey, myPhone = '0966628989';
 
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 
+// let eeeee = new MouseEvent('mouseover', { 'view': window, 'bubbles': true, 'cancelable': true});
+
+function customEvent(n){
+    if(n == 'mouseover'){
+        let event = new MouseEvent('mouseover', { 'bubbles': true, 'cancelable': true});
+     //   let event = new MouseEvent('mouseover', { 'view': window, 'bubbles': true, 'cancelable': true});
+        return event;
+    } else {
+        let event = document.createEvent('Event');
+        event.initEvent(n, true, false);
+        return event;
+    }
+}
+
 function getFormatedDate(i = 0) {
     const today = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
     const yyyy = today.getFullYear();
@@ -69,13 +83,16 @@ function getFormatedDate(i = 0) {
 function getListOrdersVTP(phone = myPhone) {
     return new Promise((resolve, reject) => {
         if(!phone) return reject('Chưa có sdt');
-        if (!vtp_tokenKey || !vtp_deviceId) return reject('Lỗi Viettel Post');
+
+        let dvId = GM_getValue('vtp_deviceId');
+        let token = GM_getValue('vtp_tokenKey');
+        if (!token || !dvId) return reject('Lỗi Viettel Post');
 
         GM_xmlhttpRequest({
             url:  "https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2",
             method: "POST",
             headers: {
-                'Token': vtp_tokenKey,
+                'Token': token,
                 "Content-Type": "application/json;charset=UTF-8",
             },
             data: JSON.stringify({
@@ -90,7 +107,7 @@ function getListOrdersVTP(phone = myPhone) {
                 "IS_FAST_DELIVERY": false,
                 "REASON_RETURN": null,
                 "ORDER_STATUS": "-108,100,102,103,104,-100",
-                "deviceId": vtp_deviceId
+                "deviceId": dvId
             }),
             onload: function (response) {
                 console.log (
@@ -111,8 +128,14 @@ function getListOrdersVTP(phone = myPhone) {
 (function() {
     if(window.location.href.indexOf('facebook') == -1) return;
 
-    vtp_deviceId = GM_getValue('vtp_deviceId');
-    vtp_tokenKey = GM_getValue('vtp_tokenKey');
+    const prdList = [
+        'Quần Áo - Trịnh Hiền Auth - Bumkids',
+        'Mỹ Phẩm - Trịnh Hiền Auth - Bumkids',
+        'Túi xách - Trịnh Hiền Auth - Bumkids',
+        'Mũ - Trịnh Hiền Auth - Bumkids',
+        'Kính - Trịnh Hiền Auth - Bumkids',
+        'Giày dép - Trịnh Hiền Auth - Bumkids'
+    ];
 
     const phoneBook = {
         key: 'fb_phoneBook',
@@ -178,12 +201,14 @@ function getListOrdersVTP(phone = myPhone) {
     function phone2Recievers(phone = null) {
         return new Promise((resolve, reject) => {
             if(!phone) return reject('chưa có sdt');
-            if (!vtp_tokenKey || !vtp_deviceId) return reject('Lỗi 0012');
+
+            let token = GM_getValue('vtp_tokenKey');
+            if (!token) return reject('Lỗi 0012');
 
             GM_xmlhttpRequest({
-            method: "GET",
+                method: "GET",
                 headers: {
-                    'Authorization': 'Bearer ' + vtp_tokenKey
+                    'Authorization': 'Bearer ' + token
                 },
                 url:  "https://io.okd.viettelpost.vn/order/v1.0/receiver/_suggest?q=" + phone,
                 onload: function (response) {
@@ -205,12 +230,14 @@ function getListOrdersVTP(phone = myPhone) {
     function getDeliveryRate(phone){
         return new Promise((resolve, reject) => {
             if(!phone) return reject('Chưa có sdt');
-            if (!vtp_tokenKey || !vtp_deviceId) return reject('Lỗi viettel');
+
+            let token = GM_getValue('vtp_tokenKey');
+            if (!token) return reject('Lỗi viettel');
 
             GM_xmlhttpRequest({
             method: "GET",
                 headers: {
-                    'Authorization': 'Bearer ' + vtp_tokenKey
+                    'Authorization': 'Bearer ' + token
                 },
                 url:  "https://io.okd.viettelpost.vn/order/v1.0/kyc/" + phone,
                 onload: function (response) {
@@ -325,9 +352,12 @@ function getListOrdersVTP(phone = myPhone) {
                     if(match && !~match.indexOf(myPhone)){
                         stop();
                         m.classList.add('hasPhoneNo');
+                        m.dispatchEvent(customEvent('mouseover'));
+
                         for(let i = 0; i <= 10; i++){
                             setTimeout(() => {
                                 m.scrollIntoView( {block: "center", inline: "nearest"});
+                                m.querySelector('div[aria-haspopup="menu"][role="button"][aria-label="Xem thêm"]:not([aria-expanded="true"])')?.click();
                             }, i * 100)
                         }
                         break;
@@ -349,12 +379,11 @@ function getListOrdersVTP(phone = myPhone) {
             if(this.penddingOrders) return alert('❌ Có đơn chờ giao');
 
             document.body.style.cursor = 'wait';
+            let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
 
             phone2Recievers(this.phone).then(r => {
 
                 console.log(r);
-
-                let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
 
                 let addr = '';
                 let numb = prompt("Danh sách địa chỉ:\n" + (!r.items.length ? '❌ Chưa có!' : r.items.map((l, i) => `${i + 1}/ ${l.addr.substring (0, 50) + '...'}`).join('\n')) + "\n\nB1 - Chọn địa chỉ, hoặc nhập địa chỉ mới:", 1);
@@ -362,12 +391,6 @@ function getListOrdersVTP(phone = myPhone) {
                 addr = r.items[numb - 1]?.addr || numb;
                 url += '&addr=' + addr;
 
-                let prdList = ['Quần Áo - Trịnh Hiền Auth - Bumkids',
-                               'Mỹ Phẩm - Trịnh Hiền Auth - Bumkids',
-                               'Túi xách - Trịnh Hiền Auth - Bumkids',
-                               'Mũ - Trịnh Hiền Auth - Bumkids',
-                               'Kính - Trịnh Hiền Auth - Bumkids',
-                               'Giày dép - Trịnh Hiền Auth - Bumkids'];
                 let pl = prdList.map((p, i) => (i + 1) + '/ ' + p).join('\n');
                 var i = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Nhập tên sản phẩm:', 1);
                 let prdName = prdList[i - 1];
@@ -407,18 +430,10 @@ function getListOrdersVTP(phone = myPhone) {
 (function($) {
     if(window.location.href.indexOf('viettelpost') == -1) return;
 
-    vtp_deviceId = window.localStorage.deviceId;
-    vtp_tokenKey = vtp_deviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
-
-    GM_setValue('vtp_deviceId', vtp_deviceId);
-    GM_setValue('vtp_tokenKey', vtp_tokenKey);
-
-    function customEvent(n){
-        let event = document.createEvent('Event');
-        event.initEvent(n, true, false);
-        return event;
-    }
-
+    let dvId = window.localStorage.deviceId;
+    let token = dvId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
+    GM_setValue('vtp_deviceId', dvId);
+    GM_setValue('vtp_tokenKey', token);
 
     $(document).ready(async function(){
         if(window.location.href.indexOf('/order/tao-don-le') == -1) return;
