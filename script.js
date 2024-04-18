@@ -30,6 +30,19 @@ const myPhone = '0966628989';
     box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1);
     }
 
+    div.infoCard:after {
+    content: '';
+    position: absolute;
+    left: 4%;
+    top: 101%;
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 6px solid #fff;
+    clear: both;
+    }
+
     div.infoCard div.toolBar {
     text-align: center;
     background-color: rgb(245 245 245 / 60%);
@@ -436,13 +449,22 @@ function getListOrdersVTP(phone = myPhone) {
             })
         }
     }
-    document.onmouseup = function(){
+    document.onmouseup = async function(){
+        await new Promise(resolve => { setTimeout(_ => resolve(), 1000) });
+
         document.querySelectorAll('div.__fb-light-mode:not(.added)').forEach(function(e){
             e.classList.add('added');
             let s = e.querySelector('div[aria-label="Cài đặt chat"]');
             s && new InfoCard(e);
         })
     }
+
+
+    document.onkeyup = (function(e) {
+        if (e.key === "Escape") { // escape key maps to keycode `27`
+            document.querySelectorAll('div[aria-label="Đóng đoạn chat"]').forEach(e => e.click());
+        }
+    });
 
     window.addEventListener("beforeunload", function(e){
         window.childWin && window.childWin.close();
