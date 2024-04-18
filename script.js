@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-04-18-1
+// @version      2024-04-18-2
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
 // @match        https://www.facebook.com/*
-// @icon         https://avatars.githubusercontent.com/u/22832798?v=4&size=40
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 // @grant       GM_setValue
 // @grant       GM_getValue
 // @grant       GM_xmlhttpRequest
@@ -304,33 +304,31 @@ function getListOrdersVTP(phone = myPhone) {
             if(this.searchLoop){ return stop(); }
 
             this.searchLoop = setInterval(() => {
-                this.container.querySelectorAll('div').forEach(d => {
-                    d.scrollTop = 0;
-                })
-                this.container.querySelectorAll('div.__fb-light-mode[role="row"]:not(.scanned)').forEach( m => {
+                this.container.querySelectorAll('div').forEach(d => { d.scrollTop = 0 });
+                let nodes = this.container.querySelectorAll('div.__fb-light-mode[role="row"]:not(.scanned)');
+                for(let i = 1; i < nodes.length; i++){
+                    let m = nodes[nodes.length - i];
                     let text = m.innerText.replaceAll(/(\.|\,|\-|\s)/g, '');
-                    // let text = m.innerText;
-                    //console.log(text);
                     let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
-                    // let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/g);
                     m.classList.add('scanned');
-                    if(match && match[0] != myPhone){
+
+                    if(match && !~match.indexOf(myPhone)){
                         stop();
                         m.style.cssText = "border: 2px dashed red; border-radius: 10px; overflow: hidden;";
                         for(let i = 0; i <= 10; i++){
                             setTimeout(() => {
                                 m.scrollIntoView( {block: "center", inline: "nearest"});
-                            }, i * 200)
+                            }, i * 100)
                         }
-                        return false;
+                        break;
                     }
-                })
+                }
             }, 500);
             this.searchBtn.innerText = 'Stop.';
         }
         setPhone(phone = window.prompt("Nhập sđt cho " + this.name, "")){
             if (phone == null || phone == "" || !isVNPhone(phone)) return false;
-            if (! confirm("Xác nhận đổi sdt cho " + this.name + " thành " + phone + "?")) return false;
+            if (! confirm("Xác nhận đổi sdt cho " + this.name + " => " + phone + "?")) return false;
 
             this.phone = phone;
             phoneBook.set(this.id, this.phone);
