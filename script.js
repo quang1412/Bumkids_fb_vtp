@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-04-15-2
+// @version      2024-04-18-1
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -34,7 +34,7 @@ let vtp_deviceId, vtp_tokenKey, myPhone = '0966628989';
     body.vt-post.custom div.box-receiver div.card-body { max-height: 310px; overflow: auto; }
     body.vt-post.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}
     body.vt-post.custom button {text-wrap: nowrap;}
-    body.vt-post.custom div.box-receiver div.card-body group small {color: red !important;}
+    body.vt-post.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}
     body.vt-post.custom #content {width: 100% !important; margin-left: 0;}`,
 
         head = document.head || document.getElementsByTagName('head')[0],
@@ -115,20 +115,57 @@ function getListOrdersVTP(phone = myPhone) {
     const phoneBook = {
         key: 'fb_phoneBook',
         get: function(id = 0){
-            let pb = GM_getValue(this.key) || {};
+            let pb = GM_getValue(this.key);
+            //console.log(pb)
             return pb[id];
         },
         set: function(id = 0, phone = 0){
             let pb = GM_getValue(this.key) || {};
             pb[id] = phone;
             GM_setValue(this.key, pb);
-            this.save();
+            this.save(id, phone);
             return true;
         },
-        save: function(){
-            // backup to server
+        save: function(id, phone){
+            GM_xmlhttpRequest({
+                url:  "https://bumluxury.com/bumkids/fid2phone.php",
+                method: "POST",
+                headers: { "Content-Type": "application/json;charset=UTF-8" },
+                data: JSON.stringify({ "fid": id, "phone": phone }),
+                onload: function (response) { },
+                onerror: function(reponse) {
+                    console.log("error: ", reponse);
+                    return alert('Phonebook error: ' + reponse)
+                }
+            })
+        },
+        sync: function(){
+            let pb = GM_getValue(this.key);
+            return new Promise((resolve, reject) => {
+                if(pb) return reject();
+                GM_xmlhttpRequest({
+                    url:  "https://bumluxury.com/bumkids/fid2phone.php",
+                    method: "GET",
+                    responseType: 'json',
+                    onload: function (response) {
+                        pb = response.response;
+                        return resolve(pb);
+                    },
+                    onerror: function(reponse) {
+                        console.log("error: ", reponse);
+                        return resolve(pb);
+                        alert('Phonebook error: ' + reponse);
+                    }
+                })
+            }).then(pb => {
+                console.log('phoneBook downloaded', pb);
+                GM_setValue(this.key, pb);
+            }).catch(e => {
+                console.log('phoneBook available', pb);
+            })
         }
     }
+    phoneBook.sync();
 
     const lastPrice = {
         key: 'fb_lastPrice',
@@ -198,20 +235,22 @@ function getListOrdersVTP(phone = myPhone) {
     class InfoCard{
         constructor(container){
             this.container = container;
-            this.card = document.createElement('div');
-            this.card.classList = 'infoCard';
 
             let h = container.querySelector('a[aria-label][href][role="link"]');
             this.name = h.getAttribute('aria-label');
             this.id = h.getAttribute('href').replaceAll('\/', '');
 
+            if(!this.id || !this.name){
+                this.container.classList.remove('added');
+                return false;
+            }
+
+            this.card = document.createElement('div');
+            this.card.classList = 'infoCard';
+
             this.phone = phoneBook.get(this.id);
             this.penddingOrders = 0;
             this.deliveryRate = 0;
-
-            if(!this.id || !this.name){
-                return this.container.classList.remove('added');
-            }
 
             this.infoList = document.createElement('table');
             this.infoList.setAttribute('style', 'padding-bottom: 5px;');
@@ -250,23 +289,19 @@ function getListOrdersVTP(phone = myPhone) {
             }
         }
         refreshInfo(){
-           // await phone2Recievers(this.phone)
-            this.infoList.innerHTML = '<tr><td colspan="2" style="text-align:center;">Updating...</td></tr>';
-
+            this.infoList.innerHTML = '<tr><td colspan="2" style="text-align:center;">Đang cập nhật...</td></tr>';
             getListOrdersVTP(this.phone).then(orders => {
-                console.log(orders);
                 this.penddingOrders = orders.data.totalElements;
                 return getDeliveryRate(this.phone);
             }).then(rate => {
-                console.log(rate)
-                this.deliveryRate = rate.deliveryRate != -1 ? (rate.deliveryRate * 100).toFixed(2) + '% (' + rate.order501 + '/' + rate.totalOrder + ')' : 'Chưa có.';
+                this.deliveryRate = rate?.deliveryRate != -1 ? (rate.deliveryRate * 100).toFixed(2) + '% (' + rate.order501 + '/' + rate.totalOrder + ')' : 'Chưa có.';
             }).catch(e => {
                 this.penddingOrders = e.message;
                 this.deliveryRate = e.message;
             }).finally(() => {
                 this.infoList.innerHTML = `<tr><td>Sdt:</td><td> ${this.phone || '---'}</td></tr>
                 <tr><td>Uy tín:</td><td> ${this.deliveryRate || '---'}</td></tr>
-                <tr><td>Đơn giữ:</td><td> ${this.penddingOrders ? 'Có.' : 'Không.'}`;
+                <tr><td>Đơn giữ:</td><td> ${this.penddingOrders ? 'Có' : 'Không'}`;
             })
         }
         phoneSearching(){
@@ -298,8 +333,8 @@ function getListOrdersVTP(phone = myPhone) {
             this.searchBtn.innerText = 'Stop.';
         }
         setPhone(phone = window.prompt("Nhập sđt cho " + this.name, "")){
-
             if (phone == null || phone == "" || !isVNPhone(phone)) return false;
+            if (! confirm("Xác nhận đổi sdt cho " + this.name + " thành " + phone + "?")) return false;
 
             this.phone = phone;
             phoneBook.set(this.id, this.phone);
@@ -318,12 +353,17 @@ function getListOrdersVTP(phone = myPhone) {
                 let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
 
                 let addr = '';
-                let numb = prompt("Danh sách địa chỉ:\n" + (!r.items.length ? 'Chưa có!' : r.items.map((l, i) => `${i + 1}/ ${l.addr.substring (0, 50) + '...'}`).join('\n')) + "\n\nB1 - Chọn địa chỉ, hoặc nhập địa chỉ mới:", 1);
+                let numb = prompt("Danh sách địa chỉ:\n" + (!r.items.length ? '❌ Chưa có!' : r.items.map((l, i) => `${i + 1}/ ${l.addr.substring (0, 50) + '...'}`).join('\n')) + "\n\nB1 - Chọn địa chỉ, hoặc nhập địa chỉ mới:", 1);
                 if (numb == null || numb == undefined) return false;
                 addr = r.items[numb - 1]?.addr || numb;
                 url += '&addr=' + addr;
 
-                let prdList = ['Quần Áo - Trịnh Hiền Auth - Bumkids', 'My Pham - Trịnh Hiền Auth - Bumkids'];
+                let prdList = ['Quần Áo - Trịnh Hiền Auth - Bumkids',
+                               'Mỹ Phẩm - Trịnh Hiền Auth - Bumkids',
+                               'Túi xách - Trịnh Hiền Auth - Bumkids',
+                               'Mũ - Trịnh Hiền Auth - Bumkids',
+                               'Kính - Trịnh Hiền Auth - Bumkids',
+                               'Giày dép - Trịnh Hiền Auth - Bumkids'];
                 let pl = prdList.map((p, i) => (i + 1) + '/ ' + p).join('\n');
                 var i = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Nhập tên sản phẩm:', 1);
                 let prdName = prdList[i - 1];
@@ -332,7 +372,7 @@ function getListOrdersVTP(phone = myPhone) {
 
                 let itemsPrice = prompt("Địa chỉ: " + addr + "\nTên SP: " + prdName + "\n\nB3 - Nhập giá, phân tách bằng dấu cách để tính tổng (đv 1.000đ):", GM_getValue('fb_lastPrice') || 1000);
                 if (itemsPrice == null || itemsPrice == undefined) { return false }
-                let price = itemsPrice.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv), 0);
+                let price = itemsPrice.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
                 GM_setValue('fb_lastPrice', itemsPrice);
                 url += '&price=' + (price*1000);
 
@@ -403,7 +443,6 @@ function getListOrdersVTP(phone = myPhone) {
             });
 
             this.dispatchEvent(customEvent('input'));
-  //          this.dispatchEvent(customEvent('change'));
         });
 
         function updateCOD(price, fee){
@@ -424,13 +463,6 @@ function getListOrdersVTP(phone = myPhone) {
             let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
 
             fee && updateCOD(price, fee);
-
-            /*
-            let no = document.querySelector('input#orderNo');
-            no.value = Math.floor(Math.random() * (9999999999 - 1000000000 + 1) + 1000000000);
-            no.dispatchEvent(customEvent('input'));
-            no.dispatchEvent(customEvent('change'));
-            */
         });
 
         $(document).keyup(function(e) {
