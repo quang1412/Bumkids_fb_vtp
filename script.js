@@ -167,17 +167,6 @@ function getListOrdersVTP(phone = myPhone) {
     }
     phoneBook.sync();
 
-    const lastPrice = {
-        key: 'fb_lastPrice',
-        set: function(p){
-            GM_setValue(this.key, p);
-            return true;
-        },
-        get: function(){
-            return GM_getValue(this.key) || 1000;
-        }
-    }
-
     function phone2Recievers(phone = null) {
         return new Promise((resolve, reject) => {
             if(!phone) return reject('chưa có sdt');
@@ -321,7 +310,7 @@ function getListOrdersVTP(phone = myPhone) {
                 this.container.querySelectorAll('div.__fb-light-mode[role="row"]:not(.scanned)').forEach( m => {
                     let text = m.innerText.replaceAll(/(\W|\D)/g, '');
                     console.log(text);
-                    let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/s);
+                    let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/g);
                     m.classList.add('scanned');
                     if(match && match[0] != myPhone){
                         stop();
