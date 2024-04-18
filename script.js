@@ -16,9 +16,13 @@ const myPhone = '0966628989';
 
 (function(){
     var css = `div.infoCard{
-    color: darkblue;
     font-weight: 500;
-    background-image: linear-gradient(-20deg, #e9defa 0%, #fbfcdb 100%);
+
+    color: darkblue;
+    background-image: linear-gradient(240deg, #a1c4fd 0%, #c2e9fb 100%);
+    /* background-image: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%); */
+
+    /* backdrop-filter: blur(10px); */
     /* background: radial-gradient(circle at 18.7% 37.8%, rgb(250, 250, 250) 0%, rgb(225, 234, 238) 90%); */
     position: absolute;
     bottom: calc(100% + 3px);
@@ -28,8 +32,27 @@ const myPhone = '0966628989';
     border: 1.5px solid #dedede;
     border-radius: 8px;
     padding: 5px;
+    box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1);
     }
-    div.hasPhoneNum {border: 2px dashed red; border-radius: 10px; overflow: hidden; margin-bottom: 5px;}
+    div.infoCard div.toolBar {
+    text-align: center;
+    background-color: rgb(245 245 245 / 60%);
+    border-radius: 6px;
+    border: 1px solid #dedede;
+    padding: 5px;
+    display: flex;
+    justify-content: space-around;
+    }
+
+    div.toolBar a { flex: 1; }
+    div.toolBar:hover a:not(:hover) { opacity: .5; }
+
+    div.hasPhoneNum {
+    border: 2px dashed red;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 5px;
+    }
 
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
     body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
@@ -284,22 +307,21 @@ function getListOrdersVTP(phone = myPhone) {
             this.searchBtn = document.createElement('a');
             this.searchBtn.innerText = 'Tìm sđt';
             this.searchBtn.style.color = 'blue';
+            this.searchBtn.style['min-width'] = '48px';
             this.searchBtn.onclick = () => { this.phoneSearching() };
 
             let btn_2 = document.createElement('a');
             btn_2.innerText = 'Sửa sđt';
             btn_2.style.color = 'red';
-            btn_2.style['margin-left'] = '10px';
             btn_2.onclick = () => { this.setPhone() };
 
             let btn_3 = document.createElement('a');
             btn_3.innerText = 'Tạo đơn';
             btn_3.style.color = 'green';
-            btn_3.style['margin-left'] = '10px';
             btn_3.onclick = () => { this.createOrder() };
 
             let toolBar = document.createElement('div');
-            toolBar.setAttribute('style', 'padding-top: 5px; border-top: 1px solid #dedede;');
+            toolBar.classList.add('toolBar');
 
             toolBar.append(this.searchBtn, btn_2, btn_3);
             this.card.append(this.infoList, toolBar);
@@ -328,14 +350,14 @@ function getListOrdersVTP(phone = myPhone) {
             }).finally(() => {
                 this.infoList.innerHTML = `<tr><td>Sdt:</td><td> ${this.phone || '---'}</td></tr>
                 <tr><td>Uy tín:</td><td> ${this.deliveryRate || '---'}</td></tr>
-                <tr><td>Đơn giữ:</td><td> ${this.penddingOrders ? 'Có' : 'Không'}`;
+                <tr><td>Đơn giữ:</td><td> ${this.penddingOrders ? 'Có ❌❌❌' : 'Không'}`;
             })
         }
         phoneSearching(){
             let stop = () => {
                 window.clearInterval(this.searchLoop);
                 this.searchLoop = 0;
-                this.searchBtn.innerText = 'Tìm sđt!';
+                this.searchBtn.innerText = 'Tìm sđt';
                 return;
             }
 
@@ -373,8 +395,8 @@ function getListOrdersVTP(phone = myPhone) {
             }, 500);
             this.searchBtn.innerText = 'Dừng';
         }
-        setPhone(phone = window.prompt("Nhập sđt cho " + this.name, "")){
-            if (phone == null || phone == "" || !isVNPhone(phone)) return false;
+        setPhone(phone = window.prompt("Nhập sđt cho " + this.name, this.phone)){
+            if (phone == null || phone == "" || phone == this.phone || !isVNPhone(phone)) return false;
 1
             this.phone = phone;
             phoneBook.set(this.id, this.phone);
