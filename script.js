@@ -6,7 +6,7 @@
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
 // @match        https://www.facebook.com/*
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
+// @icon         https://avatars.githubusercontent.com/u/22832798?v=4&size=40
 // @grant       GM_setValue
 // @grant       GM_getValue
 // @grant       GM_xmlhttpRequest
