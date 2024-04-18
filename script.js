@@ -314,7 +314,8 @@ function getListOrdersVTP(phone = myPhone) {
                     m.classList.add('scanned');
                     if(match && match[0] != myPhone){
                         stop();
-                        m.scrollIntoView();
+                        m.style.cssText = "border: 2px dashed red; border-radius: 10px; overflow: hidden;";
+                        m.scrollIntoView( {block: "center", inline: "nearest"});
                         return false;
                     }
                 })
