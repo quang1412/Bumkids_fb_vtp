@@ -29,7 +29,7 @@ const myPhone = '0966628989';
     border-radius: 8px;
     padding: 5px;
     }
-    div.hasPhoneNo {border: 2px dashed red; border-radius: 10px; overflow: hidden; margin-bottom: 5px;}
+    div.hasPhoneNum {border: 2px dashed red; border-radius: 10px; overflow: hidden; margin-bottom: 5px;}
 
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
     body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
@@ -141,7 +141,6 @@ function getListOrdersVTP(phone = myPhone) {
         key: 'fb_phoneBook',
         get: function(id){
             let pb = GM_getValue(this.key);
-            //console.log(pb)
             return pb[id];
         },
         set: function(id, phone){
@@ -170,7 +169,6 @@ function getListOrdersVTP(phone = myPhone) {
                 console.log('phoneBook available', pb);
                 return false;
             }
-
             return new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
                     url:  "https://bumluxury.com/bumkids/fid2phone.php",
@@ -311,7 +309,10 @@ function getListOrdersVTP(phone = myPhone) {
             this.container.onmouseup = () => {
                 if(!window.getSelection) return;
                 let phone = window.getSelection().toString().replaceAll(/\D/g,'');
-                if(isVNPhone(phone) && phone != this.phone && phone != myPhone) return this.setPhone(phone);
+                if(!isVNPhone(phone) || phone == this.phone || phone == myPhone) return false;
+                if (! confirm("Xác nhận đổi sdt cho " + this.name + " => " + phone + "?")) return false;
+
+                this.setPhone(phone);
             }
         }
         refreshInfo(){
@@ -356,7 +357,7 @@ function getListOrdersVTP(phone = myPhone) {
                     let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
                     if(!match || !!~match.indexOf(myPhone)){ continue; }
 
-                    m.classList.add('hasPhoneNo');
+                    m.classList.add('hasPhoneNum');
                     m.dispatchEvent(customEvent('mouseover'));
 
                     for(let i = 0; i <= 10; i++){
@@ -370,12 +371,11 @@ function getListOrdersVTP(phone = myPhone) {
                     break;
                 }
             }, 500);
-            this.searchBtn.innerText = 'Stop.';
+            this.searchBtn.innerText = 'Dừng';
         }
         setPhone(phone = window.prompt("Nhập sđt cho " + this.name, "")){
             if (phone == null || phone == "" || !isVNPhone(phone)) return false;
-            if (! confirm("Xác nhận đổi sdt cho " + this.name + " => " + phone + "?")) return false;
-
+1
             this.phone = phone;
             phoneBook.set(this.id, this.phone);
             this.refreshInfo();
