@@ -15,10 +15,11 @@
 let vtp_deviceId, vtp_tokenKey, myPhone = '0966628989';
 
 (function(){
-    var css = `.infoCard{
+    var css = `div.infoCard{
     color: darkblue;
     font-weight: 500;
     background-image: linear-gradient(-20deg, #e9defa 0%, #fbfcdb 100%);
+    /* background: radial-gradient(circle at 18.7% 37.8%, rgb(250, 250, 250) 0%, rgb(225, 234, 238) 90%); */
     position: absolute;
     bottom: calc(100% + 3px);
     left: 10px;
@@ -27,8 +28,8 @@ let vtp_deviceId, vtp_tokenKey, myPhone = '0966628989';
     border: 1.5px solid #dedede;
     border-radius: 8px;
     padding: 5px;
-    /* background: radial-gradient(circle at 18.7% 37.8%, rgb(250, 250, 250) 0%, rgb(225, 234, 238) 90%); */
     }
+    div.hasPhoneNo {border: 2px dashed red; border-radius: 10px; overflow: hidden;}
 
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
     body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
@@ -235,14 +236,17 @@ function getListOrdersVTP(phone = myPhone) {
             let h = container.querySelector('a[aria-label][href][role="link"]');
             this.name = h.getAttribute('aria-label');
             this.id = h.getAttribute('href').replaceAll('\/', '');
+            let imgElem = h.querySelector('img[src*="https"]');
+            let imgSrc = imgElem?.getAttribute('src');
 
-            if(!this.id || !this.name){
+            if(!this.id || !this.name || !imgSrc){
                 this.container.classList.remove('added');
                 return false;
             }
 
             this.card = document.createElement('div');
             this.card.classList = 'infoCard';
+            // this.card.style['background-image'] = `url(${imgSrc})`;
 
             this.phone = phoneBook.get(this.id);
             this.penddingOrders = 0;
@@ -280,8 +284,7 @@ function getListOrdersVTP(phone = myPhone) {
             this.container.onmouseup = () => {
                 if(!window.getSelection) return;
                 let phone = window.getSelection().toString().replaceAll(/\D/g,'');
-                if(!isVNPhone(phone) || phone == this.phone || phone == myPhone) return;
-                this.setPhone(phone);
+                if(isVNPhone(phone) && phone != this.phone && phone != myPhone) return this.setPhone(phone);
             }
         }
         refreshInfo(){
@@ -321,7 +324,7 @@ function getListOrdersVTP(phone = myPhone) {
 
                     if(match && !~match.indexOf(myPhone)){
                         stop();
-                        m.style.cssText = "border: 2px dashed red; border-radius: 10px; overflow: hidden;";
+                        m.classList.add('hasPhoneNo');
                         for(let i = 0; i <= 10; i++){
                             setTimeout(() => {
                                 m.scrollIntoView( {block: "center", inline: "nearest"});
