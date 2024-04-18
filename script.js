@@ -342,26 +342,32 @@ function getListOrdersVTP(phone = myPhone) {
 
             this.searchLoop = setInterval(() => {
                 this.container.querySelectorAll('div').forEach(d => { d.scrollTop = 0 });
+
+                let topAvt = this.container.querySelector('div[aria-label="Quang Trịnh"][role="img"]');
+                topAvt && stop();
+
                 let nodes = this.container.querySelectorAll('div.__fb-light-mode[role="row"]:not(.scanned)');
+
                 for(let i = 1; i < nodes.length; i++){
                     let m = nodes[nodes.length - i];
-                    let text = m.innerText.replaceAll(/(\.|\,|\-|\s)/g, '');
-                    let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
                     m.classList.add('scanned');
 
-                    if(match && !~match.indexOf(myPhone)){
-                        stop();
-                        m.classList.add('hasPhoneNo');
-                        m.dispatchEvent(customEvent('mouseover'));
+                    let text = m.innerText.replaceAll(/(\.|\,|\-|\s)/g, '');
+                    let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
+                    if(!match || !!~match.indexOf(myPhone)){ continue; }
 
-                        for(let i = 0; i <= 10; i++){
-                            setTimeout(() => {
-                                m.scrollIntoView( {block: "center", inline: "nearest"});
-                                m.querySelector('div[aria-haspopup="menu"][role="button"][aria-label="Xem thêm"]:not([aria-expanded="true"])')?.click();
-                            }, i * 100)
-                        }
-                        break;
+                    m.classList.add('hasPhoneNo');
+                    m.dispatchEvent(customEvent('mouseover'));
+
+                    for(let i = 0; i <= 10; i++){
+                        setTimeout(() => {
+                            m.scrollIntoView( {block: "center", inline: "nearest"});
+                            m.querySelector('div[aria-haspopup="menu"][role="button"][aria-label="Xem thêm"]:not([aria-expanded="true"])')?.click();
+                        }, i * 100)
                     }
+
+                    stop();
+                    break;
                 }
             }, 500);
             this.searchBtn.innerText = 'Stop.';
@@ -378,11 +384,14 @@ function getListOrdersVTP(phone = myPhone) {
             if(!this.phone) return alert('❌ Vui lòng cập nhật sđt trước!');
             if(this.penddingOrders) return alert('❌ Có đơn chờ giao');
 
+            if(this.cccc) return;
+            this.cccc = 1;
+
             document.body.style.cursor = 'wait';
+
             let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
 
             phone2Recievers(this.phone).then(r => {
-
                 console.log(r);
 
                 let addr = '';
@@ -408,6 +417,7 @@ function getListOrdersVTP(phone = myPhone) {
             }).catch(e => {
             }).finally(() => {
                 document.body.style.cursor = 'default';
+                this.cccc = null;
             })
         }
     }
