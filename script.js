@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-04-18-2
+// @version      2024-04-19-1
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -15,7 +15,8 @@
 const myPhone = '0966628989';
 
 (function(){
-    var css = `div.infoCard{
+    var css = `div.infoCard {
+    font-family: monospace !important;
     font-weight: 500;
     color: darkblue;
     background-image: linear-gradient(240deg, #a1c4fd 0%, #c2e9fb 100%);
@@ -412,8 +413,8 @@ function getListOrdersVTP(phone = myPhone) {
             if(!this.phone) return alert('❌ Vui lòng cập nhật sđt trước!');
             if(this.penddingOrders) return alert('❌ Có đơn chờ giao');
 
-            if(this.cccc) return;
-            this.cccc = 1;
+            if(this.isBusy) return;
+            this.isBusy = 1;
 
             document.body.style.cursor = 'wait';
 
@@ -445,7 +446,7 @@ function getListOrdersVTP(phone = myPhone) {
             }).catch(e => {
             }).finally(() => {
                 document.body.style.cursor = 'default';
-                this.cccc = null;
+                this.isBusy = 0;
             })
         }
     }
@@ -462,7 +463,7 @@ function getListOrdersVTP(phone = myPhone) {
 
     document.onkeyup = (function(e) {
         if (e.key === "Escape") { // escape key maps to keycode `27`
-            document.querySelectorAll('div[aria-label="Đóng đoạn chat"]').forEach(e => e.click());
+            // document.querySelectorAll('div[aria-label="Đóng đoạn chat"]').forEach(e => e.click());
         }
     });
 
