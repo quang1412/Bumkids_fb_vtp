@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-04-19-1
+// @version      2024-04-19-2
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -16,7 +16,6 @@ const myPhone = '0966628989';
 
 (function(){
     var css = `div.infoCard {
-    font-family: monospace !important;
     font-weight: 500;
     color: darkblue;
     background-image: linear-gradient(240deg, #a1c4fd 0%, #c2e9fb 100%);
@@ -338,13 +337,18 @@ function getListOrdersVTP(phone = myPhone) {
             this.container.onmouseup = () => {
                 if(!window.getSelection) return;
                 let phone = window.getSelection().toString().replaceAll(/\D/g,'');
-                if(!isVNPhone(phone) || phone == this.phone || phone == myPhone) return false;
-                if (! confirm("Xác nhận đổi sdt cho " + this.name + " => " + phone + "?")) return false;
-
-                this.setPhone(phone);
-            }
+                if(!isVNPhone(phone) || phone == this.phone || phone == myPhone){
+                    return false;
+                } else if(!this.phone || confirm("Xác nhận đổi sdt cho " + this.name + " => " + phone + "?")){
+                    this.setPhone(phone);
+                }
+             }
         }
         refreshInfo(){
+
+            if(this.isBusy) return;
+            this.isBusy = 1;
+
             this.infoList.innerHTML = '<tr><td colspan="2" style="text-align:center;">Đang tải...</td></tr>';
             getListOrdersVTP(this.phone).then(orders => {
                 this.penddingOrders = orders.data.totalElements;
@@ -358,6 +362,7 @@ function getListOrdersVTP(phone = myPhone) {
                 this.infoList.innerHTML = `<tr><td>Sdt:</td><td> ${this.phone || '---'}</td></tr>
                 <tr><td>Uy tín:</td><td> ${this.deliveryRate || '---'}</td></tr>
                 <tr><td>Đơn giữ:</td><td> ${this.penddingOrders ? 'Có ❌❌❌' : 'Không'}`;
+                this.isBusy = 0;
             })
         }
         phoneSearching(){
@@ -373,7 +378,7 @@ function getListOrdersVTP(phone = myPhone) {
             this.searchLoop = setInterval(() => {
                 this.container.querySelectorAll('div').forEach(d => { d.scrollTop = 0 });
 
-                let topAvt = this.container.querySelector('div[aria-label="Quang Trịnh"][role="img"]');
+                let topAvt = this.container.querySelector('div[aria-label="'+this.name+'"][role="img"]');
                 topAvt && stop();
 
                 let nodes = this.container.querySelectorAll('div.__fb-light-mode[role="row"]:not(.scanned)');
