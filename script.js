@@ -359,7 +359,12 @@ function getListOrdersVTP(phone = myPhone) {
                 this.penddingOrders = orders.data.totalElements;
                 return getDeliveryRate(this.phone);
             }).then(rate => {
-                this.deliveryRate = rate?.deliveryRate != -1 ? (rate.deliveryRate * 100).toFixed(2) + '% (' + rate.order501 + '/' + rate.totalOrder + ')' : 'Chưa có.';
+                let r = 'Chưa có';
+                if(rate && rate.deliveryRate !== -1){
+                    let percent = (rate.deliveryRate * 100).toFixed(2);
+                    r = (`${percent}% (${rate.order501}/${rate.totalOrder})`);
+                }
+                this.deliveryRate = r;
             }).catch(e => {
                 this.penddingOrders = e.message;
                 this.deliveryRate = e.message;
