@@ -326,10 +326,15 @@ function getListOrdersVTP(phone = myPhone) {
             btn_3.style.color = 'green';
             btn_3.onclick = () => { this.createOrder() };
 
+            let btn_4 = document.createElement('a');
+            btn_4.innerText = 'Order';
+            btn_4.style.color = 'purple';
+            btn_4.onclick = () => { alert('✔đang phát triển!') };
+
             let toolBar = document.createElement('div');
             toolBar.classList.add('toolBar');
 
-            toolBar.append(this.searchBtn, btn_2, btn_3);
+            toolBar.append(this.searchBtn, btn_2, btn_3, btn_4);
             this.card.append(this.infoList, toolBar);
 
             container.append(this.card);
@@ -409,7 +414,6 @@ function getListOrdersVTP(phone = myPhone) {
         }
         setPhone(phone = window.prompt("Nhập sđt cho " + this.name, this.phone)){
             if (phone == null || phone == "" || phone == this.phone || !isVNPhone(phone)) return false;
-1
             this.phone = phone;
             phoneBook.set(this.id, this.phone);
             this.refreshInfo();
@@ -446,8 +450,8 @@ function getListOrdersVTP(phone = myPhone) {
                 GM_setValue('fb_lastPrice', itemsPrice);
                 url += '&price=' + (price*1000);
 
+                window.childWin?.focus();
                 window.childWin = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
-                window.childWin.focus();
             }).catch(e => {
             }).finally(() => {
                 document.body.style.cursor = 'default';
@@ -455,6 +459,23 @@ function getListOrdersVTP(phone = myPhone) {
             })
         }
     }
+
+    function conversationScaning(callback){
+        console.log('conversationScaning');
+        let elems = document.querySelectorAll('div[aria-label="Tin nhắn"]:not(.added)')
+        if(!elems.length){
+            return callback(true);
+        }
+        elems.forEach(function(e){
+            let contain = e.closest('div.__fb-light-mode');
+            if(contain.querySelector('a[aria-label][href][role="link"]')){
+                let card = new InfoCard(contain);
+                e.classList.add('added');
+                return callback(true);
+            }
+        })
+    }
+
     document.onmouseup = async function(){
         await new Promise(resolve => { setTimeout(_ => resolve(), 1000) });
 
@@ -463,6 +484,24 @@ function getListOrdersVTP(phone = myPhone) {
             let s = e.querySelector('div[aria-label="Cài đặt chat"]');
             s && new InfoCard(e);
         })
+
+
+        document.querySelectorAll('a[aria-label][role="link"][href*="/"]:not(.tested)').forEach(function(e){
+            return;
+            e.classList.add('tested');
+            e.style.border = '1px dashed green';
+
+            let label = e.getAttribute('aria-label');
+            let href = e.getAttribute('href').replaceAll('/', '');
+            let pattern = /^\d(\d)+\d$/g;
+            let isId = pattern.test(href);
+            let isName = !~(['Trang cá nhân', 'Mở ảnh']).indexOf(label)
+            console.log(href, isId);
+
+            if(isId && isName){
+                e.style.border = '1px dashed red';
+            }
+        });
     }
 
 
