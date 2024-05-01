@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-04-19-2
+// @version      2024-05-01-01
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -325,7 +325,7 @@ function getListOrdersVTP(phone = myPhone) {
             let toolBar = document.createElement('div');
             toolBar.classList.add('toolBar');
 
-            toolBar.append(this.searchBtn, btn_2, btn_4, btn_3);
+            toolBar.append(this.searchBtn, btn_2, btn_3);
             this.card.append(this.infoList, toolBar);
 
             container.append(this.card);
@@ -436,8 +436,8 @@ function getListOrdersVTP(phone = myPhone) {
                 if(!prdName) return false;
                 url += '&prdName=' + prdName;
 
-                viettelWin?.focus();
-                var viettelWin = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
+                viettelWindown?.focus();
+                var viettelWindown = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
                 //window.addEventListener('message', (event) => {if (event.data === 'popup-closed') {alert('ok')}});
             }).catch(alert).finally(() => {
             })
@@ -465,8 +465,8 @@ function getListOrdersVTP(phone = myPhone) {
                 GM_setValue('fb_lastPrice', itemsPrice);
                 url += '&price=' + (price*1000);
 
-                viettelWin?.focus();
-                var viettelWin = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
+                viettelWindown?.focus();
+                var viettelWindown = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
                 //window.addEventListener('message', (event) => {if (event.data === 'popup-closed') {alert('ok')}});
 
             }).then(_ => {
@@ -491,7 +491,7 @@ function getListOrdersVTP(phone = myPhone) {
         }
     }
 
-    function conversationScaning(callback){
+    /* function conversationScaning(callback){
         console.log('conversationScaning');
         let elems = document.querySelectorAll('div[aria-label="Tin nhắn"]:not(.added)')
         if(!elems.length){
@@ -505,7 +505,7 @@ function getListOrdersVTP(phone = myPhone) {
                 return callback(true);
             }
         })
-    }
+    } */
 
     document.onmouseup = async function(){
 
@@ -593,7 +593,7 @@ function getListOrdersVTP(phone = myPhone) {
         }
 
         $(document).on('change click', 'input#productPrice', function(e){
-            let price = parseInt(this.value.replaceAll('.', '')|| 0);
+            let price = parseInt(this.value.replaceAll('.', '') || 0);
             let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
 
             fee && updateCOD(price, fee);
@@ -632,11 +632,13 @@ function getListOrdersVTP(phone = myPhone) {
             phoneNoInput.value = phone;
 
             let fn = document.querySelector('input#fullName');
-            setInterval(_ => {
-                fn.value = name;
-                fn.dispatchEvent(customEvent('input'));
-                fn.dispatchEvent(customEvent('change'));
-            }, 1000);
+            ['click', 'keydown', 'keyup'].forEach(e => {
+                document.body.addEventListener(e, _ => {
+                    fn.value = name;
+                    fn.dispatchEvent(customEvent('input'));
+                    fn.dispatchEvent(customEvent('change'));
+                })
+            })
 
             let pn = document.querySelector('input#productName');
             pn.value = prdName + ' - Trịnh Hiền - Bumkids';
@@ -647,13 +649,9 @@ function getListOrdersVTP(phone = myPhone) {
             let pw = document.querySelector('input#productWeight');
             pw.value = 200;
 
-            //setTimeout(() => {[fn, adr, pr, pn, pw].map(i => {i.dispatchEvent(customEvent('click')); i.dispatchEvent(customEvent('input')); i.dispatchEvent(customEvent('change'))});}, 1000);
-
-            setTimeout(() => {}, 1000);
+            [pr, pn, pw].map(i => {i.dispatchEvent(customEvent('input')); i.dispatchEvent(customEvent('change'))});
 
             setTimeout(() => {
-                [pr, pn, pw].map(i => {i.dispatchEvent(customEvent('click')); i.dispatchEvent(customEvent('input')); i.dispatchEvent(customEvent('change'))});
-
                 phoneNoInput.dispatchEvent(customEvent('change'));
                 phoneNoInput.click();
                 phoneNoInput.focus();
