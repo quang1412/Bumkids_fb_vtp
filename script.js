@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-05-01-01
+// @version      2024-05-02-01
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -120,7 +120,7 @@ function getListOrdersVTP(phone = myPhone) {
 (function() {
     if(window.location.href.indexOf('facebook') == -1) return;
 
-    const prdList = ['Quần Áo','Mỹ Phẩm','Túi xách','Mũ','Kính','Giày dép'];
+    const prdList = ['👕👕 Quần Áo','💄💄 Mỹ Phẩm','👜👜 Túi xách','👒👒 Mũ nón','👓👓 Kính','👠👠 Giày dép'];
 
     const phoneBook = {
         key: 'fb_phoneBook',
