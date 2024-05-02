@@ -10,12 +10,15 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
+// @grant        GM_addElement
+// @grant        GM_notification
 
 // ==/UserScript==
 const myPhone = '0966628989';
 
-(function(){
-    var css = `div.infoCard {
+GM_addElement(document.body, 'style', { textContent: `
+    div.infoCard {
+    box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1);
     font-weight: 500;
     color: darkblue;
     background-image: linear-gradient(240deg, #a1c4fd 0%, #c2e9fb 100%);
@@ -27,41 +30,14 @@ const myPhone = '0966628989';
     border: 2px solid #fff;
     border-radius: 8px;
     padding: 8px;
-    box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1);
-    }
+    };
 
-    div.infoCard:after {
-    content: '';
-    position: absolute;
-    left: 4%;
-    top: 101%;
-    width: 0;
-    height: 0;
-    border-left: 7px solid transparent;
-    border-right: 7px solid transparent;
-    border-top: 6px solid #fff;
-    clear: both;
-    }
-
+    div.infoCard:after { content: ''; position: absolute; left: 4%; top: 101%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 6px solid #fff; clear: both; }
     div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }
-
-    div.infoCard div.toolBar {
-    text-align: center;
-    background-color: rgb(245 245 245 / 60%);
-    border-radius: 6px;
-    display: flex;
-    justify-content: space-around;
-    }
-
+    div.infoCard div.toolBar { text-align: center; background-color: rgb(245 245 245 / 60%); border-radius: 6px; display: flex; justify-content: space-around; }
     div.toolBar a { padding: 5px; flex: 1; }
     div.toolBar:hover a:not(:hover) { opacity: .5; }
-
-    div.hasPhoneNum {
-    border: 2px dashed red;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 5px;
-    }
+    div.hasPhoneNum { border: 2px dashed red; border-radius: 10px; overflow: hidden; margin-bottom: 5px; }
 
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
     body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
@@ -69,21 +45,9 @@ const myPhone = '0966628989';
     body.vt-post.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}
     body.vt-post.custom button {text-wrap: nowrap;}
     body.vt-post.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}
-    body.vt-post.custom #content {width: 100% !important; margin-left: 0;}`,
+    body.vt-post.custom #content {width: 100% !important; margin-left: 0;}`
+});
 
-        head = document.head || document.getElementsByTagName('head')[0],
-        style = document.createElement('style');
-
-    head.appendChild(style);
-
-    style.type = 'text/css';
-    if (style.styleSheet){
-        // This is required for IE8 and below.
-        style.styleSheet.cssText = css;
-    } else {
-        style.appendChild(document.createTextNode(css));
-    }
-})();
 
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 function customEvent(n){
@@ -517,17 +481,13 @@ function getListOrdersVTP(phone = myPhone) {
             s && new InfoCard(e);
         })
 
-        document.querySelectorAll('a[aria-label][role="link"][href*="/"]:not(.tested)').forEach(function(e){
-            // return;
+//        document.querySelectorAll('a[aria-label][role="link"][href*="/"]:not(.tested)').forEach(function(e){
+        document.querySelectorAll(`a[aria-label][role="link"]:is([href^="/1"],[href^="/2"]):not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"], .tested)`).forEach(async function(e){
+
             e.classList.add('tested');
             // e.style.border = '1px dashed green';
-            let label = e.getAttribute('aria-label');
-            let href = e.getAttribute('href').replaceAll('/', '');
-            let isName = !~(['Trang cá nhân', 'Mở ảnh']).indexOf(label)
-            let isId = (/^\d(\d)+\d$/g).test(href);
-            if(isId && isName){
-                e.style.border = '1px dashed red';
-            }
+            e.style.border = '1px dashed red';
+            //await GM.notification({ text: "Click me." });
         });
     }
 
