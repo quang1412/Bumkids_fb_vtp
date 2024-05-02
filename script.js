@@ -48,7 +48,6 @@ GM_addElement(document.body, 'style', { textContent: `
     body.vt-post.custom #content {width: 100% !important; margin-left: 0;}`
 });
 
-
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 function customEvent(n){
     if(n == 'mouseover'){
@@ -60,7 +59,6 @@ function customEvent(n){
         return event;
     }
 }
-
 function getFormatedDate(i = 0) {
     const today = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
     const yyyy = today.getFullYear();
@@ -71,7 +69,6 @@ function getFormatedDate(i = 0) {
     const formattedToday = dd + '/' + mm + '/' + yyyy;
     return formattedToday;
 }
-
 function getListOrdersVTP(phone = myPhone) {
     return new Promise((resolve, reject) => {
         if(!phone) return reject('Chưa có sdt');
