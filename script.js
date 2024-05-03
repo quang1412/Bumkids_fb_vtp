@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-05-03-01
+// @version      2024-05-03-02
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -12,6 +12,8 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addElement
 // @grant        GM_notification
+// @grant        window.onurlchange
+
 
 // ==/UserScript==
 const myPhone = '0966628989';
@@ -754,4 +756,38 @@ function getListOrdersVTP(phone = myPhone) {
             }, 1000)
         }
     })
+
+    const customCard = {
+        render: function(){
+            if(document.querySelector('div.custom_card')) { return }
+
+            let card = GM_addElement(document.querySelector('div.vtp-dashboard > div.vtp-main-content > div.row:nth-child(3) > div.col-lg-8'), 'div', {
+                class: 'card form-group custom_card'
+            });
+
+            let cardHeader = GM_addElement(card, 'div', {
+                class: 'card-header'
+            });
+            cardHeader.innerHTML = '<img class="mr-1" src="/assets/images/package.svg"><span class="vicc-title">Bảng tuỳ chỉnh</span>';
+
+            let cardBody = GM_addElement(card, 'div', {
+                class: 'card-body'
+            });
+            cardBody.innerHTML = 'đang cập nhật...';
+        }
+    }
+
+    if(window.location.href == 'https://viettelpost.vn/dashboard'){
+        customCard.render();
+        if (window.onurlchange === null) {
+            window.addEventListener('urlchange', (info) => {
+                if(info.url != 'https://viettelpost.vn/dashboard' ) return;
+                customCard.render();
+            });
+        }
+    }
+
+
 })($);
+
+
