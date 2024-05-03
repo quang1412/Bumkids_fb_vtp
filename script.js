@@ -431,10 +431,6 @@ function getListOrdersVTP(phone = myPhone) {
 
             let card = GM_addElement(container, 'div', { class: 'infoCard' });
 
-            /* let bg = GM_addElement(card, 'div', {
-                style: 'bacground-image: url("https://i.pinimg.com/originals/71/de/86/71de863e48b9f3c25419ae7f3ad3e5e7.jpg"); position: absolute; top: 0, left: 0 bottom: 0; right: 0; opacity: .5; z-index: -1;'
-            }); */
-
             this.infoList = GM_addElement(card, 'table', { style: 'padding-bottom: 5px;' });
             let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
 
@@ -461,7 +457,7 @@ function getListOrdersVTP(phone = myPhone) {
                 let phone = window.getSelection().toString().replaceAll(/\D/g,'');
                 if(!isVNPhone(phone) || phone == this.phone || phone == myPhone){
                     return false;
-                } else if(!this.phone || confirm("Xác nhận đổi sdt cho " + this.name + " => " + phone + "?")){
+                } else if(!this.phone || confirm("Xác nhận đổi sdt cho " + this.name + " thành: " + phone + "?")){
                     this.setPhone(phone);
                 }
              }
@@ -768,7 +764,7 @@ function getListOrdersVTP(phone = myPhone) {
             let cardHeader = GM_addElement(card, 'div', {
                 class: 'card-header'
             });
-            cardHeader.innerHTML = '<img class="mr-1" src="/assets/images/package.svg"><span class="vicc-title">Bảng tuỳ chỉnh</span>';
+            cardHeader.innerHTML = '<img class="mr-1" src="/assets/images/package.svg"><span class="vicc-title">Bảng tuỳ chỉnh / Bumkids</span>';
 
             let cardBody = GM_addElement(card, 'div', {
                 class: 'card-body'
