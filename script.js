@@ -117,7 +117,18 @@ function getListOrdersVTP(phone = myPhone) {
     })
 }
 
-//   Facebook //
+//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
 (function() {
     if(window.location.href.indexOf('facebook') == -1) return;
 
@@ -587,7 +598,7 @@ function getListOrdersVTP(phone = myPhone) {
             s && new InfoCard(e);
         }); */
 
-        document.querySelectorAll(`a[aria-label][role="link"]:is([href^="/1"],[href^="/2"]):not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"], .tested)`).forEach(async function(e){
+        document.querySelectorAll(`a[aria-label][role="link"]:is([href^="/1"],[href^="/2"],[href^="/6"]):not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"], .tested)`).forEach(async function(e){
             e.classList.add('tested');
             e.style.border = '1px dashed red';
             let info = {
@@ -775,12 +786,13 @@ function getListOrdersVTP(phone = myPhone) {
 
     if(window.location.href == 'https://viettelpost.vn/dashboard'){
         customCard.render();
-        if (window.onurlchange === null) {
-            window.addEventListener('urlchange', (info) => {
-                if(info.url != 'https://viettelpost.vn/dashboard' ) return;
-                customCard.render();
-            });
-        }
+    }
+
+    if (window.onurlchange === null) {
+        window.addEventListener('urlchange', (info) => {
+            if(info.url != 'https://viettelpost.vn/dashboard' ) return;
+            customCard.render();
+        });
     }
 
 
