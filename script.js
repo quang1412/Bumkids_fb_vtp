@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-05-03-02
+// @version      2024-05-04-0
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -10,6 +10,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
+// @grant        GM_addStyle
 // @grant        GM_addElement
 // @grant        GM_notification
 // @grant        window.onurlchange
@@ -117,20 +118,10 @@ function getListOrdersVTP(phone = myPhone) {
     })
 }
 
-//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-//   Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+// Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook
 (function() {
     if(window.location.href.indexOf('facebook') == -1) return;
+    GM_addStyle(`div[role="list"] div[role="listitem"] span:hover {-webkit-line-clamp: 10 !important;}`);
 
     const prdList = ['👕👕 Quần Áo','💄💄 Mỹ Phẩm','👜👜 Túi xách','👒👒 Mũ nón','👓👓 Kính','👠👠 Giày dép'];
 
@@ -598,11 +589,15 @@ function getListOrdersVTP(phone = myPhone) {
             s && new InfoCard(e);
         }); */
 
-        document.querySelectorAll(`a[aria-label][role="link"]:is([href^="/1"],[href^="/2"],[href^="/6"]):not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"], .tested)`).forEach(async function(e){
+        document.querySelectorAll(`a[aria-label][role="link"][href^="/"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.tested)`).forEach(async function(e){
             e.classList.add('tested');
+            let href = e.getAttribute('href');
+
+            if(!(/^\/(\d)+\/$/g).test(href)) return !1;
+
             e.style.border = '1px dashed red';
             let info = {
-                id: e.getAttribute('href').replaceAll('/', ''),
+                id: href.replaceAll('/', ''),
                 name: e.getAttribute('aria-label'),
             }
             let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
@@ -620,26 +615,7 @@ function getListOrdersVTP(phone = myPhone) {
 
 })();
 
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-//   Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
+//Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
 
 (function($) {
     if(window.location.href.indexOf('viettelpost') == -1) return;
@@ -763,39 +739,32 @@ function getListOrdersVTP(phone = myPhone) {
             }, 1000)
         }
     })
+})($);
 
-    const customCard = {
-        render: function(){
+// customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard
+(function(){
+    if(window.location.origin != 'https://viettelpost.vn') return !1;
+
+    const customDashboardCard = {
+        init: function(){
             if(document.querySelector('div.custom_card')) { return }
+            let col = document.querySelector('div.vtp-dashboard > div.vtp-main-content > div.row:nth-child(3) > div.col-lg-8');
 
-            let card = GM_addElement(document.querySelector('div.vtp-dashboard > div.vtp-main-content > div.row:nth-child(3) > div.col-lg-8'), 'div', {
-                class: 'card form-group custom_card'
-            });
+            let card = GM_addElement(col, 'div', { class: 'card form-group custom_card' });
 
-            let cardHeader = GM_addElement(card, 'div', {
-                class: 'card-header'
-            });
+            let cardHeader = GM_addElement(card, 'div', { class: 'card-header' });
             cardHeader.innerHTML = '<img class="mr-1" src="/assets/images/package.svg"><span class="vicc-title">Bảng tuỳ chỉnh / Bumkids</span>';
 
-            let cardBody = GM_addElement(card, 'div', {
-                class: 'card-body'
-            });
-            cardBody.innerHTML = 'đang cập nhật...';
+            let cardBody = GM_addElement(card, 'div', { class: 'card-body' });
+            cardBody.innerText = 'đang cập nhật...';
         }
     }
 
-    if(window.location.href == 'https://viettelpost.vn/dashboard'){
-        customCard.render();
-    }
+    window.location.href == 'https://viettelpost.vn/dashboard' && customDashboardCard.init();
 
-    if (window.onurlchange === null) {
-        window.addEventListener('urlchange', (info) => {
-            if(info.url != 'https://viettelpost.vn/dashboard' ) return;
-            customCard.render();
-        });
-    }
-
-
-})($);
+    !window.onurlchange && window.addEventListener('urlchange', (info) => {
+        info.url == 'https://viettelpost.vn/dashboard' && customDashboardCard.init();
+    });
+})()
 
 
