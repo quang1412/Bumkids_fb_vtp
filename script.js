@@ -6,7 +6,6 @@
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
 // @downloadURL  https://github.com/quang1412/Bumkids_fb_vtp/tree/main
 // @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
-// @sandbox      MAIN_WORLD
 // @match        https://viettelpost.vn/*
 // @match        https://www.facebook.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -46,13 +45,13 @@ function getFormatedDate(i = 0) {
     const formattedToday = dd + '/' + mm + '/' + yyyy;
     return formattedToday;
 }
-function getListOrdersVTP(phone = myPhone) {
+function getListOrdersVTP(phone) {
     return new Promise((resolve, reject) => {
-        if(!phone) return reject('Chưa có sdt');
+        if(!phone) return reject(new Error('Chưa có sdt'));
 
         let dvId = GM_getValue('vtp_deviceId');
         let token = GM_getValue('vtp_tokenKey');
-        if (!token || !dvId) return reject('Lỗi Viettel Post');
+        if (!token || !dvId) return reject('Lỗi token viettel post');
 
         GM_xmlhttpRequest({
             url:  "https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2",
@@ -72,7 +71,7 @@ function getListOrdersVTP(phone = myPhone) {
                 "ORDER_PAYMENT": "",
                 "IS_FAST_DELIVERY": false,
                 "REASON_RETURN": null,
-                "ORDER_STATUS": "-108,100,102,103,104,-100",
+                "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570",
                 "deviceId": dvId
             }),
             onload: function (response) {
@@ -86,6 +85,7 @@ function getListOrdersVTP(phone = myPhone) {
                 console.log("error: ", reponse);
                 return reject(reponse)
             }
+            //"ORDER_STATUS": "-108,100,102,103,104,-100",
         })
     })
 }
@@ -160,7 +160,7 @@ function getListOrdersVTP(phone = myPhone) {
 
     function phone2Recievers(phone = null) {
         return new Promise((resolve, reject) => {
-            if(!phone) return reject('chưa có sdt');
+            if(!phone) return reject(new Error('Chưa có sdt'));
 
             let token = GM_getValue('vtp_tokenKey');
             if (!token) return reject('Lỗi 0012');
@@ -260,31 +260,42 @@ function getListOrdersVTP(phone = myPhone) {
         }
         refreshInfo(){
             if(this.isBusy) return;
-
             this.isBusy = 1;
 
+            let i = {}
+
             this.infoList.innerHTML = '<tr><td colspan="2" style="text-align:center;">Đang tải...</td></tr>';
-            getListOrdersVTP(this.phone).then(orders => {
-                console.log(orders)
-                this.penddingOrders = orders.data.totalElements;
-                return getDeliveryRate(this.phone);
-            }).then(rate => {
+            getListOrdersVTP(this.phone).then(res => {
+                console.log(res)
+                // picked: 105,200,202,300,310,320,400,500,506,507,509,505,501,515,502,551,508,550,504,503
+                let list = res.data.data.LIST_ORDER;
+                i.total = res.data.data.TOTAL;
+                i.totalCOD = res.data.data.TOTAL_COLLECTION.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+                i.pending = list.filter(function(o){ return !!~([-108,100,102,103,104]).indexOf(o.ORDER_STATUS) }).length;
+                i.draft = list.filter(function(o){ return (o.ORDER_STATUS == -100) }).length;
+
+                this.holdedOrders = (i.draft + i.pending);
+
+            }).then(_ => getDeliveryRate(this.phone)).then(rate => {
                 let r = 'Chưa có';
                 if(rate && rate.deliveryRate !== -1){
                     let percent = (rate.deliveryRate * 100).toFixed(2);
                     r = (`${percent}% (${rate.order501}/${rate.totalOrder})`);
                 }
-                this.deliveryRate = r;
-            }).catch(e => {
-                this.penddingOrders = e.message;
-                this.deliveryRate = e.message;
-            }).finally(() => {
+                i.rate = r;
+            }).then(() => {
                 this.isBusy = 0;
                 this.infoList.innerHTML = `
                 <tr style="display:none;"><td>ID:</td> <td>${this.id}</td></tr>
-                <tr><td>Sdt:</td> <td>${this.phone || '---'}</td></tr>
-                <tr><td>Uy tín:</td> <td>${this.deliveryRate || '---'}</td></tr>
-                <tr><td>Đơn giữ:</td> <td>${this.penddingOrders ? 'Có ❌❌❌' : 'Không'}`;
+                <tr><td>SĐT: </td>      <td>${this.phone || '---'}</td></tr>
+                <tr><td>Uy tín: </td>   <td>${i.rate || '---'}</td></tr>
+                <tr><td>Đơn giữ: </td>  <td>${i.pending} chờ • ${i.draft} nháp ${this.holdedOrders ? '❌' : ''}</td></tr>
+                <tr><td>COD: </td> <td>${i.totalCOD} • ${i.total} đơn</td></tr>`;
+            }).catch(e => {
+                console.error(e);
+                this.infoList.innerHTML = `<tr style="color:red"><td>❌ ${e.message}</td></tr>`;
+            }).finally(_ => {
+                this.isBusy = 0;
             })
         }
         phoneSearching(){
@@ -338,7 +349,7 @@ function getListOrdersVTP(phone = myPhone) {
         createOrder(){
             new Promise((resolve, reject) => {
                 if(!this.phone) return reject('❌ Vui lòng cập nhật sđt trước!');
-                if(this.penddingOrders) return reject('❌ Có đơn chờ giao');
+                if(this.holdedOrders) return reject('❌ Có đơn chờ giao');
                 return resolve(true);
             }).then(_ => {
                 let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
@@ -436,13 +447,22 @@ function getListOrdersVTP(phone = myPhone) {
 
             if(!isVNPhone(this.value)) return;
 
-            let req = await getListOrdersVTP(this.value).catch(e => alert('Lỗi khi check trùng đơn! ❌❌❌'))
-            if(req?.status == '200' && req?.data?.totalElements){
+            let res = await getListOrdersVTP(this.value).catch(e => alert('Lỗi khi check trùng đơn! ❌❌❌'))
+            let list = res.data.data.LIST_ORDER;
+
+            let pendingOrders = list.filter(function(o){
+                return !!~([-108,100,102,103,104]).indexOf(o.ORDER_STATUS);
+            });
+            console.log(pendingOrders);
+            let draftOrders = list.filter(function(o){
+                return (o.ORDER_STATUS == -100);
+            });
+            if(res?.status == '200' && (pendingOrders.length + draftOrders.length)){
                 alert('Sđt đang có đơn giữ/chờ lấy! ❌❌❌');
-                let lastOrderNum = req.data.data.LIST_ORDER[0].ORDER_NUMBER;
+                let lastOrderNum = res.data.data.LIST_ORDER[0].ORDER_NUMBER;
                 window.location.href = 'https://viettelpost.vn/thong-tin-don-hang?peopleTracking=sender&orderNumber=' + lastOrderNum;
             }
-            GM_setValue('vtp_duplicateCheckStatus', req?.status);
+            GM_setValue('vtp_duplicateCheckStatus', res?.status);
         });
 
         function updateCOD(price, fee){
@@ -553,6 +573,23 @@ function getListOrdersVTP(phone = myPhone) {
     !window.onurlchange && window.addEventListener('urlchange', (info) => {
         info.url == 'https://viettelpost.vn/dashboard' && customDashboardCard.init();
     });
+})();
+
+(function(){
+    let dat = { "entry.1158876406" : new Date().getTime(), "entry.1286223003": "name1"};
+    //postToGoogle("1FAIpQLSe_qTjWWDDWHlq-YvtpU0WnWeyL_HTA2gcSB3LDg8HNTTip0A", dat);
+    function postToGoogle(id, dat) {
+        GM_xmlhttpRequest({
+            url: 'https://docs.google.com/forms/d/e/'+id+'/formResponse?'+Object.keys(dat).map(k => (k+'='+dat[k])).join('&'),
+            method: "GET",
+            headers: {
+              "Content-Type": "text/html; charset=utf-8"
+            },
+            data: JSON.stringify(dat),
+            dataType: 'json',
+            onload: function (response) {
+                console.log(response);
+            }
+        })
+    }
 })()
-
-
