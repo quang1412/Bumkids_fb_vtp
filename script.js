@@ -2,6 +2,8 @@
 // @name         Bum | FB - VTP
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
 // @version      2024-05-04-0
+// @downloadURL  https://github.com/quang1412/Bumkids_fb_vtp/tree/main
+// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
 // @description  try to take over the world!
 // @author       QuangPlus
 // @match        https://viettelpost.vn/*
@@ -19,39 +21,7 @@
 // ==/UserScript==
 const myPhone = '0966628989';
 
-GM_addElement(document.body, 'style', { textContent: `
-    div.infoCard {
-    box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1);
-    font-weight: 500;
-    color: darkblue;
-    background-image: linear-gradient(240deg, #a1c4fd 0%, #c2e9fb 100%);
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 10px;
-    min-width: 250px;
-    min-height: 20px;
-    border: 2px solid #fff;
-    border-radius: 8px;
-    padding: 8px;}
-
-    div.infoCard:after { content: ''; position: absolute; left: 4%; top: 101%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 6px solid #fff; clear: both; }
-    div[role="main"] div.infoCard { right: 50px; bottom: 50px; left: unset; }
-    div[role="main"] div.infoCard:after { display: none; }
-
-    div.infoCard div.toolBar { text-align: center; background-color: rgb(245 245 245 / 60%); border-radius: 6px; display: flex; justify-content: space-around; }
-    div.toolBar a { padding: 5px; flex: 1; }
-    div.toolBar:hover a:not(:hover) { opacity: .5; }
-    div.hasPhoneNum { border: 2px dashed red; border-radius: 10px; overflow: hidden; margin-bottom: 5px; }
-    div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }
-
-    body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
-    body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
-    body.vt-post.custom div.box-receiver div.card-body { max-height: 310px; overflow: auto; }
-    body.vt-post.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}
-    body.vt-post.custom button {text-wrap: nowrap;}
-    body.vt-post.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}
-    body.vt-post.custom #content {width: 100% !important; margin-left: 0;}`
-});
+GM_addElement(document.body, 'style', { textContent: ''});
 
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 function customEvent(n){
@@ -121,7 +91,18 @@ function getListOrdersVTP(phone = myPhone) {
 // Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook
 (function() {
     if(window.location.href.indexOf('facebook') == -1) return;
-    GM_addStyle(`div[role="list"] div[role="listitem"] span:hover {-webkit-line-clamp: 10 !important;}`);
+    GM_addStyle(`/* Facebook custom css */
+    div.infoCard { box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1); font-weight: 500; color: darkblue;
+    background-image: linear-gradient(240deg, #a1c4fd 0%, #c2e9fb 100%); position: absolute; bottom: calc(100% + 8px); left: 10px; min-width: 250px; min-height: 20px; border: 2px solid #fff; border-radius: 8px; padding: 8px;}
+    div.infoCard:after { content: ''; position: absolute; left: 4%; top: 101%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 6px solid #fff; clear: both; }
+    div[role="main"] div.infoCard { right: 50px; bottom: 50px; left: unset; }
+    div[role="main"] div.infoCard:after { display: none; }
+    div.infoCard div.toolBar { text-align: center; background-color: rgb(245 245 245 / 60%); border-radius: 6px; display: flex; justify-content: space-around; }
+    div.toolBar a { padding: 5px; flex: 1; }
+    div.toolBar:hover a:not(:hover) { opacity: .5; }
+    div.hasPhoneNum { border: 2px dashed red; border-radius: 10px; overflow: hidden; margin-bottom: 5px; }
+    div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }
+    div[role="list"] div[role="listitem"] span:hover {-webkit-line-clamp: 10 !important;}`);
 
     const prdList = ['👕👕 Quần Áo','💄💄 Mỹ Phẩm','👜👜 Túi xách','👒👒 Mũ nón','👓👓 Kính','👠👠 Giày dép'];
 
@@ -620,6 +601,15 @@ function getListOrdersVTP(phone = myPhone) {
 (function($) {
     if(window.location.href.indexOf('viettelpost') == -1) return;
 
+    GM_addStyle(`/* ViettelPost custom css */
+    body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
+    body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
+    body.vt-post.custom div.box-receiver div.card-body { max-height: 310px; overflow: auto; }
+    body.vt-post.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}
+    body.vt-post.custom button {text-wrap: nowrap;}
+    body.vt-post.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}
+    body.vt-post.custom #content {width: 100% !important; margin-left: 0;}`);
+
     let dvId = window.localStorage.deviceId;
     let token = dvId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
     GM_setValue('vtp_deviceId', dvId);
@@ -760,7 +750,7 @@ function getListOrdersVTP(phone = myPhone) {
         }
     }
 
-    window.location.href == 'https://viettelpost.vn/dashboard' && customDashboardCard.init();
+//    window.location.href == 'https://viettelpost.vn/dashboard' && customDashboardCard.init();
 
     !window.onurlchange && window.addEventListener('urlchange', (info) => {
         info.url == 'https://viettelpost.vn/dashboard' && customDashboardCard.init();
