@@ -1,27 +1,29 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
+// @author       QuangPlus
+// @version      2024-05-05-0
+// @description  try to take over the world!
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @version      2024-05-04-0
 // @downloadURL  https://github.com/quang1412/Bumkids_fb_vtp/tree/main
 // @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
-// @description  try to take over the world!
-// @author       QuangPlus
+// @sandbox      MAIN_WORLD
 // @match        https://viettelpost.vn/*
 // @match        https://www.facebook.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
+
+// @grant        GM_log
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @grant        GM_addElement
+// @grant        GM_openInTab
 // @grant        GM_notification
 // @grant        window.onurlchange
 
-
 // ==/UserScript==
-const myPhone = '0966628989';
 
-GM_addElement(document.body, 'style', { textContent: ''});
+const myPhone = '0966628989';
 
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 function customEvent(n){
@@ -102,7 +104,9 @@ function getListOrdersVTP(phone = myPhone) {
     div.toolBar:hover a:not(:hover) { opacity: .5; }
     div.hasPhoneNum { border: 2px dashed red; border-radius: 10px; overflow: hidden; margin-bottom: 5px; }
     div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }
-    div[role="list"] div[role="listitem"] span:hover {-webkit-line-clamp: 10 !important;}`);
+    div[role="list"] div[role="listitem"] span:hover {-webkit-line-clamp: 10 !important;}
+    /*** Sửa chiều cao khung chat ***/
+    div:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div { height: 65vh; }`);
 
     const prdList = ['👕👕 Quần Áo','💄💄 Mỹ Phẩm','👜👜 Túi xách','👒👒 Mũ nón','👓👓 Kính','👠👠 Giày dép'];
 
@@ -132,34 +136,23 @@ function getListOrdersVTP(phone = myPhone) {
                 }
             })
         },
-        init: function(){
-            let pb = GM_getValue(this.key);
-            if(pb) {
-                console.log('phoneBook available', pb);
-                return false;
-            }
-            return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    url:  "https://bumluxury.com/bumkids/fid2phone.php",
-                    method: "GET",
-                    responseType: 'json',
-                    onload: function (response) {
-                        return resolve(response.response);
-                    },
-                    onerror: function(reponse) {
-                        return reject(reponse);
-                    }
-                })
-            }).then(json => {
-                pb = json;
-                console.log('Phone Book downloaded', json);
-            }).catch(e => {
-                pb = new Object();
-                console.log("error: ", e.message);
-                alert('Phonebook error: ' + e.message);
-                console.log('Phone Book unavailable!');
-            }).then(() => {
-                GM_setValue(this.key, pb);
+        init: async function(){
+            let pb = await GM_getValue(this.key);
+            let pb_length = Object.keys(pb).length;
+            GM_log('Phonebook length: ', pb_length);
+
+            !pb && GM_xmlhttpRequest({
+                url:  "https://bumluxury.com/bumkids/fid2phone.php",
+                method: "GET",
+                responseType: 'json',
+                onload: function(res) {
+                    console.log(res.response);
+                    GM_setValue(this.key, res.response);
+                },
+                onerror: function(e){
+                    console.error(e);
+                    GM_setValue(this.key, new Object());
+                }
             })
         }
     }
@@ -222,186 +215,6 @@ function getListOrdersVTP(phone = myPhone) {
             })
         })
     }
-
-    /* class InfoCard{
-        constructor(container){
-            this.container = container;
-
-            let h = container.querySelector('a[aria-label][href][role="link"]');
-            this.name = h.getAttribute('aria-label');
-            this.id = h.getAttribute('href').replaceAll('\/', '');
-            let imgElem = h.querySelector('img[src*="https"]');
-            let imgSrc = imgElem?.getAttribute('src');
-
-            if(!this.id || !this.name || !imgSrc){
-                this.container.classList.remove('added');
-                return false;
-            }
-
-            this.card = document.createElement('div');
-            this.card.classList = 'infoCard';
-            // this.card.style['background-image'] = `url(${imgSrc})`;
-
-            this.phone = phoneBook.get(this.id);
-            this.penddingOrders = 0;
-            this.deliveryRate = 0;
-
-            this.infoList = document.createElement('table');
-            this.infoList.setAttribute('style', 'padding-bottom: 5px;');
-            this.refreshInfo();
-
-            this.searchBtn = document.createElement('a');
-            this.searchBtn.innerText = 'Tìm sđt';
-            this.searchBtn.style.color = 'blue';
-            this.searchBtn.onclick = () => { this.phoneSearching() };
-
-            let btn_2 = document.createElement('a');
-            btn_2.innerText = 'Sửa sđt';
-            btn_2.style.color = 'red';
-            btn_2.onclick = () => { this.setPhone() };
-
-            let btn_3 = document.createElement('a');
-            btn_3.innerText = 'Tạo đơn';
-            btn_3.style.color = 'green';
-            btn_3.onclick = () => { this.createOrder() };
-
-            let btn_4 = document.createElement('a');
-            btn_4.innerText = 'Order';
-            btn_4.style.color = 'purple';
-            btn_4.onclick = () => { this.createPreOrder() };
-
-            let toolBar = document.createElement('div');
-            toolBar.classList.add('toolBar');
-
-            toolBar.append(this.searchBtn, btn_2, btn_3);
-            this.card.append(this.infoList, toolBar);
-
-            container.append(this.card);
-
-            this.container.onmouseup = () => {
-                if(!window.getSelection) return;
-                let phone = window.getSelection().toString().replaceAll(/\D/g,'');
-                if(!isVNPhone(phone) || phone == this.phone || phone == myPhone){
-                    return false;
-                } else if(!this.phone || confirm("Xác nhận đổi sdt cho " + this.name + " => " + phone + "?")){
-                    this.setPhone(phone);
-                }
-             }
-        }
-        refreshInfo(){
-
-            if(this.isBusy) return;
-            this.isBusy = 1;
-
-            this.infoList.innerHTML = '<tr><td colspan="2" style="text-align:center;">Đang tải...</td></tr>';
-            getListOrdersVTP(this.phone).then(orders => {
-                console.log(orders)
-                this.penddingOrders = orders.data.totalElements;
-                return getDeliveryRate(this.phone);
-            }).then(rate => {
-                let r = 'Chưa có';
-                if(rate && rate.deliveryRate !== -1){
-                    let percent = (rate.deliveryRate * 100).toFixed(2);
-                    r = (`${percent}% (${rate.order501}/${rate.totalOrder})`);
-                }
-                this.deliveryRate = r;
-            }).catch(e => {
-                this.penddingOrders = e.message;
-                this.deliveryRate = e.message;
-            }).finally(() => {
-                this.infoList.innerHTML = `<tr style="display:none;"><td>ID:</td><td> ${this.id}</td></tr>
-                <tr><td>Sdt:</td><td> ${this.phone || '---'}</td></tr>
-                <tr><td>Uy tín:</td><td> ${this.deliveryRate || '---'}</td></tr>
-                <tr><td>Đơn giữ:</td><td> ${this.penddingOrders ? 'Có ❌❌❌' : 'Không'}`;
-                this.isBusy = 0;
-            })
-        }
-        phoneSearching(){
-            let stop = () => {
-                window.clearInterval(this.searchLoop);
-                this.searchLoop = 0;
-                this.searchBtn.innerText = 'Tìm sđt';
-                return;
-            }
-
-            if(this.searchLoop){ return stop(); }
-
-            this.searchLoop = setInterval(() => {
-                this.container.querySelectorAll('div').forEach(d => { d.scrollTop = 0 });
-
-                let topAvt = this.container.querySelector('div[aria-label="'+this.name+'"][role="img"]');
-                topAvt && stop();
-
-                let nodes = this.container.querySelectorAll('div:is(.__fb-dark-mode, .__fb-light-mode)[role="row"]:not(.scanned)');
-
-                for(let i = 1; i < nodes.length; i++){
-                    let m = nodes[nodes.length - i];
-                    m.classList.add('scanned');
-
-                    let text = m.innerText.replaceAll(/(\.|\,|\-|\s)/g, '');
-                    let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
-                    if(!match || !!~match.indexOf(myPhone)){ continue; }
-
-                    m.classList.add('hasPhoneNum');
-                    m.dispatchEvent(customEvent('mouseover'));
-
-                    for(let i = 0; i <= 10; i++){
-                        setTimeout(() => {
-                            m.scrollIntoView( {block: "center", inline: "nearest"});
-                            m.querySelector('div[aria-haspopup="menu"][role="button"][aria-label="Xem thêm"]:not([aria-expanded="true"])')?.click();
-                        }, i * 100)
-                    }
-
-                    stop();
-                    break;
-                }
-            }, 500);
-            this.searchBtn.innerText = 'Dừng';
-        }
-        setPhone(phone = window.prompt("Nhập sđt cho " + this.name, this.phone)){
-            if (phone == null || phone == "" || phone == this.phone || !isVNPhone(phone)) return false;
-            this.phone = phone;
-            phoneBook.set(this.id, this.phone);
-            this.refreshInfo();
-        }
-        createOrder(){
-            new Promise((resolve, reject) => {
-                if(!this.phone) return reject('❌ Vui lòng cập nhật sđt trước!');
-                if(this.penddingOrders) return reject('❌ Có đơn chờ giao');
-                return resolve(true);
-            }).then(_ => {
-                let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
-
-                let prices = prompt("B1 - Nhập giá, phân tách bằng dấu cách để tính tổng (đv 1.000đ):", GM_getValue('fb_lastPrice') || 1000);
-                if (prices == null || prices == undefined) { return false }
-                let price = prices.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
-                GM_setValue('fb_lastPrice', prices);
-                url += '&price=' + (price*1000);
-
-                let pl = prdList.map((p, i) => (i + 1) + '/ ' + p).join('\n');
-                var i = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn tên sản phẩm, giá '+ prices +':', 1);
-                let prdName = prdList[i - 1];
-                if(!prdName) return false;
-                url += '&prdName=' + prdName;
-
-                viettelWindow?.focus();
-                var viettelWindow = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
-                //window.addEventListener('message', (event) => {if (event.data === 'popup-closed') {alert('ok')}});
-            }).catch(alert).finally(() => {
-            })
-        }
-        createPreOrder(){
-            let pathname = window.location.pathname;
-            let isPost = (/\/posts\/[\d\w]+$/g).test(pathname);
-            if(!isPost){
-                return alert('vui lòng chuyển vào trang bài post');
-            }
-            let postId = window.prompt("Nhập id bài post", window.location.pathname);
-            if(postId == null || postId == '') return;
-            return
-            alert('✔đang phát triển!');
-        }
-    } */
 
     class InfoCard_1{
         constructor(info, container){
@@ -542,9 +355,10 @@ function getListOrdersVTP(phone = myPhone) {
                 if(!prdName) return false;
                 url += '&prdName=' + prdName;
 
-                viettelWindow?.focus();
-                var viettelWindow = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
-                //window.addEventListener('message', (event) => {if (event.data === 'popup-closed') {alert('ok')}});
+                popupWindow?.focus();
+                var popupWindow = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
+                window.addEventListener('message', (ev) => {ev.data === 'popup-closed' && this.refreshInfo() });
+
             }).catch(alert).finally(() => {
             })
         }
@@ -564,12 +378,6 @@ function getListOrdersVTP(phone = myPhone) {
     document.onmouseup = async function(){
         await new Promise(resolve => { setTimeout(_ => resolve(), 1000) });
 
-        /* document.querySelectorAll('div:is(.__fb-dark-mode, .__fb-light-mode):not(.added)').forEach(function(e){
-            e.classList.add('added');
-            let s = e.querySelector('div[aria-label="Cài đặt chat"]');
-            s && new InfoCard(e);
-        }); */
-
         document.querySelectorAll(`a[aria-label][role="link"][href^="/"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.tested)`).forEach(async function(e){
             e.classList.add('tested');
             let href = e.getAttribute('href');
@@ -577,14 +385,10 @@ function getListOrdersVTP(phone = myPhone) {
             if(!(/^\/(\d)+\/$/g).test(href)) return !1;
 
             e.style.border = '1px dashed red';
-            let info = {
-                id: href.replaceAll('/', ''),
-                name: e.getAttribute('aria-label'),
-            }
+            e.style['border-radius'] = '6px';
+            let info = { id: href.replaceAll('/', ''), name: e.getAttribute('aria-label') }
             let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
             let card = new InfoCard_1(info, p);
-
-            //await GM.notification({ text: "Click me." });
         });
     }
 
@@ -596,10 +400,13 @@ function getListOrdersVTP(phone = myPhone) {
 
 })();
 
-//Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
+// Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
+// Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
+// Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
+// Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
 
 (function($) {
-    if(window.location.href.indexOf('viettelpost') == -1) return;
+    if(window.location.origin != 'https://viettelpost.vn') return !1;
 
     GM_addStyle(`/* ViettelPost custom css */
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
@@ -616,32 +423,26 @@ function getListOrdersVTP(phone = myPhone) {
     GM_setValue('vtp_tokenKey', token);
 
     $(document).ready(async function(){
-        if(window.location.href.indexOf('/order/tao-don-le') == -1) return;
+        if(window.location.pathname != '/order/tao-don-le') return !1;
 
-        let test = await getListOrdersVTP();
-        let status = test?.status == 200;
+        let phoneNoInput = document.querySelector('input#phoneNo');
 
-        $('input#phoneNo').attr('placeholder', 'Nhập số điện thoại để tự điền thông tin người nhận \(check trùng đơn: '+ (status ? 'OK' : 'LỖI') +'\)');
+        let status = GM_getValue('vtp_duplicateCheckStatus') || 200;
+        $(phoneNoInput).attr('placeholder', `Nhập số điện thoại để tự điền thông tin người nhận \| check trùng ${status == 200 ? '🟢' : '🔴'}`);
 
-        status && $(document).on('change', 'input#phoneNo', async function(){
+        $(phoneNoInput).on('change', async function(){
             this.value = this.value.replaceAll(/\D/g, '');
-
-            let phone = this.value
-            console.warn(phone);
-
-            if(!isVNPhone(phone)){ return }
-            getListOrdersVTP(phone).then(orders => {
-                console.warn(orders);
-                if(orders.status == '200' && orders.data.totalElements){
-                    alert('❌❌❌ \n Sđt đang có đơn giữ, hoặc đơn chờ lấy! \n❌❌❌');
-                    this.value = '';
-                    window.location.reload();
-                }
-            }).catch(e => {
-                alert(e.message);
-            });
-
             this.dispatchEvent(customEvent('input'));
+
+            if(!isVNPhone(this.value)) return;
+
+            let req = await getListOrdersVTP(this.value).catch(e => alert('Lỗi khi check trùng đơn! ❌❌❌'))
+            if(req?.status == '200' && req?.data?.totalElements){
+                alert('Sđt đang có đơn giữ/chờ lấy! ❌❌❌');
+                let lastOrderNum = req.data.data.LIST_ORDER[0].ORDER_NUMBER;
+                window.location.href = 'https://viettelpost.vn/thong-tin-don-hang?peopleTracking=sender&orderNumber=' + lastOrderNum;
+            }
+            GM_setValue('vtp_duplicateCheckStatus', req?.status);
         });
 
         function updateCOD(price, fee){
@@ -671,70 +472,67 @@ function getListOrdersVTP(phone = myPhone) {
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
                 $('#confirmCreateOrder button.btn.btn-viettel.btn-sm').click();
                 //window.opener.parent.postMessage('childMess', 'hello');
-
             }
         });
 
-        window.opener?.postMessage('popup-closed', '*');
-
         const urlParams = new URLSearchParams(window.location.search);
         let fbid = urlParams.get('fbid');
-        if(fbid){
-            let phone = urlParams.get('phone');
-            let addr = urlParams.get('addr');
-            let name = urlParams.get('name');
-            let price = urlParams.get('price');
-            let prdName = urlParams.get('prdName');
 
-            window.document.body.classList.add('custom');
-            let s = $('div.box-receiver');
-            let p = s.parent();
-            s.prependTo(p);
+        if(!fbid) return;
 
-            //$('#custom_selectbox > div > div > ul.d-flex.flex-column.tab-list > li:nth-child(2) > label').click();
+        let phone = urlParams.get('phone'),
+            addr = urlParams.get('addr'),
+            name = urlParams.get('name'),
+            price = urlParams.get('price'),
+            prdName = urlParams.get('prdName');
 
-            let phoneNoInput = document.querySelector('input#phoneNo');
-            phoneNoInput.value = phone;
+        let s = $('div.box-receiver'),
+            p = s.parent();
 
-            let fn = document.querySelector('input#fullName');
-            ['click', 'keydown', 'keyup'].forEach(e => {
-                document.body.addEventListener(e, _ => {
-                    fn.value = name;
-                    fn.dispatchEvent(customEvent('input'));
-                    fn.dispatchEvent(customEvent('change'));
-                })
+        window.document.body.classList.add('custom');
+        s.prependTo(p);
+
+        phoneNoInput.value = phone;
+
+        let fn = document.querySelector('input#fullName');
+        ['click', 'keydown', 'keyup'].forEach(e => {
+            document.body.addEventListener(e, _ => {
+                fn.value = name;
+                fn.dispatchEvent(customEvent('input'));
+                fn.dispatchEvent(customEvent('change'));
             })
+        });
 
-            let pn = document.querySelector('input#productName');
-            pn.value = prdName + ' - Trịnh Hiền - Bumkids';
+        let pn = document.querySelector('input#productName');
+        pn.value = prdName + ' - Trịnh Hiền - Bumkids';
 
-            let pr = document.querySelector('input#productPrice');
-            pr.value = price;
+        let pr = document.querySelector('input#productPrice');
+        pr.value = price;
 
-            let pw = document.querySelector('input#productWeight');
-            pw.value = 200;
+        let pw = document.querySelector('input#productWeight');
+        pw.value = 200;
 
-            [pr, pn, pw].map(i => {i.dispatchEvent(customEvent('input')); i.dispatchEvent(customEvent('change'))});
+        [pr, pn, pw, phoneNoInput].map(i => {i.dispatchEvent(customEvent('input')); i.dispatchEvent(customEvent('change'))});
 
-            setTimeout(() => {
-                phoneNoInput.dispatchEvent(customEvent('change'));
-                phoneNoInput.click();
-                phoneNoInput.focus();
-            }, 1000);
+        phoneNoInput.click();
+        phoneNoInput.focus();
 
-            let iv = setInterval(function(){
-                let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
 
-                fee && (updateCOD(price, fee), clearInterval(iv));
-            }, 1000)
-        }
+        let iv = setInterval(function(){
+            let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
+
+            fee && (updateCOD(price, fee), clearInterval(iv));
+        }, 1000);
+
+        window.onbeforeunload = function(event) {
+            window.opener?.postMessage('popup-closed', '*');
+        };
     })
 })($);
 
 // customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard
 (function(){
     if(window.location.origin != 'https://viettelpost.vn') return !1;
-
     const customDashboardCard = {
         init: function(){
             if(document.querySelector('div.custom_card')) { return }
@@ -750,7 +548,7 @@ function getListOrdersVTP(phone = myPhone) {
         }
     }
 
-//    window.location.href == 'https://viettelpost.vn/dashboard' && customDashboardCard.init();
+    window.location.href == 'https://viettelpost.vn/dashboard' && customDashboardCard.init();
 
     !window.onurlchange && window.addEventListener('urlchange', (info) => {
         info.url == 'https://viettelpost.vn/dashboard' && customDashboardCard.init();
