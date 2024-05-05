@@ -123,7 +123,7 @@ function getListOrdersVTP(phone) {
     div:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div { height: 65vh; }
 
     /*** Đánh dấu cmt của người đăng ***/
-    div[role="article"][aria-label*="${myFbName}"] {border-left: 1px dashed gray; }
+    div[role="article"][aria-label*="${myFbName}"] {border-left: 2px dashed gray; }
     `);
 
     const prdList = ['👕👕 Quần Áo','💄💄 Mỹ Phẩm','👜👜 Túi xách','👒👒 Mũ nón','👓👓 Kính','👠👠 Giày dép'];
