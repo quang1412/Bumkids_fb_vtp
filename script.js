@@ -429,7 +429,7 @@ function getListOrdersVTP(phone) {
     document.onmouseup = async function(){
         await new Promise(resolve => { setTimeout(_ => resolve(), 1000) });
 
-        document.querySelectorAll(`a[aria-label][role="link"][href^="/"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.tested)`).forEach(async function(e){
+        document.querySelectorAll(`a[aria-label][role="link"][href^="/"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.tested)`).forEach(function(e){
             e.classList.add('tested');
             let href = e.getAttribute('href');
 
@@ -439,9 +439,6 @@ function getListOrdersVTP(phone) {
             let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
 
             let card = new InfoCard_1(info, p);
-
-//            e.style.border = '1px dashed red';
-//            e.style['border-radius'] = '6px';
         });
     }
 
