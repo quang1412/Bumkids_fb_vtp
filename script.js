@@ -16,8 +16,8 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @grant        GM_addElement
-// @grant        GM_openInTab
 // @grant        GM_notification
+// @grant        GM_registerMenuCommand
 // @grant        window.onurlchange
 
 // ==/UserScript==
@@ -95,11 +95,15 @@ function getListOrdersVTP(phone) {
     if(window.location.href.indexOf('facebook') == -1) return;
     GM_addStyle(`/* Facebook custom css */
     div.infoCard { box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1); font-weight: 500; color: darkblue;
-    background-image: linear-gradient(240deg, #a1c4fd 0%, #c2e9fb 100%); position: absolute; bottom: calc(100% + 8px); left: 10px; min-width: 250px; min-height: 20px; border: 2px solid #fff; border-radius: 8px; padding: 8px;}
+    background-image: linear-gradient(240deg, #a1c4fd 0%, #c2e9fb 100%); position: absolute; bottom: calc(100% + 8px); left: 10px;
+    min-width: 250px; min-height: unset; border: 2px solid #fff; border-radius: 8px; padding: 8px;}
+
+    div[role="main"] div.infoCard { left: 10px; top: 64px; right: unset; bottom: unset; }
     div.infoCard:after { content: ''; position: absolute; left: 4%; top: 101%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 6px solid #fff; clear: both; }
-    div[role="main"] div.infoCard { right: 50px; bottom: 50px; left: unset; }
-    div[role="main"] div.infoCard:after { display: none; }
+    div[role="main"] div.infoCard:after { top: -8px; border-top: unset; border-bottom: 6px solid #fff; }
+
     div.infoCard div.toolBar { text-align: center; background-color: rgb(245 245 245 / 60%); border-radius: 6px; display: flex; justify-content: space-around; }
+
     div.toolBar a { padding: 5px; flex: 1; }
     div.toolBar:hover a:not(:hover) { opacity: .5; }
     div.hasPhoneNum { border: 2px dashed red; border-radius: 10px; overflow: hidden; margin-bottom: 5px; }
@@ -112,6 +116,38 @@ function getListOrdersVTP(phone) {
 
     const phoneBook = {
         key: 'fb_phoneBook',
+        gg_form_id: '1FAIpQLSe_qTjWWDDWHlq-YvtpU0WnWeyL_HTA2gcSB3LDg8HNTTip0A',
+        download_url_gg: 'https://docs.google.com/spreadsheets/d/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/gviz/tq?tqx=out:json&tq&gid=314725270',
+        int_gg: async function(){
+            let res = await GM.xmlHttpRequest({ url: this.download_url_gg, responseType: 'text', }).catch(e => console.error(e));
+            let txt = res.responseText.replace('/*O_o*/\ngoogle.visualization.Query.setResponse(', '').replace(');','');
+            let json = JSON.parse(txt);
+            console.log(json);
+            let object = new Object();
+            let remap = json.table.rows.map(r => {
+                object[(r.c[1].v)] = r.c[2].v;
+            });
+            console.log(object);
+        },
+        init: async function(){
+            let pb = await GM.getValue(this.key, null);
+            let pb_length = Object.keys(pb).length;
+            GM_log('Phonebook length: ', pb_length);
+
+            !pb && GM_xmlhttpRequest({
+                url:  "https://bumluxury.com/bumkids/fid2phone.php",
+                method: "GET",
+                responseType: 'text',
+                onload: function(res) {
+                    console.log(res.response);
+                    GM_setValue(this.key, res.response);
+                },
+                onerror: function(e){
+                    console.error(e);
+                    GM_setValue(this.key, new Object());
+                }
+            })
+        },
         get: function(id){
             let pb = GM_getValue(this.key);
             return pb[id];
@@ -121,6 +157,7 @@ function getListOrdersVTP(phone) {
             pb[id] = phone;
             GM_setValue(this.key, pb);
             this.upload(id, phone);
+            this.upload_gg(id, phone);
             return true;
         },
         upload: function(id, phone){
@@ -136,27 +173,21 @@ function getListOrdersVTP(phone) {
                 }
             })
         },
-        init: async function(){
-            let pb = await GM_getValue(this.key);
-            let pb_length = Object.keys(pb).length;
-            GM_log('Phonebook length: ', pb_length);
-
-            !pb && GM_xmlhttpRequest({
-                url:  "https://bumluxury.com/bumkids/fid2phone.php",
+        upload_gg: function(id, phone){
+            GM_xmlhttpRequest({
+                url: 'https://docs.google.com/forms/d/e/'+this.gg_form_id+'/formResponse?entry.1158876406='+id+'&entry.1286223003='+phone,
                 method: "GET",
-                responseType: 'json',
-                onload: function(res) {
-                    console.log(res.response);
-                    GM_setValue(this.key, res.response);
+                headers: {
+                    "Content-Type": "text/html; charset=utf-8"
                 },
-                onerror: function(e){
-                    console.error(e);
-                    GM_setValue(this.key, new Object());
+                onload: function (response) {
+                    console.log(response);
                 }
             })
         }
     }
     phoneBook.init();
+    // phoneBook.int_gg();
 
     function phone2Recievers(phone = null) {
         return new Promise((resolve, reject) => {
@@ -286,11 +317,11 @@ function getListOrdersVTP(phone) {
             }).then(() => {
                 this.isBusy = 0;
                 this.infoList.innerHTML = `
-                <tr style="display:none;"><td>ID:</td> <td>${this.id}</td></tr>
-                <tr><td>SĐT: </td>      <td>${this.phone || '---'}</td></tr>
-                <tr><td>Uy tín: </td>   <td>${i.rate || '---'}</td></tr>
-                <tr><td>Đơn giữ: </td>  <td>${i.pending} chờ • ${i.draft} nháp ${this.holdedOrders ? '❌' : ''}</td></tr>
-                <tr><td>COD: </td> <td>${i.totalCOD} • ${i.total} đơn</td></tr>`;
+                <!--<tr><td>ID:</td> <td>${this.id}</td></tr>-->
+                <tr><td>SĐT: </td> <td>${this.phone || '---'}</td></tr>
+                <tr><td>Uy tín: </td> <td>${i.rate || '---'}</td></tr>
+                <tr><td>Đơn giữ: </td> <td>${i.pending} chờ • ${i.draft} nháp ${this.holdedOrders ? '❌' : ''}</td></tr>
+                <tr><td>Tổng COD: </td> <td>${i.totalCOD} • ${i.total} đơn</td></tr>`;
             }).catch(e => {
                 console.error(e);
                 this.infoList.innerHTML = `<tr style="color:red"><td>❌ ${e.message}</td></tr>`;
@@ -354,14 +385,14 @@ function getListOrdersVTP(phone) {
             }).then(_ => {
                 let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
 
-                let prices = prompt("B1 - Nhập giá, phân tách bằng dấu cách để tính tổng (đv 1.000đ):", GM_getValue('fb_lastPrice') || 1000);
+                let prices = prompt("B1 - Nhập giá (đv nghìn đ), phân tách bằng dấu cách để tính tổng", GM_getValue('fb_lastPrice') || 1000);
                 if (prices == null || prices == undefined) { return false }
                 let price = prices.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
                 GM_setValue('fb_lastPrice', prices);
                 url += '&price=' + (price*1000);
 
                 let pl = prdList.map((p, i) => (i + 1) + '/ ' + p).join('\n');
-                var i = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn tên sản phẩm, giá '+ prices +':', 1);
+                var i = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn tên sản phẩm (giá đã nhập:'+ prices +')', 1);
                 let prdName = prdList[i - 1];
                 if(!prdName) return false;
                 url += '&prdName=' + prdName;
@@ -395,11 +426,13 @@ function getListOrdersVTP(phone) {
 
             if(!(/^\/(\d)+\/$/g).test(href)) return !1;
 
-            e.style.border = '1px dashed red';
-            e.style['border-radius'] = '6px';
             let info = { id: href.replaceAll('/', ''), name: e.getAttribute('aria-label') }
             let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
+
             let card = new InfoCard_1(info, p);
+
+//            e.style.border = '1px dashed red';
+//            e.style['border-radius'] = '6px';
         });
     }
 
@@ -575,21 +608,3 @@ function getListOrdersVTP(phone) {
     });
 })();
 
-(function(){
-    let dat = { "entry.1158876406" : new Date().getTime(), "entry.1286223003": "name1"};
-    //postToGoogle("1FAIpQLSe_qTjWWDDWHlq-YvtpU0WnWeyL_HTA2gcSB3LDg8HNTTip0A", dat);
-    function postToGoogle(id, dat) {
-        GM_xmlhttpRequest({
-            url: 'https://docs.google.com/forms/d/e/'+id+'/formResponse?'+Object.keys(dat).map(k => (k+'='+dat[k])).join('&'),
-            method: "GET",
-            headers: {
-              "Content-Type": "text/html; charset=utf-8"
-            },
-            data: JSON.stringify(dat),
-            dataType: 'json',
-            onload: function (response) {
-                console.log(response);
-            }
-        })
-    }
-})()
