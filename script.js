@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-05-05-0
+// @version      2024-05-05-1
 // @description  try to take over the world!
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
 // @downloadURL  https://github.com/quang1412/Bumkids_fb_vtp/tree/main
@@ -121,7 +121,7 @@ Facebook Facebook Facebook
     div:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div { height: 65vh; }
 
     /*** Đánh dấu cmt của người đăng ***/
-    div[role="article"][aria-label*="${myFbName}"] {border-left: 2px dashed gray; }
+    /*div[role="article"][aria-label*="${myFbName}"] {border-left: 2px dashed gray; }*/
     `);
 
     const prdList = ['👕👕 Quần Áo','💄💄 Mỹ Phẩm','👜👜 Túi xách','👒👒 Mũ nón','👓👓 Kính','👠👠 Giày dép'];
