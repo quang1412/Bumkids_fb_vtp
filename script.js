@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-05-05-1
+// @version      2024-05-05-0
 // @description  try to take over the world!
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
 // @downloadURL  https://github.com/quang1412/Bumkids_fb_vtp/tree/main
@@ -22,7 +22,8 @@
 
 // ==/UserScript==
 
-const myPhone = '0966628989';
+const myPhone = '0966628989',
+      myFbName = 'Trịnh Hiền';
 
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 function customEvent(n){
@@ -90,6 +91,14 @@ function getListOrdersVTP(phone) {
     })
 }
 
+
+
+
+
+// Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+// Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+// Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+// Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook
 // Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook
 (function() {
     if(window.location.href.indexOf('facebook') == -1) return;
@@ -109,8 +118,13 @@ function getListOrdersVTP(phone) {
     div.hasPhoneNum { border: 2px dashed red; border-radius: 10px; overflow: hidden; margin-bottom: 5px; }
     div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }
     div[role="list"] div[role="listitem"] span:hover {-webkit-line-clamp: 10 !important;}
+
     /*** Sửa chiều cao khung chat ***/
-    div:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div { height: 65vh; }`);
+    div:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div { height: 65vh; }
+
+    /*** Đánh dấu cmt của người đăng ***/
+    div[role="article"][aria-label*="${myFbName}"] {border-left: 1px dashed gray; }
+    `);
 
     const prdList = ['👕👕 Quần Áo','💄💄 Mỹ Phẩm','👜👜 Túi xách','👒👒 Mũ nón','👓👓 Kính','👠👠 Giày dép'];
 
@@ -292,9 +306,7 @@ function getListOrdersVTP(phone) {
         refreshInfo(){
             if(this.isBusy) return;
             this.isBusy = 1;
-
             let i = {}
-
             this.infoList.innerHTML = '<tr><td colspan="2" style="text-align:center;">Đang tải...</td></tr>';
             getListOrdersVTP(this.phone).then(res => {
                 console.log(res)
@@ -308,14 +320,12 @@ function getListOrdersVTP(phone) {
                 this.holdedOrders = (i.draft + i.pending);
 
             }).then(_ => getDeliveryRate(this.phone)).then(rate => {
-                let r = 'Chưa có';
-                if(rate && rate.deliveryRate !== -1){
+                i.rate = 'Chưa có';
+                if(rate && !!~rate.deliveryRate){
                     let percent = (rate.deliveryRate * 100).toFixed(2);
-                    r = (`${percent}% (${rate.order501}/${rate.totalOrder})`);
-                }
-                i.rate = r;
+                    i.rate = (`${percent}% (${rate.order501}/${rate.totalOrder})`);
+                };
             }).then(() => {
-                this.isBusy = 0;
                 this.infoList.innerHTML = `
                 <!--<tr><td>ID:</td> <td>${this.id}</td></tr>-->
                 <tr><td>SĐT: </td> <td>${this.phone || '---'}</td></tr>
@@ -323,7 +333,6 @@ function getListOrdersVTP(phone) {
                 <tr><td>Đơn giữ: </td> <td>${i.pending} chờ • ${i.draft} nháp ${this.holdedOrders ? '❌' : ''}</td></tr>
                 <tr><td>Tổng COD: </td> <td>${i.totalCOD} • ${i.total} đơn</td></tr>`;
             }).catch(e => {
-                console.error(e);
                 this.infoList.innerHTML = `<tr style="color:red"><td>❌ ${e.message}</td></tr>`;
             }).finally(_ => {
                 this.isBusy = 0;
@@ -477,25 +486,25 @@ function getListOrdersVTP(phone) {
         $(phoneNoInput).on('change', async function(){
             this.value = this.value.replaceAll(/\D/g, '');
             this.dispatchEvent(customEvent('input'));
-
             if(!isVNPhone(this.value)) return;
 
-            let res = await getListOrdersVTP(this.value).catch(e => alert('Lỗi khi check trùng đơn! ❌❌❌'))
-            let list = res.data.data.LIST_ORDER;
+            try{
+                let res = await getListOrdersVTP(this.value).catch(e => {throw new Error()});
+                GM_setValue('vtp_duplicateCheckStatus', res?.status);
 
-            let pendingOrders = list.filter(function(o){
-                return !!~([-108,100,102,103,104]).indexOf(o.ORDER_STATUS);
-            });
-            console.log(pendingOrders);
-            let draftOrders = list.filter(function(o){
-                return (o.ORDER_STATUS == -100);
-            });
-            if(res?.status == '200' && (pendingOrders.length + draftOrders.length)){
-                alert('Sđt đang có đơn giữ/chờ lấy! ❌❌❌');
-                let lastOrderNum = res.data.data.LIST_ORDER[0].ORDER_NUMBER;
-                window.location.href = 'https://viettelpost.vn/thong-tin-don-hang?peopleTracking=sender&orderNumber=' + lastOrderNum;
+                if(res?.status != 200) throw new Error();
+
+                let list = res.data.data.LIST_ORDER;
+                let holdOrders = list.filter(function(o){return !!~([-100,-108,100,102,103,104]).indexOf(o.ORDER_STATUS)});
+
+                if(holdOrders.length){
+                    alert('Sđt đang có đơn giữ/chờ lấy! ❌❌❌');
+                    let lastestOrder = holdOrders[0].ORDER_NUMBER;
+                    window.location.href = 'https://viettelpost.vn/thong-tin-don-hang?peopleTracking=sender&orderNumber=' + lastestOrder;
+                }
+            } catch(e){
+                alert('Lỗi khi check trùng đơn! ❌❌❌');
             }
-            GM_setValue('vtp_duplicateCheckStatus', res?.status);
         });
 
         function updateCOD(price, fee){
