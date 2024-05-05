@@ -418,17 +418,6 @@ Facebook Facebook Facebook
     });
 
 })();
-
-(function(){
-    document.addEventListener('mouseup', function(){
-        if(!~window.location.pathname.indexOf('/posts/')) return;
-        document.querySelectorAll('div[role="article"] ul:not(.added)').forEach(e => {
-            e.classList.add('added');
-            let li = GM_addElement(e, 'li', {role: 'button'});
-            li.innerHTML = 'test';
-        });
-    })
-})();
 /***
 Viettel Viettel Viettel Viettel
 Viettel Viettel Viettel Viettel
