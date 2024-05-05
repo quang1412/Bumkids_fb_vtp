@@ -4,7 +4,7 @@
 // @version      2024-05-05-1
 // @description  try to take over the world!
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
-// @downloadURL  https://github.com/quang1412/Bumkids_fb_vtp/tree/main
+// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
 // @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
 // @match        https://viettelpost.vn/*
 // @match        https://www.facebook.com/*
