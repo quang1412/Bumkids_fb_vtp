@@ -17,7 +17,6 @@
 // @grant        GM_addStyle
 // @grant        GM_addElement
 // @grant        GM_notification
-// @grant        GM_registerMenuCommand
 // @grant        window.onurlchange
 
 // ==/UserScript==
@@ -91,21 +90,20 @@ function getListOrdersVTP(phone) {
     })
 }
 
-
-
-
-
-// Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-// Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-// Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-// Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook
-// Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook Facebook
+/***
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+***/
 (function() {
     if(window.location.href.indexOf('facebook') == -1) return;
     GM_addStyle(`/* Facebook custom css */
     div.infoCard { box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1); font-weight: 500; color: darkblue;
     background-image: linear-gradient(240deg, #a1c4fd 0%, #c2e9fb 100%); position: absolute; bottom: calc(100% + 8px); left: 10px;
-    min-width: 250px; min-height: unset; border: 2px solid #fff; border-radius: 8px; padding: 8px;}
+    min-width: calc(100% - 30px); min-height: unset; border: 2px solid #fff; border-radius: 8px; padding: 8px;}
 
     div[role="main"] div.infoCard { left: 10px; top: 64px; right: unset; bottom: unset; }
     div.infoCard:after { content: ''; position: absolute; left: 4%; top: 101%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 6px solid #fff; clear: both; }
@@ -203,35 +201,6 @@ function getListOrdersVTP(phone) {
     phoneBook.init();
     // phoneBook.int_gg();
 
-    function phone2Recievers(phone = null) {
-        return new Promise((resolve, reject) => {
-            if(!phone) return reject(new Error('Chưa có sdt'));
-
-            let token = GM_getValue('vtp_tokenKey');
-            if (!token) return reject('Lỗi 0012');
-
-            GM_xmlhttpRequest({
-                method: "GET",
-                headers: {
-                    'Authorization': 'Bearer ' + token
-                },
-                url:  "https://io.okd.viettelpost.vn/order/v1.0/receiver/_suggest?q=" + phone,
-                onload: function (response) {
-                    console.log (
-                        "GM_xmlhttpRequest() response is:\n",
-                        response.responseText.substring (0, 80) + '...'
-                    );
-                    return resolve(JSON.parse(response.responseText));
-                },
-                onerror: function(reponse) {
-                    console.log("error: ", reponse);
-                    return reject(reponse)
-                }
-
-            })
-        })
-    }
-
     function getDeliveryRate(phone){
         return new Promise((resolve, reject) => {
             if(!phone) return reject('Chưa có sdt');
@@ -279,18 +248,18 @@ function getListOrdersVTP(phone) {
             this.searchBtn.innerText = 'Tìm sđt';
             this.searchBtn.onclick = _ => this.phoneSearching();
 
-            let btn_2 = GM_addElement(toolBar, 'a', { href: 'javascript:void(0)', style: 'color:red;'});
+            let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
             btn_2.innerText = 'Sửa sđt';
             btn_2.onclick = _ => this.setPhone();
 
-            let btn_3 = GM_addElement(toolBar, 'a', { href: 'javascript:void(0)', style: 'color:green;'});
+            let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:purple;'});
+            btn_4.innerText = 'Order';
+            btn_4.onclick = _ => this.preOrder();
+            //btn_4.remove();
+
+            let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:green;'});
             btn_3.innerText = 'Tạo đơn';
             btn_3.onclick = _ => this.createOrder();
-
-            let btn_4 = GM_addElement(toolBar, 'a', { href: 'javascript:void(0)', style: 'color:purple;'});
-            btn_4.innerText = 'Order';
-            btn_4.onclick = _ => this.createPreOrder();
-            btn_4.remove();
 
             this.refreshInfo();
             this.container.onmouseup = () => {
@@ -413,7 +382,7 @@ function getListOrdersVTP(phone) {
             }).catch(alert).finally(() => {
             })
         }
-        createPreOrder(){
+        preOrder(){
             let pathname = window.location.pathname;
             let isPost = (/\/posts\/[\d\w]+$/g).test(pathname);
             if(!isPost){
@@ -450,11 +419,23 @@ function getListOrdersVTP(phone) {
 
 })();
 
-// Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-// Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-// Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-// Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post Viettel Post
-
+(function(){
+    document.addEventListener('mouseup', function(){
+        if(!~window.location.pathname.indexOf('/posts/')) return;
+        document.querySelectorAll('div[role="article"] ul:not(.added)').forEach(e => {
+            e.classList.add('added');
+            let li = GM_addElement(e, 'li', {role: 'button'});
+            li.innerHTML = 'test';
+        });
+    })
+})();
+/***
+Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel
+***/
 (function($) {
     if(window.location.origin != 'https://viettelpost.vn') return !1;
 
@@ -500,7 +481,7 @@ function getListOrdersVTP(phone) {
                     window.location.href = 'https://viettelpost.vn/thong-tin-don-hang?peopleTracking=sender&orderNumber=' + lastestOrder;
                 }
             } catch(e){
-                alert('Lỗi khi check trùng đơn! ❌❌❌');
+                alert('Lỗi check trùng đơn! ❌❌❌');
             }
         });
 
@@ -589,7 +570,13 @@ function getListOrdersVTP(phone) {
     })
 })($);
 
-// customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard customDashboardCard
+/***
+customDashboardCard customDashboardCard
+customDashboardCard customDashboardCard
+customDashboardCard customDashboardCard
+customDashboardCard customDashboardCard
+customDashboardCard customDashboardCard
+***/
 (function(){
     if(window.location.origin != 'https://viettelpost.vn') return !1;
     const customDashboardCard = {
@@ -614,3 +601,36 @@ function getListOrdersVTP(phone) {
     });
 })();
 
+
+
+
+/****
+function phone2Recievers(phone = null) {
+    return new Promise((resolve, reject) => {
+        if(!phone) return reject(new Error('Chưa có sdt'));
+
+        let token = GM_getValue('vtp_tokenKey');
+        if (!token) return reject('Lỗi 0012');
+
+        GM_xmlhttpRequest({
+            method: "GET",
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            url:  "https://io.okd.viettelpost.vn/order/v1.0/receiver/_suggest?q=" + phone,
+            onload: function (response) {
+                console.log (
+                    "GM_xmlhttpRequest() response is:\n",
+                    response.responseText.substring (0, 80) + '...'
+                );
+                return resolve(JSON.parse(response.responseText));
+            },
+            onerror: function(reponse) {
+                console.log("error: ", reponse);
+                return reject(reponse)
+            }
+
+        })
+    })
+}
+***/
