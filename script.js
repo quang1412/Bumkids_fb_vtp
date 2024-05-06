@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-05-05-1
+// @version      2024-05-06-1
 // @description  try to take over the world!
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -103,7 +103,7 @@ Facebook Facebook Facebook
     GM_addStyle(`/* Facebook custom css */
     div.infoCard { box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1); font-weight: 500; color: darkblue;
     background-image: linear-gradient(240deg, #a1c4fd 0%, #c2e9fb 100%); position: absolute; bottom: calc(100% + 8px); left: 10px;
-    min-width: calc(100% - 30px); min-height: unset; border: 2px solid #fff; border-radius: 8px; padding: 8px;}
+    width: 300px; min-height: unset; border: 2px solid #fff; border-radius: 8px; padding: 8px;}
 
     div[role="main"] div.infoCard { left: 10px; top: 64px; right: unset; bottom: unset; }
     div.infoCard:after { content: ''; position: absolute; left: 4%; top: 101%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 6px solid #fff; clear: both; }
@@ -124,7 +124,7 @@ Facebook Facebook Facebook
     /*div[role="article"][aria-label*="${myFbName}"] {border-left: 2px dashed gray; }*/
     `);
 
-    const prdList = ['👕👕 Quần Áo','💄💄 Mỹ Phẩm','👜👜 Túi xách','👒👒 Mũ nón','👓👓 Kính','👠👠 Giày dép'];
+    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép'];
 
     const phoneBook = {
         key: 'fb_phoneBook',
@@ -275,7 +275,7 @@ Facebook Facebook Facebook
         refreshInfo(){
             if(this.isBusy) return;
             this.isBusy = 1;
-            let i = {}
+            let i = {rate: 'Chưa có', total: 0, pending: 0, draft: 0, totalCOD: 0};
             this.infoList.innerHTML = '<tr><td colspan="2" style="text-align:center;">Đang tải...</td></tr>';
             getListOrdersVTP(this.phone).then(res => {
                 console.log(res)
@@ -285,15 +285,11 @@ Facebook Facebook Facebook
                 i.totalCOD = res.data.data.TOTAL_COLLECTION.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
                 i.pending = list.filter(function(o){ return !!~([-108,100,102,103,104]).indexOf(o.ORDER_STATUS) }).length;
                 i.draft = list.filter(function(o){ return (o.ORDER_STATUS == -100) }).length;
-
                 this.holdedOrders = (i.draft + i.pending);
-
             }).then(_ => getDeliveryRate(this.phone)).then(rate => {
-                i.rate = 'Chưa có';
-                if(rate && !!~rate.deliveryRate){
-                    let percent = (rate.deliveryRate * 100).toFixed(2);
-                    i.rate = (`${percent}% (${rate.order501}/${rate.totalOrder})`);
-                };
+                if(!rate?.totalOrder || rate.deliveryRate == -1) return;
+                let percent = (rate.deliveryRate * 100).toFixed(2);
+                i.rate = (`${percent}% (${rate.order501}/${rate.totalOrder})`);
             }).then(() => {
                 this.infoList.innerHTML = `
                 <!--<tr><td>ID:</td> <td>${this.id}</td></tr>-->
@@ -302,7 +298,7 @@ Facebook Facebook Facebook
                 <tr><td>Đơn giữ: </td> <td>${i.pending} chờ • ${i.draft} nháp ${this.holdedOrders ? '❌' : ''}</td></tr>
                 <tr><td>Tổng COD: </td> <td>${i.totalCOD} • ${i.total} đơn</td></tr>`;
             }).catch(e => {
-                this.infoList.innerHTML = `<tr style="color:red"><td>❌ ${e.message}</td></tr>`;
+                this.infoList.innerHTML = `<tr style="color:red; text-align: center;"><td>${e.message}</td></tr>`;
             }).finally(_ => {
                 this.isBusy = 0;
             })
@@ -377,7 +373,10 @@ Facebook Facebook Facebook
 
                 popupWindow?.focus();
                 var popupWindow = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
-                window.addEventListener('message', (ev) => {ev.data === 'popup-closed' && this.refreshInfo() });
+                window.addEventListener('message', (ev) => {
+                    ev.data.fbid === this.id && this.refreshInfo();
+                    ev.data.orderId && GM_notification();
+                });
 
             }).catch(alert).finally(() => {
             })
@@ -451,11 +450,11 @@ Viettel Viettel Viettel Viettel
         $(phoneNoInput).attr('placeholder', `Nhập số điện thoại để tự điền thông tin người nhận \| check trùng ${status == 200 ? '🟢' : '🔴'}`);
 
         $(phoneNoInput).on('change', async function(){
-            this.value = this.value.replaceAll(/\D/g, '');
-            this.dispatchEvent(customEvent('input'));
-            if(!isVNPhone(this.value)) return;
-
             try{
+                this.value = this.value.replaceAll(/\D/g, '');
+                this.dispatchEvent(customEvent('input'));
+                if(!isVNPhone(this.value)) return;
+
                 let res = await getListOrdersVTP(this.value).catch(e => {throw new Error()});
                 GM_setValue('vtp_duplicateCheckStatus', res?.status);
 
@@ -474,25 +473,30 @@ Viettel Viettel Viettel Viettel
             }
         });
 
-        function updateCOD(price, fee){
-            let input = document.querySelector('input#cod'),
-                p = parseInt(price),
-                f = parseInt(fee)
-            input.value = p + f;
-            input.dispatchEvent(customEvent('input'));
-            input.dispatchEvent(customEvent('change'));
+        function updateCOD(callback){
+            try{
+                let price = parseInt(document.querySelector('input#productPrice').value.replaceAll('.', '') || 0);
+                let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
+                if(!price || !fee) return false;
 
-            let n = document.querySelector('.box-product-info + div .ng-star-inserted .custom-switch input#switch1');
-            n.checked = true;
-            n.dispatchEvent(customEvent('change'));
+                let input = document.querySelector('input#cod'),
+                    p = parseInt(price),
+                    f = parseInt(fee)
+                input.value = p + f;
+                input.dispatchEvent(customEvent('input'));
+                input.dispatchEvent(customEvent('change'));
+
+                let n = document.querySelector('.box-product-info + div .ng-star-inserted .custom-switch input#switch1');
+                n.checked = true;
+                n.dispatchEvent(customEvent('change'));
+
+                return callback();
+            } catch(e){
+                return false;
+            }
         }
 
-        $(document).on('change click', 'input#productPrice', function(e){
-            let price = parseInt(this.value.replaceAll('.', '') || 0);
-            let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
-
-            fee && updateCOD(price, fee);
-        });
+        $(document).on('change click', 'input#productPrice', updateCOD);
 
         $(document).keyup(function(e) {
             if (e.key === "Escape") { // escape key maps to keycode `27`
@@ -500,14 +504,13 @@ Viettel Viettel Viettel Viettel
             }
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
                 $('#confirmCreateOrder button.btn.btn-viettel.btn-sm').click();
-                //window.opener.parent.postMessage('childMess', 'hello');
             }
         });
 
         const urlParams = new URLSearchParams(window.location.search);
         let fbid = urlParams.get('fbid');
 
-        if(!fbid) return;
+        if(!fbid) return true;
 
         let phone = urlParams.get('phone'),
             addr = urlParams.get('addr'),
@@ -521,19 +524,15 @@ Viettel Viettel Viettel Viettel
         window.document.body.classList.add('custom');
         s.prependTo(p);
 
-        phoneNoInput.value = phone;
-
         let fn = document.querySelector('input#fullName');
-        ['click', 'keydown', 'keyup'].forEach(e => {
-            document.body.addEventListener(e, _ => {
-                fn.value = name;
-                fn.dispatchEvent(customEvent('input'));
-                fn.dispatchEvent(customEvent('change'));
-            })
-        });
+        $(document.body).on('click keyup keydown', function(){
+            fn.value = name;
+            fn.dispatchEvent(customEvent('input'));
+            fn.dispatchEvent(customEvent('change'));
+        })
 
         let pn = document.querySelector('input#productName');
-        pn.value = prdName + ' - Trịnh Hiền - Bumkids';
+        pn.value = prdName;
 
         let pr = document.querySelector('input#productPrice');
         pr.value = price;
@@ -541,54 +540,26 @@ Viettel Viettel Viettel Viettel
         let pw = document.querySelector('input#productWeight');
         pw.value = 200;
 
-        [pr, pn, pw, phoneNoInput].map(i => {i.dispatchEvent(customEvent('input')); i.dispatchEvent(customEvent('change'))});
+        phoneNoInput.value = phone;
+
+        [pr, pn, pw, phoneNoInput].forEach(i => {
+            i.dispatchEvent(customEvent('input'));
+            i.dispatchEvent(customEvent('change'))
+        });
 
         phoneNoInput.click();
         phoneNoInput.focus();
 
-
         let iv = setInterval(function(){
-            let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
-
-            fee && (updateCOD(price, fee), clearInterval(iv));
+            updateCOD(function(){ clearInterval(iv) });
         }, 1000);
 
         window.onbeforeunload = function(event) {
-            window.opener?.postMessage('popup-closed', '*');
+            window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
         };
     })
 })($);
 
-/***
-customDashboardCard customDashboardCard
-customDashboardCard customDashboardCard
-customDashboardCard customDashboardCard
-customDashboardCard customDashboardCard
-customDashboardCard customDashboardCard
-***/
-(function(){
-    if(window.location.origin != 'https://viettelpost.vn') return !1;
-    const customDashboardCard = {
-        init: function(){
-            if(document.querySelector('div.custom_card')) { return }
-            let col = document.querySelector('div.vtp-dashboard > div.vtp-main-content > div.row:nth-child(3) > div.col-lg-8');
-
-            let card = GM_addElement(col, 'div', { class: 'card form-group custom_card' });
-
-            let cardHeader = GM_addElement(card, 'div', { class: 'card-header' });
-            cardHeader.innerHTML = '<img class="mr-1" src="/assets/images/package.svg"><span class="vicc-title">Bảng tuỳ chỉnh / Bumkids</span>';
-
-            let cardBody = GM_addElement(card, 'div', { class: 'card-body' });
-            cardBody.innerText = 'đang cập nhật...';
-        }
-    }
-
-    window.location.href == 'https://viettelpost.vn/dashboard' && customDashboardCard.init();
-
-    !window.onurlchange && window.addEventListener('urlchange', (info) => {
-        info.url == 'https://viettelpost.vn/dashboard' && customDashboardCard.init();
-    });
-})();
 
 
 
