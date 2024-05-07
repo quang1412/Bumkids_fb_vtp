@@ -115,6 +115,7 @@ Facebook Facebook Facebook
     text-shadow: unset;
     }
 
+    div.infoCard ::selection {color: red; background: yellow;}
     div.infoCard:after { content: ''; position: absolute; left: 4%; top: 101%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 6px solid #fff; clear: both; }
     div[role="main"] div.infoCard { left: 10px; top: 64px; right: unset; bottom: unset; }
     div[role="main"] div.infoCard:after { top: -8px; border-top: unset; border-bottom: 6px solid #fff; }
@@ -223,6 +224,7 @@ Facebook Facebook Facebook
     };
     phoneBook.init();
     // phoneBook.int_gg();
+
     const orderBook = {
         key: 'fb_orderNotes',
         gg_form_id: '1FAIpQLSe_qTjWWDDWHlq-YvtpU0WnWeyL_HTA2gcSB3LDg8HNTTip0A',
@@ -287,7 +289,7 @@ Facebook Facebook Facebook
             let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:purple;'});
             btn_4.innerText = 'Order';
             btn_4.onclick = _ => this.preOrder();
-            //btn_4.remove();
+            btn_4.remove();
 
             let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:green;'});
             btn_3.innerText = 'Tạo đơn';
@@ -302,21 +304,12 @@ Facebook Facebook Facebook
                 } else if(!this.phone || confirm("Xác nhận đổi sdt cho " + this.name + " thành: " + phone + "?")){
                     this.setPhone(phone);
                 }
-             }
-            card.ondrop = event => {
-                event.preventDefault();
-
-                console.log(event);
-                let data = event.dataTransfer.getData("Text");
-                console.log(data);
-
-                let url = new URL(data);
-                let comment_id = url.searchParams.get('comment_id');
-                if(!comment_id) return;
-                console.log(comment_id, data);
-                let a = document.querySelector('a[href="'+data+'"]');
-                a.style.color = 'red';
             }
+
+            var input_aweqwe = this.container.querySelector('div[role="textbox"][aria-label="Tin nhắn"]');
+            input_aweqwe && input_aweqwe.addEventListener('keyup', e => {
+                console.log(input_aweqwe.innerText);
+            })
         }
         refreshInfo(){
             if(this.isBusy) return;
@@ -423,21 +416,11 @@ Facebook Facebook Facebook
                     ev.data.fbid === this.id && this.refreshInfo();
                     ev.data.orderId && GM_notification();
                 });
-
             }).catch(alert).finally(() => {
             })
         }
         preOrder(){
-            let pathname = window.location.pathname;
-            let isPost = (/\/posts\/[\d\w]+$/g).test(pathname);
-            if(!isPost){
-                return alert('vui lòng chuyển vào trang bài post');
-            }
-            let postId = window.prompt("Nhập id bài post", window.location.pathname);
-            if(postId == null || postId == '') return;
-
-            return
-            alert('✔đang phát triển!');
+            return alert('testing..');
         }
     }
 
@@ -464,6 +447,7 @@ Facebook Facebook Facebook
     });
 
 })();
+
 
 /***
 Viettel Viettel Viettel Viettel
