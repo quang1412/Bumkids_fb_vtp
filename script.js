@@ -429,22 +429,16 @@ Facebook Facebook Facebook
         await new Promise(resolve => { setTimeout(_ => resolve(), 1000) });
         let ee = document.querySelectorAll(`a[aria-label][role="link"][href^="/"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.tested)`);
         for(let i = 0; i < ee.length; i++){
-            new Promise(resolve => {
-                return setTimeout(resolve, i * 500)
-            }).then(_ => {
-                let e = ee[i];
-                e.classList.add('tested');
-                let href = e.getAttribute('href');
-
-                if(!(/^\/(\d)+\/$/g).test(href)) return true;
-
-                let info = { id: href.replaceAll('/', ''), name: e.getAttribute('aria-label') }
-
-                if(document.querySelector('div.infoCard[data-fbid="'+info.id+'"]')) return true;
-
-                let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
+            let e = ee[i];
+            e.classList.add('tested');
+            let href = e.getAttribute('href');
+            if(!(/^\/(\d)+\/$/g).test(href)) continue;
+            let info = { id: href.replaceAll('/', ''), name: e.getAttribute('aria-label') }
+            if(document.querySelector('div.infoCard[data-fbid="'+info.id+'"]')) continue;
+            let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
+            setTimeout(_ => {
                 let card = new InfoCard_1(info, p);
-            })
+            }, i * 200);
         }
     }
 
