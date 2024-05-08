@@ -273,7 +273,7 @@ Facebook Facebook Facebook
             this.penddingOrders = 0;
             this.deliveryRate = 0;
 
-            let card = GM_addElement(container, 'div', { class: 'infoCard' });
+            let card = GM_addElement(container, 'div', { class: 'infoCard', 'data-fbid': this.id });
 
             this.infoList = GM_addElement(card, 'table', { style: 'padding-bottom: 5px;' });
             let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
@@ -317,7 +317,7 @@ Facebook Facebook Facebook
             let i = {rate: 'Chưa có', total: 0, pending: 0, draft: 0, totalCOD: 0};
             this.infoList.innerHTML = '<tr><td colspan="2" style="text-align:center;">Đang tải...</td></tr>';
             getListOrdersVTP(this.phone).then(res => {
-                console.log(res)
+                //console.log(res)
                 // picked: 105,200,202,300,310,320,400,500,506,507,509,505,501,515,502,551,508,550,504,503
                 let list = res.data.data.LIST_ORDER;
                 i.total = res.data.data.TOTAL;
@@ -326,6 +326,7 @@ Facebook Facebook Facebook
                 i.draft = list.filter(function(o){ return (o.ORDER_STATUS == -100) }).length;
                 this.holdedOrders = (i.draft + i.pending);
             }).then(_ => getDeliveryRate(this.phone)).then(rate => {
+                //console.log(rate);
                 if(!rate?.totalOrder || rate.deliveryRate == -1) return;
                 let percent = (rate.deliveryRate * 100).toFixed(2);
                 i.rate = (`${percent}% (${rate.order501}/${rate.totalOrder})`);
@@ -426,18 +427,25 @@ Facebook Facebook Facebook
 
     document.onmouseup = async function(){
         await new Promise(resolve => { setTimeout(_ => resolve(), 1000) });
+        let ee = document.querySelectorAll(`a[aria-label][role="link"][href^="/"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.tested)`);
+        for(let i = 0; i < ee.length; i++){
+            new Promise(resolve => {
+                return setTimeout(resolve, i * 500)
+            }).then(_ => {
+                let e = ee[i];
+                e.classList.add('tested');
+                let href = e.getAttribute('href');
 
-        document.querySelectorAll(`a[aria-label][role="link"][href^="/"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.tested)`).forEach(function(e){
-            e.classList.add('tested');
-            let href = e.getAttribute('href');
+                if(!(/^\/(\d)+\/$/g).test(href)) return true;
 
-            if(!(/^\/(\d)+\/$/g).test(href)) return !1;
+                let info = { id: href.replaceAll('/', ''), name: e.getAttribute('aria-label') }
 
-            let info = { id: href.replaceAll('/', ''), name: e.getAttribute('aria-label') }
-            let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
+                if(document.querySelector('div.infoCard[data-fbid="'+info.id+'"]')) return true;
 
-            let card = new InfoCard_1(info, p);
-        });
+                let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
+                let card = new InfoCard_1(info, p);
+            })
+        }
     }
 
     document.onkeyup = (function(e) {
