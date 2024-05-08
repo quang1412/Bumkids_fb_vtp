@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-05-07-3
+// @version      2024-05-07-4
 // @description  try to take over the world!
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -339,7 +339,7 @@ Facebook Facebook Facebook
         }
         phoneSearching(){
             this.searchBtn.innerText = 'Dừng';
-            if(this.searchLoop) return this.phoneSearch_Stop();
+            if(this.searchLoop) return this.phoneSearching_Stop();
             this.searchLoop = setInterval(() => {
                 this.container.querySelectorAll('div').forEach(d => { d.scrollTop = 0 });
 
@@ -357,26 +357,27 @@ Facebook Facebook Facebook
                     if(!match || !!~match.indexOf(myPhone)){
                         continue;
                     } else {
-                        m.classList.add('hasPhoneNum');
-                        m.dispatchEvent(customEvent('mouseover'));
-                        this.phoneSearch_Stop(m);
+                        this.phoneSearching_Stop(m);
                         break;
                     }
                 }
             }, 500);
         }
-        phoneSearch_Stop(e){
+        phoneSearching_Stop(e){
             window.clearInterval(this.searchLoop);
             this.searchBtn.innerText = 'Tìm sđt';
             this.searchLoop = 0;
 
             if(!e) return;
 
+            e.classList.add('hasPhoneNum');
+            e.dispatchEvent(customEvent('mouseover'));
+
             for(let i = 0; i <= 10; i++){
                 setTimeout(() => {
                     e.scrollIntoView( {block: "center", inline: "nearest"});
-                    e.querySelector('div[aria-haspopup="menu"][role="button"][aria-label="Xem thêm"]:not([aria-expanded="true"])')?.click();
-                }, i * 100)
+                    //e.querySelector('div[aria-haspopup="menu"][role="button"][aria-label="Xem thêm"]:not([aria-expanded="true"])')?.click();
+                }, i * 100);
             }
         }
         setPhone(phone = window.prompt("Nhập sđt cho " + this.name, this.phone)){
