@@ -332,12 +332,22 @@ Facebook Facebook Facebook
                 let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.phone);
                 this.infoList.innerHTML = `
                 <!--<tr><td>ID:</td> <td>${this.id}</td></tr>-->
-                <tr><td>SĐT: </td> <td>${this.phone || '---'}</td></tr>
-                <tr><td>Uy tín: </td> <td>${i.rate || '---'}</td></tr>
-                <tr><td>Đơn giữ: </td> <td style="" ><a href="${vtlink}" target="_blank" style="color: ${this.holdedOrders?'red':'inherit'}">
-                  ${i.pending} chờ • ${i.draft} nháp
-                </td></tr>
-                <tr><td>Tổng COD: </td> <td>${i.totalCOD} • ${i.total} đơn</td></tr>`;
+                <tr>
+                  <td>SĐT: </td>
+                  <td>${this.phone}</td>
+                </tr>
+                <tr>
+                  <td>Uy tín: </td>
+                  <td>${i.rate}</td>
+                </tr>
+                <tr>
+                  <td>Đơn giữ: </td>
+                  <td><a href="${vtlink}" target="_blank" style="color: ${this.holdedOrders?'red':'inherit'}">${i.pending} chờ • ${i.draft} nháp</a></td>
+                </tr>
+                <tr>
+                  <td>Tổng COD: </td>
+                  <td>${i.totalCOD} • ${i.total} đơn</td>
+                </tr>`;
             }).catch(e => {
                 this.infoList.innerHTML = `<tr style="color:orangered; text-align: center;"><td>${e.message}</td></tr>`;
             }).finally(_ => {
