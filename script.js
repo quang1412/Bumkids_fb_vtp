@@ -329,13 +329,13 @@ Facebook Facebook Facebook
                 let percent = (rate.deliveryRate * 100).toFixed(2);
                 i.rate = (`${percent}% (${rate.order501}/${rate.totalOrder})`);
             }).then(() => {
-                let link = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.phone);
+                let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.phone);
                 this.infoList.innerHTML = `
                 <!--<tr><td>ID:</td> <td>${this.id}</td></tr>-->
                 <tr><td>SĐT: </td> <td>${this.phone || '---'}</td></tr>
                 <tr><td>Uy tín: </td> <td>${i.rate || '---'}</td></tr>
-                <tr><td>Đơn giữ: </td> <td style="" ><a href="${link}" target="_blank" style="color: ${this.holdedOrders?'red':'inherit'}">
-                  ${i.pending} chờ • ${i.draft} nháp ${this.holdedOrders?'❌':''}
+                <tr><td>Đơn giữ: </td> <td style="" ><a href="${vtlink}" target="_blank" style="color: ${this.holdedOrders?'red':'inherit'}">
+                  ${i.pending} chờ • ${i.draft} nháp
                 </td></tr>
                 <tr><td>Tổng COD: </td> <td>${i.totalCOD} • ${i.total} đơn</td></tr>`;
             }).catch(e => {
