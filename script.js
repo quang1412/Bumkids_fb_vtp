@@ -239,7 +239,7 @@ Facebook Facebook Facebook
 
             let token = GM_getValue('vtp_tokenKey');
             if (!token) return reject('Lỗi viettel');
-            setTimeout(resolve, 3000);
+            setTimeout(_ => {return resolve('timeout')}, 3000);
 
             GM_xmlhttpRequest({
                 method: "GET",
@@ -325,8 +325,9 @@ Facebook Facebook Facebook
                 i.draft = list.filter(function(o){ return (o.ORDER_STATUS == -100) }).length;
                 this.holdedOrders = (i.draft + i.pending);
             }).then(_ => getDeliveryRate(this.phone)).then(rate => {
-                //console.log(rate);
+                if(rate == 'timeout'){ i.rate = 'timeout'; return; }
                 if(!rate?.totalOrder || rate.deliveryRate == -1) return;
+
                 let percent = (rate.deliveryRate * 100).toFixed(2);
                 i.rate = (`${percent}% (${rate.order501}/${rate.totalOrder})`);
             }).then(() => {
