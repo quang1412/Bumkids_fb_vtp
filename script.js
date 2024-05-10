@@ -239,6 +239,7 @@ Facebook Facebook Facebook
 
             let token = GM_getValue('vtp_tokenKey');
             if (!token) return reject('Lỗi viettel');
+            setTimeout(resolve, 3000);
 
             GM_xmlhttpRequest({
                 method: "GET",
