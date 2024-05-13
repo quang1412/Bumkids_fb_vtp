@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-05-13
+// @version      2024-05-13-1
 // @description  try to take over the world!
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -106,6 +106,8 @@ Facebook Facebook Facebook
 
 
     @keyframes blinker { 50% { opacity: 0; }}
+
+    ._8ykn :not(.always-enable-animations) .infoCard{ animation-name: auto !important; transition-property: all !important; }
 
     div.infoCard {
     transition: all 1.5s ease-in-out;
@@ -455,6 +457,20 @@ Facebook Facebook Facebook
             let card = new InfoCard_1(info, p);
         }
     }
+
+    function postsCommentListChange(){
+        let interv = setInterval(function(){
+            if(!(/facebook\.com\/.*\/posts\//g).test(window.location.href)) return;
+            let i = document.querySelector('div[role="button"] span[dir="auto"] i[style*="/vxnmwo6SJru.png"]');
+            i && (i.click(), clearInterval(interv));
+        }, 500);
+
+        setTimeout(function(){
+            clearInterval(interv);
+        }, 5000);
+    }
+    postsCommentListChange();
+    window.addEventListener('urlchange', postsCommentListChange);
 })();
 
 
