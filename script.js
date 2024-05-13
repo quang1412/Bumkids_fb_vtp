@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-05-07-4
+// @version      2024-05-13
 // @description  try to take over the world!
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -143,7 +143,7 @@ Facebook Facebook Facebook
 
     /*** CSS END ***/`);
 
-    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép'];
+    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ'];
 
     const phoneBook = {
         key: 'fb_phoneBook',
@@ -308,7 +308,7 @@ Facebook Facebook Facebook
                 }
             }
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
-            copyright.innerText = '© QuangPlus';
+            copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
         refreshInfo(){
             if(this.isBusy) return;
