@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-05-13-2
+// @version      2024-05-14-1
 // @description  try to take over the world!
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -113,7 +113,8 @@ Facebook Facebook Facebook
     --border-color: lightgray;
     --bg-brightness: 1.5;
     --bg-toolBar: rgb(231 231 231 / 60%);
-    color: #080808;
+    color: #000;
+
     backdrop-filter: brightness(var(--bg-brightness)) blur(10px);
     box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1);
     font-weight: bolder;
@@ -121,14 +122,15 @@ Facebook Facebook Facebook
     bottom: calc(100% + 8px);
     left: 10px;
     width: calc(100% - 30px);
+    max-height: unset;
     max-width: 350px;
-    min-height: unset;
     border: 2px solid var(--border-color);
     border-radius: 8px;
     padding: 8px;
     filter: blur(0px);
     transition: all 1.5s ease-in-out;
     overflow: hidden;
+    opacity: 1;
     }
 
     html.__fb-dark-mode div.infoCard {
@@ -138,7 +140,7 @@ Facebook Facebook Facebook
     color: whitesmoke;
     }
 
-    div.infoCard.refreshing{ filter: blur(10px); }
+    div.infoCard.refreshing{ filter: blur(10px), opacity: 0;}
 
     div.infoCard ::selection {color: red; background: yellow;}
     div.infoCard:after { content: ''; position: absolute; left: 4%; top: 101%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 6px solid var(--border-color); clear: both; }
