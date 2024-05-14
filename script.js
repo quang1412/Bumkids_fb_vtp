@@ -128,6 +128,7 @@ Facebook Facebook Facebook
     padding: 8px;
     filter: blur(0px);
     transition: all 1.5s ease-in-out;
+    overflow: hidden;
     }
 
     html.__fb-dark-mode div.infoCard {
@@ -147,6 +148,14 @@ Facebook Facebook Facebook
     div.infoCard div.toolBar { text-align: center; background-color: var(--bg-toolBar); border-radius: 6px; display: flex; justify-content: space-around; }
     div.infoCard div.toolBar a { padding: 5px; flex: 1; opacity: 1; transition: all .5s ease-in-out; }
     div.infoCard div.toolBar:hover a:not(:hover) { opacity: .3; }
+
+    div.infoCard div.card-bg {
+    background: #bdc3c7;
+    background: -webkit-linear-gradient(to right, #2c3e50, #bdc3c7);
+    background: linear-gradient(to right, #2c3e50, #bdc3c7);
+    z-index: -1;
+    opacity: .5;
+    }
 
     div.hasPhoneNum { border: 2px dashed red; border-radius: 10px; overflow: hidden; margin-bottom: 5px; }
     div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }
@@ -324,6 +333,8 @@ Facebook Facebook Facebook
                     this.setPhone(phone);
                 }
             }
+            let bg = GM_addElement(this.card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
+
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
