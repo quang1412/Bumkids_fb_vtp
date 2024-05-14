@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-05-13-1
+// @version      2024-05-13-2
 // @description  try to take over the world!
 // @namespace    https://github.com/quang1412/Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -460,14 +460,19 @@ Facebook Facebook Facebook
         }
     }
 
+    let interv, timeou;
     function postsCommentListChange(){
-        let interv = setInterval(function(){
+        interv && clearInterval(interv);
+        timeou && clearInterval(timeou);
+
+        interv = setInterval(function(){
             if(!(/facebook\.com\/.*\/posts\//g).test(window.location.href)) return;
             let i = document.querySelector('div[role="button"] span[dir="auto"] i[style*="/vxnmwo6SJru.png"]');
-            i && (i.click(), clearInterval(interv));
+            i && (clearInterval(interv), i.click());
+            return;
         }, 500);
 
-        setTimeout(function(){
+        timeou = setTimeout(function(){
             clearInterval(interv);
         }, 5000);
     }
