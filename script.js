@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-05-14-2
+// @version      2024-05-15-1
 // @description  try to take over the world!
-// @namespace    https://github.com/quang1412/Bumkids_fb_vtp
+// @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
 // @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
 // @match        https://viettelpost.vn/*
@@ -141,7 +141,7 @@ Facebook Facebook Facebook
     --text-color: whitesmoke;
     }
 
-    div.infoCard.refreshing{ filter: blur(10px), opacity: 0;}
+    div.infoCard.refreshing{ filter: blur(5px); }
 
     div.infoCard ::selection {color: red; background: yellow;}
     div.infoCard:after { content: ''; position: absolute; left: 4%; top: 101%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 6px solid var(--border-color); clear: both; }
@@ -172,7 +172,7 @@ Facebook Facebook Facebook
 
     /*** CSS END ***/`);
 
-    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ'];
+    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎗🎀 Phụ kiện khác'];
 
     const phoneBook = {
         key: 'fb_phoneBook',
@@ -302,7 +302,7 @@ Facebook Facebook Facebook
             this.penddingOrders = 0;
             this.deliveryRate = 0;
 
-            this.card = GM_addElement(container, 'div', { class: 'infoCard', 'data-fbid': this.id });
+            this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.id });
 
             this.infoList = GM_addElement(this.card, 'table', { style: 'padding-bottom: 5px;' });
             let toolBar = GM_addElement(this.card, 'div', { class: 'toolBar' });
@@ -320,11 +320,12 @@ Facebook Facebook Facebook
             btn_4.onclick = _ => this.preOrder();
             btn_4.remove();
 
-            let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:greenyellow;'});
+            let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
             btn_3.innerText = 'Tạo đơn';
             btn_3.onclick = _ => this.createOrder();
 
             this.refreshInfo();
+            //this.messListening();
 
             // Set phone by mouse selection
             this.container.onmouseup = _ => {
@@ -345,7 +346,7 @@ Facebook Facebook Facebook
             if(this.isBusy) return;
             this.isBusy = 1;
             let i = {rate: 'Chưa có', total: 0, pending: 0, draft: 0, totalCOD: 0};
-            this.infoList.innerHTML = '<tr><td colspan="2" style="text-align:center;">Đang tải...</td></tr>';
+            this.infoList.innerHTML = '</tr><tr><td colspan="2" style="text-align:center;">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
             this.card.classList.add('refreshing');
             getListOrdersVTP(this.phone).then(res => {
                 //console.log(res)
@@ -452,11 +453,11 @@ Facebook Facebook Facebook
                 GM_setValue('fb_lastPrice', prices);
                 url += '&price=' + (price*1000);
 
-                let pl = prdList.map((p, i) => '[' + (i + 1) + '] ' + p + (i % 2 ? '\n' : '    ')).join('');
+                let pl = prdList.map((p, i) => '[' + (i + 1) + '] ' + p + ( (i + 1) % 3 ? '    ' : '\n')).join('');
                 var i = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn tên sản phẩm (giá đã nhập:'+ prices +')', 1);
                 let prdName = prdList[i - 1];
                 if(!prdName) return false;
-                url += '&prdName=' + prdName;
+                url += '&prdName=' + prdName + ' - (' + prices + ')';
 
                 popupWindow?.focus();
                 var popupWindow = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
@@ -469,6 +470,17 @@ Facebook Facebook Facebook
         }
         preOrder(){
             return alert('testing..');
+        }
+        messListening(){
+            try{
+                let inp = this.container.querySelector('div[role="textbox"][aria-label="Tin nhắn"]');
+                inp.setAttribute('spellcheck', false);
+                inp.addEventListener('keydown', e => {
+                    if (e.keyCode === 32) { // 13 = enter / 32 = space
+                        console.log(inp.innerText);
+                    }
+                })
+            }catch(e){}
         }
     }
 
@@ -489,25 +501,26 @@ Facebook Facebook Facebook
         }
     }
 
+})();
+
+(function(){
+    if(window.location.origin != 'https://www.facebook.com') return !1;
     let interv, timeou;
-    function postsCommentListChange(){
+    function commentFilterClick(){
         interv && clearInterval(interv);
         timeou && clearInterval(timeou);
 
         interv = setInterval(function(){
             if(!(/facebook\.com\/.*\/posts\//g).test(window.location.href)) return;
             let i = document.querySelector('div[role="button"] span[dir="auto"] i:is([style*="/vxnmwo6SJru.png"], [style*="/vEQmG9s3C2b.png"])');
-            console.log(i);
             i && (clearInterval(interv), i.click());
-            return;
         }, 500);
-
         timeou = setTimeout(function(){
             clearInterval(interv);
         }, 5000);
     }
-    postsCommentListChange();
-    window.addEventListener('urlchange', postsCommentListChange);
+    commentFilterClick();
+    window.addEventListener('urlchange', commentFilterClick);
 })();
 
 
@@ -654,7 +667,21 @@ Viettel Viettel Viettel Viettel
     })
 })($);
 
+(async function(){
+    return
+    GM_notification({
+        text: "This is the notification message.",
+        title: "Notification Title",
+        url: 'https:/example.com/',
+        onclick: (event) => {
+            // The userscript is still running, so don't open example.com
+            event.preventDefault();
+            // Display an alert message instead
+            alert('I was clicked!')
+        }
+    });
 
+})();
 
 
 
