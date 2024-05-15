@@ -451,7 +451,7 @@ Facebook Facebook Facebook
                 GM_setValue('fb_lastPrice', prices);
                 url += '&price=' + (price*1000);
 
-                let pl = prdList.map((p, i) => (i + 1) + '/ ' + p).join('\n');
+                let pl = prdList.map((p, i) => '[' + (i + 1) + '] ' + p + (i % 2 ? '\n' : '    ')).join('');
                 var i = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn tên sản phẩm (giá đã nhập:'+ prices +')', 1);
                 let prdName = prdList[i - 1];
                 if(!prdName) return false;
