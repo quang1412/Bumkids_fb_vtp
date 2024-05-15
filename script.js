@@ -101,9 +101,9 @@ Facebook Facebook Facebook
 Facebook Facebook Facebook
 ***/
 (function() {
-    if(window.location.href.indexOf('facebook') == -1) return;
-    GM_addStyle(`/* CSS START */
+    if(window.location.origin != 'https://www.facebook.com') return !1;
 
+    GM_addStyle(`/* CSS START */
 
     @keyframes blinker { 50% { opacity: 0; }}
 
@@ -113,8 +113,9 @@ Facebook Facebook Facebook
     --border-color: lightgray;
     --bg-brightness: 1.5;
     --bg-toolBar: rgb(231 231 231 / 60%);
-    color: #000;
+    --text-color: #000;
 
+    color: var(--text-color);
     backdrop-filter: brightness(var(--bg-brightness)) blur(10px);
     box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1);
     font-weight: bolder;
@@ -137,7 +138,7 @@ Facebook Facebook Facebook
     --border-color: gray;
     --bg-brightness: 0.5;
     --bg-toolBar: rgb(79 79 79 / 60%);
-    color: whitesmoke;
+    --text-color: whitesmoke;
     }
 
     div.infoCard.refreshing{ filter: blur(10px), opacity: 0;}
@@ -306,7 +307,7 @@ Facebook Facebook Facebook
             this.infoList = GM_addElement(this.card, 'table', { style: 'padding-bottom: 5px;' });
             let toolBar = GM_addElement(this.card, 'div', { class: 'toolBar' });
 
-            this.searchBtn = GM_addElement(toolBar, 'a', { style: 'color:blue;'});
+            this.searchBtn = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
             this.searchBtn.innerText = 'Tìm sđt';
             this.searchBtn.onclick = _ => this.phoneSearching();
 
@@ -319,7 +320,7 @@ Facebook Facebook Facebook
             btn_4.onclick = _ => this.preOrder();
             btn_4.remove();
 
-            let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:green;'});
+            let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:greenyellow;'});
             btn_3.innerText = 'Tạo đơn';
             btn_3.onclick = _ => this.createOrder();
 
