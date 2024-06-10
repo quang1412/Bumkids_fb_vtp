@@ -402,7 +402,7 @@ Facebook Facebook Facebook
                 </tr>
                 <tr>
                   <td>Tổng COD: </td>
-                  <td>${i.totalCOD} • ${i.total} đơn</td>
+                  <td>${i.total} đơn • ${i.totalCOD}</td>
                 </tr>`;
             }).catch(e => {
                 this.infoList.innerHTML = `<tr style="color:orangered; text-align: center;"><td>${e.message}</td></tr>`;
@@ -475,10 +475,9 @@ Facebook Facebook Facebook
                 url += '&price=' + (price*1000);
 
                 let pl = prdList.map((p, i) => '[' + (i + 1) + '] ' + p + ( (i + 1) % 3 ? '    ' : '\n')).join('');
-                let iii = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn tên sản phẩm (giá đã nhập: '+ prices +')', 1);
+                let iii = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn sản phẩm (phân tách bằng dấu cách)', 1);
                 if (iii == null || iii == undefined) { return false }
                 let prdNames = iii.split(/\D+/).map(i => prdList[i - 1]);
-//                if(!!~prdNames.indexOf(undefined)){ return alert('Mã sản phẩm không hợp lệ!') }
                 if(!!~prdNames.indexOf(undefined)){ throw new Error('Mã sản phẩm không hợp lệ!') }
 
                 url += '&prdName=' + prdNames.join(" %2B ") + ' - (' + prices + ')';
@@ -490,15 +489,12 @@ Facebook Facebook Facebook
                     ev.data.orderId && GM_notification();
                 });
             }
-            catch(e){
-                alert(e.message);
-            }
+            catch(e){ alert(e.message) }
         }
         preOrder(){
             return alert('testing..');
         }
         eventsListener(){
-
             this.container.onkeydown = evt => {
                 evt = evt || window.event;
                 var isEscape = false;
@@ -512,18 +508,6 @@ Facebook Facebook Facebook
                 }
             };
 
-        }
-        messListening(){
-            try{
-                let inp = this.container.querySelector('div[role="textbox"][aria-label="Tin nhắn"]');
-                inp.setAttribute('spellcheck', false);
-
-                inp.addEventListener('keydown', e => {
-                    if (e.keyCode === 32) { // 13 = enter / 32 = space
-                        console.log(inp.innerText);
-                    }
-                })
-            }catch(e){}
         }
     }
 
@@ -658,6 +642,10 @@ Viettel Viettel Viettel Viettel
             }
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
                 $('#confirmCreateOrder button.btn.btn-viettel.btn-sm').click();
+                let i = setInterval(function(){
+                    let o = $('span.madonhang#rowOrderNo1').text();
+                    o && (window.opener?.postMessage({fbid: fbid, orderId: o}, '*'), clearInterval(i));
+                }, 500);
             }
         });
 
@@ -709,7 +697,7 @@ Viettel Viettel Viettel Viettel
         }, 1000);
 
         window.onbeforeunload = function(event) {
-            window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
+
         };
     })
 })($);
