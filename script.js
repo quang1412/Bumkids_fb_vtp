@@ -17,6 +17,7 @@
 // @grant        GM_addStyle
 // @grant        GM_addElement
 // @grant        GM_notification
+// @grant        GM_addValueChangeListener
 // @grant        window.onurlchange
 
 // ==/UserScript==
@@ -34,6 +35,9 @@ function customEvent(n){
         event.initEvent(n, true, false);
         return event;
     }
+}
+function getElementByXpath(path) {
+    return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 }
 function getFormatedDate(i = 0) {
     const today = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
@@ -141,7 +145,9 @@ Facebook Facebook Facebook
     --text-color: whitesmoke;
     }
 
-    div.infoCard.refreshing{ filter: blur(5px); }
+    div.infoCard.refreshing{
+    /* filter: blur(5px); */
+    }
 
     div.infoCard ::selection {color: red; background: yellow;}
     div.infoCard:after { content: ''; position: absolute; left: 4%; top: 101%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 6px solid var(--border-color); clear: both; }
@@ -172,12 +178,13 @@ Facebook Facebook Facebook
 
     /*** CSS END ***/`);
 
-    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎗🎀 Phụ kiện khác'];
+    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎁🎀 Khác'];
 
     const phoneBook = {
         key: 'fb_phoneBook',
         gg_form_id: '1FAIpQLSe_qTjWWDDWHlq-YvtpU0WnWeyL_HTA2gcSB3LDg8HNTTip0A',
         download_url_gg: 'https://docs.google.com/spreadsheets/d/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/gviz/tq?tqx=out:json&tq&gid=314725270',
+        phonebook: null,
         int_gg: async function(){
             let res = await GM.xmlHttpRequest({ url: this.download_url_gg, responseType: 'text', }).catch(e => console.error(e));
             let txt = res.responseText.replace('/*O_o*/\ngoogle.visualization.Query.setResponse(', '').replace(');','');
@@ -190,33 +197,40 @@ Facebook Facebook Facebook
             console.log(object);
         },
         init: async function(){
-            let pb = await GM.getValue(this.key, null);
-            let pb_length = Object.keys(pb).length;
-            GM_log('Phonebook length: ', pb_length);
+            this.phonebook = await GM.getValue(this.key, null);
 
-            !pb && GM_xmlhttpRequest({
+            GM_log('Phonebook length: ', Object.keys(this.phonebook).length);
+            GM_log(this.phonebook);
+
+            GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
+                if(remote){
+                    this.phonebook = newValue
+                }
+            });
+
+            !this.phonebook && GM_xmlhttpRequest({
                 url:  "https://bumluxury.com/bumkids/fid2phone.php",
                 method: "GET",
                 synchronous: true,
                 responseType: 'text',
                 onload: function(res) {
                     console.log(res.response);
-                    GM_setValue(this.key, res.response);
+                    this.phonebook = res.response;
+                    GM_setValue(this.key, this.phonebook);
                 },
                 onerror: function(e){
                     console.error(e);
-                    GM_setValue(this.key, new Object());
+                    this.phonebook = new Object();
+                    GM_setValue(this.key, this.phonebook);
                 }
-            })
+            });
         },
         get: function(id){
-            let pb = GM_getValue(this.key);
-            return pb[id];
+            return this.phonebook[id];
         },
         set: function(id, phone){
-            let pb = GM_getValue(this.key) || {};
-            pb[id] = phone;
-            GM_setValue(this.key, pb);
+            this.phonebook[id] = phone;
+            GM_setValue(this.key, this.phonebook);
             this.upload(id, phone);
             this.upload_gg(id, phone);
             return true;
@@ -231,7 +245,7 @@ Facebook Facebook Facebook
                 onload: function (response) { },
                 onerror: function(reponse) {
                     console.log("error: ", reponse);
-                    return alert('Phonebook error: ' + reponse)
+                    return alert('phonebook error: ' + reponse)
                 }
             })
         },
@@ -245,6 +259,10 @@ Facebook Facebook Facebook
                 },
                 onload: function (response) {
                     console.log(response);
+                },
+                onerror: function(reponse) {
+                    console.log("error: ", reponse);
+                    return alert('GG phonebook error: ' + reponse)
                 }
             })
         }
@@ -315,17 +333,17 @@ Facebook Facebook Facebook
             btn_2.innerText = 'Sửa sđt';
             btn_2.onclick = _ => this.setPhone();
 
-            let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:purple;'});
-            btn_4.innerText = 'Order';
-            btn_4.onclick = _ => this.preOrder();
-            btn_4.remove();
-
             let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
             btn_3.innerText = 'Tạo đơn';
             btn_3.onclick = _ => this.createOrder();
 
+            let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:purple;'});
+            btn_4.innerText = 'Test';
+            btn_4.onclick = _ => this.test();
+            btn_4.remove();
+
             this.refreshInfo();
-            //this.messListening();
+            this.eventsListener();
 
             // Set phone by mouse selection
             this.container.onmouseup = _ => {
@@ -342,11 +360,14 @@ Facebook Facebook Facebook
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
+        test(){
+            this.container.querySelector('div[aria-label="Chọn nhãn dán"]')?.click();
+        }
         refreshInfo(){
             if(this.isBusy) return;
             this.isBusy = 1;
             let i = {rate: 'Chưa có', total: 0, pending: 0, draft: 0, totalCOD: 0};
-            this.infoList.innerHTML = '</tr><tr><td colspan="2" style="text-align:center;">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
+            this.infoList.innerHTML = '</tr><tr><td style=" ">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
             this.card.classList.add('refreshing');
             getListOrdersVTP(this.phone).then(res => {
                 //console.log(res)
@@ -440,24 +461,27 @@ Facebook Facebook Facebook
             this.refreshInfo();
         }
         createOrder(){
-            new Promise((resolve, reject) => {
-                if(!this.phone) return reject('❌ Vui lòng cập nhật sđt trước!');
-                if(this.holdedOrders) return reject('❌ Có đơn chờ giao');
-                return resolve(true);
-            }).then(_ => {
+            try{
+                if(!this.phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
+                if(this.holdedOrders) throw new Error('❌ Có đơn chờ giao');
+
                 let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
 
-                let prices = prompt("B1 - Nhập giá (đv nghìn đ), phân tách bằng dấu cách để tính tổng", GM_getValue('fb_lastPrice') || 1000);
-                if (prices == null || prices == undefined) { return false }
-                let price = prices.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
+                let prices = prompt("B1 - Nhập giá (đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('fb_lastPrice', 1000));
+                if (prices == undefined || prices == null) { return false }
                 GM_setValue('fb_lastPrice', prices);
+                let price = prices.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
+
                 url += '&price=' + (price*1000);
 
                 let pl = prdList.map((p, i) => '[' + (i + 1) + '] ' + p + ( (i + 1) % 3 ? '    ' : '\n')).join('');
-                var i = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn tên sản phẩm (giá đã nhập:'+ prices +')', 1);
-                let prdName = prdList[i - 1];
-                if(!prdName) return false;
-                url += '&prdName=' + prdName + ' - (' + prices + ')';
+                let iii = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn tên sản phẩm (giá đã nhập: '+ prices +')', 1);
+                if (iii == null || iii == undefined) { return false }
+                let prdNames = iii.split(/\D+/).map(i => prdList[i - 1]);
+//                if(!!~prdNames.indexOf(undefined)){ return alert('Mã sản phẩm không hợp lệ!') }
+                if(!!~prdNames.indexOf(undefined)){ throw new Error('Mã sản phẩm không hợp lệ!') }
+
+                url += '&prdName=' + prdNames.join(" %2B ") + ' - (' + prices + ')';
 
                 popupWindow?.focus();
                 var popupWindow = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
@@ -465,16 +489,35 @@ Facebook Facebook Facebook
                     ev.data.fbid === this.id && this.refreshInfo();
                     ev.data.orderId && GM_notification();
                 });
-            }).catch(alert).finally(() => {
-            })
+            }
+            catch(e){
+                alert(e.message);
+            }
         }
         preOrder(){
             return alert('testing..');
+        }
+        eventsListener(){
+
+            this.container.onkeydown = evt => {
+                evt = evt || window.event;
+                var isEscape = false;
+                if ("key" in evt) {
+                    isEscape = (evt.key === "Escape" || evt.key === "Esc");
+                } else {
+                    isEscape = (evt.keyCode === 27);
+                }
+                if (isEscape) {
+                    this.container.querySelector('div[role="button"][aria-label="Đóng đoạn chat"]')?.click();
+                }
+            };
+
         }
         messListening(){
             try{
                 let inp = this.container.querySelector('div[role="textbox"][aria-label="Tin nhắn"]');
                 inp.setAttribute('spellcheck', false);
+
                 inp.addEventListener('keydown', e => {
                     if (e.keyCode === 32) { // 13 = enter / 32 = space
                         console.log(inp.innerText);
@@ -505,17 +548,17 @@ Facebook Facebook Facebook
 
 (function(){
     if(window.location.origin != 'https://www.facebook.com') return !1;
-    let interv, timeou;
-    function commentFilterClick(){
-        interv && clearInterval(interv);
-        timeou && clearInterval(timeou);
+    let interv, timout;
+
+    let commentFilterClick = function(){
+        clearInterval(interv); clearInterval(timout);
 
         interv = setInterval(function(){
             if(!(/facebook\.com\/.*\/posts\//g).test(window.location.href)) return;
-            let i = document.querySelector('div[role="button"] span[dir="auto"] i:is([style*="/vxnmwo6SJru.png"], [style*="/vEQmG9s3C2b.png"])');
+            let i = getElementByXpath('//*[@id="facebook"]/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div/div/div/div/div/div/div/div/div/div/div/div[13]/div/div/div[4]/div/div/div[2]/div[2]/div/div/span/div/div/i');
             i && (clearInterval(interv), i.click());
         }, 500);
-        timeou = setTimeout(function(){
+        timout = setTimeout(function(){
             clearInterval(interv);
         }, 5000);
     }
@@ -541,7 +584,9 @@ Viettel Viettel Viettel Viettel
     body.vt-post.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}
     body.vt-post.custom button {text-wrap: nowrap;}
     body.vt-post.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}
-    body.vt-post.custom #content {width: 100% !important; margin-left: 0;}`);
+    body.vt-post.custom #content {width: 100% !important; margin-left: 0;}
+    /* ViettelPost custom css */`);
+
 
     let dvId = window.localStorage.deviceId;
     let token = dvId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
