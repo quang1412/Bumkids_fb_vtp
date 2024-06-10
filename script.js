@@ -199,8 +199,8 @@ Facebook Facebook Facebook
         init: async function(){
             this.phonebook = await GM.getValue(this.key, null);
 
-            GM_log('Phonebook length: ', Object.keys(this.phonebook).length);
-            GM_log(this.phonebook);
+            //GM_log('Phonebook length: ', Object.keys(this.phonebook).length);
+            //GM_log(this.phonebook);
 
             GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
                 if(remote){
@@ -527,14 +527,13 @@ Facebook Facebook Facebook
         }
     }
 
-    document.onmouseup = async function(){
+    document.onmousemove = function(){
         clearTimeout(window.timout);
         window.timout = setTimeout(function(){
-            GM_log('okok');
-            let ee = document.querySelectorAll(`a[aria-label][role="link"][href^="/"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.tested)`);
+            let ee = document.querySelectorAll(`a[aria-label][role="link"][href^="/"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.checked)`);
             for(let i = 0; i < ee.length; i++){
                 let e = ee[i];
-                e.classList.add('tested');
+                e.classList.add('checked');
                 let href = e.getAttribute('href');
                 if(!(/^\/(\d)+\/$/g).test(href)) continue;
 
@@ -544,7 +543,7 @@ Facebook Facebook Facebook
                 let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
                 let card = new InfoCard_1(info, p);
             }
-        }, 1000);
+        }, 300);
     }
 
 })();
