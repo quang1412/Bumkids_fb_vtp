@@ -646,6 +646,7 @@ Viettel Viettel Viettel Viettel
                     let o = $('span.madonhang#rowOrderNo1').text();
                     o && (window.opener?.postMessage({fbid: fbid, orderId: o}, '*'), clearInterval(i));
                 }, 500);
+                setTimeout(() => clearInterval(i), 5000);
             }
         });
 
