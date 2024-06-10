@@ -528,20 +528,23 @@ Facebook Facebook Facebook
     }
 
     document.onmouseup = async function(){
-        await new Promise(resolve => { setTimeout(_ => resolve(), 1000) });
-        let ee = document.querySelectorAll(`a[aria-label][role="link"][href^="/"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.tested)`);
-        for(let i = 0; i < ee.length; i++){
-            let e = ee[i];
-            e.classList.add('tested');
-            let href = e.getAttribute('href');
-            if(!(/^\/(\d)+\/$/g).test(href)) continue;
+        clearTimeout(window.timout);
+        window.timout = setTimeout(function(){
+            GM_log('okok');
+            let ee = document.querySelectorAll(`a[aria-label][role="link"][href^="/"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.tested)`);
+            for(let i = 0; i < ee.length; i++){
+                let e = ee[i];
+                e.classList.add('tested');
+                let href = e.getAttribute('href');
+                if(!(/^\/(\d)+\/$/g).test(href)) continue;
 
-            let info = { id: href.replaceAll('/', ''), name: e.getAttribute('aria-label') }
-            if(document.querySelector('div.infoCard[data-fbid="'+info.id+'"]')) continue;
+                let info = { id: href.replaceAll('/', ''), name: e.getAttribute('aria-label') }
+                if(document.querySelector('div.infoCard[data-fbid="'+info.id+'"]')) continue;
 
-            let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
-            let card = new InfoCard_1(info, p);
-        }
+                let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
+                let card = new InfoCard_1(info, p);
+            }
+        }, 1000);
     }
 
 })();
