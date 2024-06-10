@@ -518,16 +518,17 @@ Facebook Facebook Facebook
             for(let i = 0; i < ee.length; i++){
                 let e = ee[i];
                 e.classList.add('checked');
-                let href = e.getAttribute('href');
-                if(!(/^\/(\d)+\/$/g).test(href)) continue;
+                let id = e.getAttribute('href').replaceAll('/', '');
+                let name = e.getAttribute('aria-label');
+                if((/\D+/g).test(id)) continue;
+                if(document.querySelector('div.infoCard[data-fbid="'+id+'"]')) continue;
 
-                let info = { id: href.replaceAll('/', ''), name: e.getAttribute('aria-label') }
-                if(document.querySelector('div.infoCard[data-fbid="'+info.id+'"]')) continue;
+                let info = {id, name};
 
                 let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
                 let card = new InfoCard_1(info, p);
             }
-        }, 500);
+        }, 300);
     }
 
 })();
