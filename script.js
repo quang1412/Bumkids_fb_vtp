@@ -13,6 +13,7 @@
 // @grant        GM_log
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        GM_deleteValue
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @grant        GM_addElement
@@ -88,7 +89,7 @@ function getListOrdersVTP(phone) {
             },
             onerror: function(reponse) {
                 console.log("error: ", reponse);
-                return reject(reponse)
+                return reject(reponse.message || 'Lỗi viettel');
             }
             //"ORDER_STATUS": "-108,100,102,103,104,-100",
         })
@@ -183,55 +184,69 @@ Facebook Facebook Facebook
     const phoneBook = {
         key: 'fb_phoneBook',
         gg_form_id: '1FAIpQLSe_qTjWWDDWHlq-YvtpU0WnWeyL_HTA2gcSB3LDg8HNTTip0A',
-        download_url_gg: 'https://docs.google.com/spreadsheets/d/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/gviz/tq?tqx=out:json&tq&gid=314725270',
-        phonebook: null,
+        sheet_url: 'https://docs.google.com/spreadsheets/d/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/gviz/tq?tqx=out:json&tq&gid=314725270',
+        data: null,
         int_gg: async function(){
-            let res = await GM.xmlHttpRequest({ url: this.download_url_gg, responseType: 'text', }).catch(e => console.error(e));
+            //GM_deleteValue('fb_phoneBook');
+
+            this.data = await GM.getValue(this.key, null);
+            GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
+                if(remote) this.data = newValue;
+            });
+
+            if(this.data) return true;
+
+            let res = await GM.xmlHttpRequest({ url: this.sheet_url, responseType: 'text', }).catch(e => console.error(e));
             let txt = res.responseText.replace('/*O_o*/\ngoogle.visualization.Query.setResponse(', '').replace(');','');
             let json = JSON.parse(txt);
             console.log(json);
             let object = new Object();
             let remap = json.table.rows.map(r => {
-                object[(r.c[1].v)] = r.c[2].v;
+                try{
+                    object[(r.c[1].v)] = r.c[2].v.replaceAll(/\D/g, "");
+                }
+                catch(e){
+                    console.error(e.message);
+                    console.error(r);
+                }
             });
             console.log(object);
+            this.data = object;
+            GM_setValue(this.key, object);
         },
         init: async function(){
-            this.phonebook = await GM.getValue(this.key, null);
-
-            //GM_log('Phonebook length: ', Object.keys(this.phonebook).length);
-            //GM_log(this.phonebook);
+            this.data = await GM.getValue(this.key, null);
 
             GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
                 if(remote){
-                    this.phonebook = newValue
+                    this.data = newValue
                 }
             });
 
-            !this.phonebook && GM_xmlhttpRequest({
+            !this.data && GM_xmlhttpRequest({
                 url:  "https://bumluxury.com/bumkids/fid2phone.php",
                 method: "GET",
                 synchronous: true,
                 responseType: 'text',
-                onload: function(res) {
+                onload: res => {
                     console.log(res.response);
-                    this.phonebook = res.response;
-                    GM_setValue(this.key, this.phonebook);
+                    this.data = res.response;
+                    GM_setValue(this.key, this.data);
                 },
                 onerror: function(e){
                     console.error(e);
-                    this.phonebook = new Object();
-                    GM_setValue(this.key, this.phonebook);
+                    this.data = new Object();
+                    GM_setValue(this.key, this.data);
                 }
             });
         },
         get: function(id){
-            return this.phonebook[id];
+            return this.data[id];
         },
         set: function(id, phone){
-            this.phonebook[id] = phone;
-            GM_setValue(this.key, this.phonebook);
-            this.upload(id, phone);
+            this.data[id] = phone;
+            GM_setValue(this.key, this.data);
+            //this.upload(id, phone);
             this.upload_gg(id, phone);
             return true;
         },
@@ -267,8 +282,8 @@ Facebook Facebook Facebook
             })
         }
     };
-    phoneBook.init();
-    // phoneBook.int_gg();
+    //phoneBook.init();
+    phoneBook.int_gg();
 
     const orderBook = {
         key: 'fb_orderNotes',
@@ -285,8 +300,8 @@ Facebook Facebook Facebook
             if(!phone) return reject('Chưa có sdt');
 
             let token = GM_getValue('vtp_tokenKey');
-            if (!token) return reject('Lỗi viettel');
-            setTimeout(_ => {return resolve('timeout')}, 3000);
+            if (!token) return reject('Chưa đăng nhập');
+            setTimeout(_ => resolve({totalOrder: 0, deliveryRate: -1}), 5000);
 
             GM_xmlhttpRequest({
                 method: "GET",
@@ -370,7 +385,8 @@ Facebook Facebook Facebook
             this.infoList.innerHTML = '</tr><tr><td style=" ">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
             this.card.classList.add('refreshing');
             getListOrdersVTP(this.phone).then(res => {
-                //console.log(res)
+                if(res.error) throw new Error('Viettel: ' + res.message);
+
                 // picked: 105,200,202,300,310,320,400,500,506,507,509,505,501,515,502,551,508,550,504,503
                 let list = res.data.data.LIST_ORDER;
                 i.total = res.data.data.TOTAL;
@@ -378,12 +394,12 @@ Facebook Facebook Facebook
                 i.pending = list.filter(function(o){ return !!~([-108,100,102,103,104]).indexOf(o.ORDER_STATUS) }).length;
                 i.draft = list.filter(function(o){ return (o.ORDER_STATUS == -100) }).length;
                 this.holdedOrders = (i.draft + i.pending);
-            }).then(_ => getDeliveryRate(this.phone)).then(rate => {
-                if(rate == 'timeout'){ i.rate = 'timeout'; return; }
-                if(!rate?.totalOrder || rate.deliveryRate == -1) return;
+            }).then(_ => getDeliveryRate(this.phone)).then(info => {
+                if(info.error) throw new Error('Viettel: ' + info.message);
+                if(!info.totalOrder || info.deliveryRate == -1) return;
 
-                let percent = (rate.deliveryRate * 100).toFixed(2);
-                i.rate = (`${percent}% (${rate.order501}/${rate.totalOrder})`);
+                let percent = (info.deliveryRate * 100).toFixed(2);
+                i.rate = (`${percent}% (${info.order501}/${info.totalOrder})`);
             }).then(() => {
                 let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.phone);
                 this.infoList.innerHTML = `
@@ -495,6 +511,7 @@ Facebook Facebook Facebook
             return alert('testing..');
         }
         eventsListener(){
+            return;
             this.container.onkeydown = evt => {
                 evt = evt || window.event;
                 var isEscape = false;
@@ -719,6 +736,7 @@ Viettel Viettel Viettel Viettel
     });
 
 })();
+
 
 
 
