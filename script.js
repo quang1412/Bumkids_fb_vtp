@@ -57,6 +57,43 @@ function getFormatedDate(i = 0) {
     return formattedToday;
 }
 
+const viettelReq = {
+    get: function(url){
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: "GET",
+                synchronous: true,
+                headers: { 'Authorization': 'Bearer ' + vtpToken },
+                url: url,
+                onload: function (response) {
+                    return resolve(JSON.parse(response.responseText))
+                },
+                onerror: function(reponse) {
+                    return reject(reponse.message || 'Lỗi viettelReqGet');
+                }
+            })
+        })
+    },
+    post: function(url, json){
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                url:  url,
+                method: "POST",
+                synchronous: true,
+                headers: { "Token": vtpToken, "Content-Type": "application/json" },
+                data: JSON.stringify({...json, "deviceId": vtpDeviceId}),
+                onload: function (response) {
+                    return resolve(JSON.parse(response.responseText))
+                },
+                onerror: function(reponse) {
+                    return reject(reponse.message || 'Lỗi viettelReqPost');
+                }
+            })
+
+        })
+    }
+}
+
 function viettelReqPost(url, json){
     return new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
@@ -66,14 +103,9 @@ function viettelReqPost(url, json){
             headers: { "Token": vtpToken, "Content-Type": "application/json" },
             data: JSON.stringify({...json, "deviceId": vtpDeviceId}),
             onload: function (response) {
-                console.log (
-                    "GM_xmlhttpRequest() response is:\n",
-                    response.responseText.substring (0, 80) + '...'
-                );
                 return resolve(JSON.parse(response.responseText))
             },
             onerror: function(reponse) {
-                console.log("error: ", reponse);
                 return reject(reponse.message || 'Lỗi viettelReqPost');
             }
         })
@@ -89,14 +121,9 @@ function viettelReqGet(url){
                 headers: { 'Authorization': 'Bearer ' + vtpToken },
                 url: url,
                 onload: function (response) {
-                    console.log (
-                        "GM_xmlhttpRequest() response is:\n",
-                        response.responseText.substring (0, 80) + '...'
-                    );
                     return resolve(JSON.parse(response.responseText))
                 },
                 onerror: function(reponse) {
-                    console.log("error: ", reponse);
                     return reject(reponse.message || 'Lỗi viettelReqGet');
                 }
             })
@@ -106,7 +133,7 @@ function viettelReqGet(url){
 function getListOrdersVTP(phone) {
     return new Promise((resolve, reject) => {
       if(!phone) return reject(new Error('Chưa có sdt'));
-        viettelReqPost("https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2", {
+        viettelReq.post("https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2", {
             "PAGE_INDEX": 1,
             "PAGE_SIZE": 10,
             "INVENTORY": null,
@@ -317,7 +344,7 @@ Facebook Facebook Facebook
             if (!token) return reject('Chưa đăng nhập');
             setTimeout(_ => resolve({totalOrder: 0, deliveryRate: -1}), 5000);
 
-            viettelReqGet("https://io.okd.viettelpost.vn/order/v1.0/kyc/" + phone).then(resolve).catch(e => {
+            viettelReq.get("https://io.okd.viettelpost.vn/order/v1.0/kyc/" + phone).then(resolve).catch(e => {
                 reject(e.message);
             });
         })
@@ -757,7 +784,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                         if(!~printableStatus.indexOf(status)){
                             throw new Error('new order not found!');
                         }
-                        viettelReqPost("https://api.viettelpost.vn/api/setting/encryptLinkPrintV2", {
+                        viettelReq.post("https://api.viettelpost.vn/api/setting/encryptLinkPrintV2", {
                             "TYPE": 100,
                             "ORDER_NUMBER": o,
                             "IS_SHOW_POSTAGE": 0,
@@ -765,7 +792,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                         }).then(json => {
                             if(json.error || !json.data.enCryptUrl) throw new Error('getPrintLink not found!');
 
-                            viettelReqPost('https://api.viettelpost.vn/api/orders/saveOrderPrint', {
+                            viettelReq.post('https://api.viettelpost.vn/api/orders/saveOrderPrint', {
                                 "OrderNumbers": [ o ],
                                 "Type": "Printed"
                             }).then(res => {
