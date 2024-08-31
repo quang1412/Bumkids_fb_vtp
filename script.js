@@ -1,13 +1,15 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-06-10
+// @version      2024-08-31
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
 // @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
 // @match        https://viettelpost.vn/*
+// @match        https://api.viettelpost.vn/*
 // @match        https://www.facebook.com/*
+// @match        https://www.messenger.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
 // @grant        GM_log
@@ -19,12 +21,14 @@
 // @grant        GM_addElement
 // @grant        GM_notification
 // @grant        GM_addValueChangeListener
+// @grant        GM_webRequest
+// @grant        GM_setClipboard
 // @grant        window.onurlchange
 
 // ==/UserScript==
 
-const myPhone = '0966628989',
-      myFbName = 'Trịnh Hiền';
+const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.trinh.5011';
+let vtpDeviceId = GM_getValue('vtp_deviceId'), vtpToken = GM_getValue('vtp_tokenKey');
 
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 function customEvent(n){
@@ -37,9 +41,11 @@ function customEvent(n){
         return event;
     }
 }
+
 function getElementByXpath(path) {
     return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 }
+
 function getFormatedDate(i = 0) {
     const today = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
     const yyyy = today.getFullYear();
@@ -50,36 +56,15 @@ function getFormatedDate(i = 0) {
     const formattedToday = dd + '/' + mm + '/' + yyyy;
     return formattedToday;
 }
-function getListOrdersVTP(phone) {
+
+function viettelReqPost(url, json){
     return new Promise((resolve, reject) => {
-        if(!phone) return reject(new Error('Chưa có sdt'));
-
-        let dvId = GM_getValue('vtp_deviceId');
-        let token = GM_getValue('vtp_tokenKey');
-        if (!token || !dvId) return reject('Lỗi token viettel post');
-
         GM_xmlhttpRequest({
-            url:  "https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2",
+            url:  url,
             method: "POST",
             synchronous: true,
-            headers: {
-                'Token': token,
-                "Content-Type": "application/json;charset=UTF-8",
-            },
-            data: JSON.stringify({
-                "PAGE_INDEX": 1,
-                "PAGE_SIZE": 10,
-                "INVENTORY": null,
-                "TYPE": 0,
-                "DATE_FROM": getFormatedDate(-30),
-                "DATE_TO": getFormatedDate(),
-                "ORDER_PROPERTIES": phone,
-                "ORDER_PAYMENT": "",
-                "IS_FAST_DELIVERY": false,
-                "REASON_RETURN": null,
-                "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570",
-                "deviceId": dvId
-            }),
+            headers: { "Token": vtpToken, "Content-Type": "application/json" },
+            data: JSON.stringify({...json, "deviceId": vtpDeviceId}),
             onload: function (response) {
                 console.log (
                     "GM_xmlhttpRequest() response is:\n",
@@ -89,11 +74,67 @@ function getListOrdersVTP(phone) {
             },
             onerror: function(reponse) {
                 console.log("error: ", reponse);
-                return reject(reponse.message || 'Lỗi viettel');
+                return reject(reponse.message || 'Lỗi viettelReqPost');
             }
-            //"ORDER_STATUS": "-108,100,102,103,104,-100",
         })
+
     })
+}
+
+function viettelReqGet(url){
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: "GET",
+                synchronous: true,
+                headers: { 'Authorization': 'Bearer ' + vtpToken },
+                url: url,
+                onload: function (response) {
+                    console.log (
+                        "GM_xmlhttpRequest() response is:\n",
+                        response.responseText.substring (0, 80) + '...'
+                    );
+                    return resolve(JSON.parse(response.responseText))
+                },
+                onerror: function(reponse) {
+                    console.log("error: ", reponse);
+                    return reject(reponse.message || 'Lỗi viettelReqGet');
+                }
+            })
+        })
+    }
+
+function getListOrdersVTP(phone) {
+    return new Promise((resolve, reject) => {
+      if(!phone) return reject(new Error('Chưa có sdt'));
+        viettelReqPost("https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2", {
+            "PAGE_INDEX": 1,
+            "PAGE_SIZE": 10,
+            "INVENTORY": null,
+            "TYPE": 0,
+            "DATE_FROM": getFormatedDate(-30),
+            "DATE_TO": getFormatedDate(),
+            "ORDER_PROPERTIES": phone,
+            "ORDER_PAYMENT": "",
+            "IS_FAST_DELIVERY": false,
+            "REASON_RETURN": null,
+            "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570",
+        }).then(res => {
+            resolve(res);
+        }).catch(e => {
+            reject(e.message)
+        });
+    })
+}
+function makeid(length = 12) {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const charactersLength = characters.length;
+    let counter = 0;
+    while (counter < length) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+      counter += 1;
+    }
+    return result;
 }
 
 
@@ -105,8 +146,10 @@ Facebook Facebook Facebook
 Facebook Facebook Facebook
 Facebook Facebook Facebook
 ***/
+
+// FACEBOOK MAIN //
 (function() {
-    if(window.location.origin != 'https://www.facebook.com') return !1;
+    if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
 
     GM_addStyle(`/* CSS START */
 
@@ -152,12 +195,13 @@ Facebook Facebook Facebook
 
     div.infoCard ::selection {color: red; background: yellow;}
     div.infoCard:after { content: ''; position: absolute; left: 4%; top: 101%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 6px solid var(--border-color); clear: both; }
-    div[role="main"] div.infoCard { left: 10px; top: 64px; right: unset; bottom: unset; }
-    div[role="main"] div.infoCard:after { top: -8px; border-top: unset; border-bottom: 6px solid var(--border-color); }
+
+    div.infoCard.bottom { left: 10px; top: 64px; right: unset; bottom: unset; }
+    div.infoCard.bottom:after { top: -8px; border-top: unset; border-bottom: 6px solid var(--border-color); }
 
     div.infoCard div.toolBar { text-align: center; background-color: var(--bg-toolBar); border-radius: 6px; display: flex; justify-content: space-around; }
     div.infoCard div.toolBar a { padding: 5px; flex: 1; opacity: 1; transition: all .5s ease-in-out; }
-    div.infoCard div.toolBar:hover a:not(:hover) { opacity: .3; }
+    /* div.infoCard div.toolBar:hover a:not(:hover) { opacity: .3; } */
 
     div.infoCard div.card-bg {
     background: #bdc3c7;
@@ -182,13 +226,15 @@ Facebook Facebook Facebook
     const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎁🎀 Khác'];
 
     const phoneBook = {
-        key: 'fb_phoneBook',
-        gg_form_id: '1FAIpQLSe_qTjWWDDWHlq-YvtpU0WnWeyL_HTA2gcSB3LDg8HNTTip0A',
-        sheet_url: 'https://docs.google.com/spreadsheets/d/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/gviz/tq?tqx=out:json&tq&gid=314725270',
         data: null,
-        int_gg: async function(){
+        key: 'fb_phoneBook',
+        ggForm:{
+            id: '1FAIpQLSe_qTjWWDDWHlq-YvtpU0WnWeyL_HTA2gcSB3LDg8HNTTip0A',
+            entrys: { fbid: '1158876406', phone: '1286223003' }
+        },
+        int: async function(){
             //GM_deleteValue('fb_phoneBook');
-
+            let url = 'https://docs.google.com/spreadsheets/d/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/gviz/tq?tqx=out:json&tq&gid=314725270';
             this.data = await GM.getValue(this.key, null);
             GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
                 if(remote) this.data = newValue;
@@ -196,104 +242,72 @@ Facebook Facebook Facebook
 
             if(this.data) return true;
 
-            let res = await GM.xmlHttpRequest({ url: this.sheet_url, responseType: 'text', }).catch(e => console.error(e));
+            GM_log('Tải phonebook từ google sheet');
+            let res = await GM.xmlHttpRequest({ url: url, responseType: 'text', }).catch(e => console.error(e));
             let txt = res.responseText.replace('/*O_o*/\ngoogle.visualization.Query.setResponse(', '').replace(');','');
             let json = JSON.parse(txt);
-            console.log(json);
+
+            GM_log(json);
             let object = new Object();
             let remap = json.table.rows.map(r => {
-                try{
-                    object[(r.c[1].v)] = r.c[2].v.replaceAll(/\D/g, "");
-                }
-                catch(e){
-                    console.error(e.message);
-                    console.error(r);
-                }
+                try{ object[(r.c[1].v)] = r.c[2].v.replaceAll(/\D/g, "") }
+                catch(e){ console.error(e.message, r) }
             });
-            console.log(object);
+
+            GM_log(object);
             this.data = object;
             GM_setValue(this.key, object);
         },
-        init: async function(){
-            this.data = await GM.getValue(this.key, null);
-
-            GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
-                if(remote){
-                    this.data = newValue
-                }
-            });
-
-            !this.data && GM_xmlhttpRequest({
-                url:  "https://bumluxury.com/bumkids/fid2phone.php",
+        upload_gg: function(fbid, phone){
+            GM_xmlhttpRequest({
+                url: `https://docs.google.com/forms/d/e/${this.ggForm.id}/formResponse?entry.${this.ggForm.entrys.fbid}=${fbid}&entry.${this.ggForm.entrys.phone}=${phone}`,
                 method: "GET",
                 synchronous: true,
-                responseType: 'text',
-                onload: res => {
-                    console.log(res.response);
-                    this.data = res.response;
-                    GM_setValue(this.key, this.data);
+                headers: {"Content-Type": "text/html; charset=utf-8"},
+                onload: function (res) {
+                    console.log(res);
                 },
-                onerror: function(e){
-                    console.error(e);
-                    this.data = new Object();
-                    GM_setValue(this.key, this.data);
+                onerror: function(res) {
+                    console.log("error: ", res.message);
+                    return alert('GG phonebook error: ' + res.message)
                 }
-            });
+            })
         },
-        get: function(id){
-            return this.data[id];
+        get: function(fbid){
+            return this.data[fbid];
         },
-        set: function(id, phone){
-            this.data[id] = phone;
+        set: function(fbid, phone){
+            this.data[fbid] = phone;
             GM_setValue(this.key, this.data);
-            //this.upload(id, phone);
-            this.upload_gg(id, phone);
+            this.upload_gg(fbid, phone);
             return true;
         },
-        upload: function(id, phone){
-            GM_xmlhttpRequest({
-                url:  "https://bumluxury.com/bumkids/fid2phone.php",
-                method: "POST",
-                synchronous: true,
-                headers: { "Content-Type": "application/json;charset=UTF-8" },
-                data: JSON.stringify({ "fid": id, "phone": phone }),
-                onload: function (response) { },
-                onerror: function(reponse) {
-                    console.log("error: ", reponse);
-                    return alert('phonebook error: ' + reponse)
-                }
-            })
-        },
-        upload_gg: function(id, phone){
-            GM_xmlhttpRequest({
-                url: 'https://docs.google.com/forms/d/e/'+this.gg_form_id+'/formResponse?entry.1158876406='+id+'&entry.1286223003='+phone,
-                method: "GET",
-                synchronous: true,
-                headers: {
-                    "Content-Type": "text/html; charset=utf-8"
-                },
-                onload: function (response) {
-                    console.log(response);
-                },
-                onerror: function(reponse) {
-                    console.log("error: ", reponse);
-                    return alert('GG phonebook error: ' + reponse)
-                }
-            })
-        }
     };
-    //phoneBook.init();
-    phoneBook.int_gg();
+    phoneBook.int();
 
-    const orderBook = {
-        key: 'fb_orderNotes',
-        gg_form_id: '1FAIpQLSe_qTjWWDDWHlq-YvtpU0WnWeyL_HTA2gcSB3LDg8HNTTip0A',
-        download_url_gg: 'https://docs.google.com/spreadsheets/d/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/gviz/tq?tqx=out:json&tq&gid=314725270',
-        init_gg: function(){
-
-        }
-    };
-    orderBook.init_gg();
+    function gglog(type, data, callback){
+        if(!type || !data) {
+            return callback(false);
+        };
+        let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ',
+            entry_type = 689021464,
+            entry_data = 354401759;
+        GM_xmlhttpRequest({
+            url: `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${entry_type}=${type}&entry.${entry_data}=${data}`,
+            method: "GET",
+            synchronous: true,
+            headers: {"Content-Type": "text/html; charset=utf-8"},
+            onload: function (res) {
+                callback(res);
+            },
+            onerror: function(res) {
+                console.log("error: ", res.message);
+                return alert('GG Log error: ' + res.message);
+                callback(false);
+            }
+        })
+       //https://docs.google.com/forms/d/e/1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ/viewform?usp=pp_url&entry.689021464=type&entry.354401759=data
+    }
 
     function getDeliveryRate(phone){
         return new Promise((resolve, reject) => {
@@ -303,39 +317,28 @@ Facebook Facebook Facebook
             if (!token) return reject('Chưa đăng nhập');
             setTimeout(_ => resolve({totalOrder: 0, deliveryRate: -1}), 5000);
 
-            GM_xmlhttpRequest({
-                method: "GET",
-                synchronous: true,
-                headers: {
-                    'Authorization': 'Bearer ' + token
-                },
-                url:  "https://io.okd.viettelpost.vn/order/v1.0/kyc/" + phone,
-                onload: function (response) {
-                    console.log (
-                        "GM_xmlhttpRequest() response is:\n",
-                        response.responseText.substring (0, 80) + '...'
-                    );
-                    let json = JSON.parse(response.responseText);
-                    return resolve(json);
-                },
-                onerror: function(reponse) {
-                    console.log("error: ", reponse);
-                    return reject(reponse)
-                }
-            })
+            viettelReqGet("https://io.okd.viettelpost.vn/order/v1.0/kyc/" + phone).then(resolve).catch(e => {
+                reject(e.message);
+            });
         })
     }
+
+    const preOrderItemsList = [];
 
     class InfoCard_1{
         constructor(info, container){
             this.container = container;
             this.id = info.id;
             this.name = info.name;
+            this.picUrl = info.picUrl;
             this.phone = phoneBook.get(this.id);
             this.penddingOrders = 0;
             this.deliveryRate = 0;
 
             this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.id });
+            if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') {
+                this.card.classList.add('bottom');
+            }
 
             this.infoList = GM_addElement(this.card, 'table', { style: 'padding-bottom: 5px;' });
             let toolBar = GM_addElement(this.card, 'div', { class: 'toolBar' });
@@ -348,14 +351,14 @@ Facebook Facebook Facebook
             btn_2.innerText = 'Sửa sđt';
             btn_2.onclick = _ => this.setPhone();
 
+            let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:yellow;'});
+            btn_4.innerText = 'Order';
+            btn_4.onclick = _ => this.preOrder();
+            !(new RegExp(/.*\/posts\/.*/g).test(document.location.pathname)) && btn_4.remove();
+
             let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
             btn_3.innerText = 'Tạo đơn';
             btn_3.onclick = _ => this.createOrder();
-
-            let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:purple;'});
-            btn_4.innerText = 'Test';
-            btn_4.onclick = _ => this.test();
-            btn_4.remove();
 
             this.refreshInfo();
             this.eventsListener();
@@ -375,8 +378,34 @@ Facebook Facebook Facebook
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
-        test(){
-            this.container.querySelector('div[aria-label="Chọn nhãn dán"]')?.click();
+        preOrder(){
+            let t = "Nhập thông tin sản phẩm order, các item cách nhau bằng dấu ; \n " + (preOrderItemsList.map((v, k) => {
+                return "[" + k + "] " + v + "\n";
+            }));
+
+            let info = {
+                "orderId" : makeid(12),
+                "uid": this.id,
+                "name": this.name,
+                "picUrl": encodeURIComponent(this.picUrl),
+                "post": document.location.pathname.replace(/.*\/posts\//g, ""),
+                "items": prompt(t, "den_200"),
+            }
+
+            if(!info.items){
+                return;
+            }
+
+            info.items = preOrderItemsList[info.items] || info.items;
+
+            gglog('pre-order', JSON.stringify(Object.values(info).join(";")), function(result){
+                console.log(result);
+            });
+
+            preOrderItemsList.push(info.items);
+            preOrderItemsList = [...new Set(preOrderItemsList)];
+
+            console.log((info));
         }
         refreshInfo(){
             if(this.isBusy) return;
@@ -500,56 +529,60 @@ Facebook Facebook Facebook
 
                 popupWindow?.focus();
                 var popupWindow = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
-                window.addEventListener('message', (ev) => {
-                    ev.data.fbid === this.id && this.refreshInfo();
-                    ev.data.orderId && GM_notification();
-                });
+                window.addEventListener('message', (ev) => { ev.data.fbid === this.id && this.refreshInfo() });
             }
             catch(e){ alert(e.message) }
         }
-        preOrder(){
-            return alert('testing..');
-        }
         eventsListener(){
-            return;
-            this.container.onkeydown = evt => {
-                evt = evt || window.event;
-                var isEscape = false;
-                if ("key" in evt) {
-                    isEscape = (evt.key === "Escape" || evt.key === "Esc");
-                } else {
-                    isEscape = (evt.keyCode === 27);
-                }
-                if (isEscape) {
-                    this.container.querySelector('div[role="button"][aria-label="Đóng đoạn chat"]')?.click();
-                }
-            };
+            this.container.addEventListener("click", function(e){
+                const target = e.target.closest('div[aria-label="Trả lời"][role="button"]'); // Or any other selector.
 
+                if(target){
+                    GM_setClipboard("e gửi về địa chỉ này c nhé", "text", () => console.log("Clipboard set!"));
+                }
+            });
         }
     }
 
     document.onmousemove = function(){
-        clearTimeout(window.timout);
+       // clearTimeout(window.timout);
+        if(window.xxag) return;
+
+        // console.log('find find');
+        let ee = document.querySelectorAll(`a[aria-label][href^="/"][role="link"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.checked)`);
+        if(window.location.origin == 'https://www.messenger.com') {
+            ee = document.querySelectorAll(`a[aria-label][href^="https://www.facebook.com/"][role="link"]:not([aria-label=""], [aria-label="Xem tất cả trong Messenger"], [aria-label="Tin nhắn mới"], [aria-label="Mở ảnh"], [aria-label="Thông báo"], [aria-label="Trang cá nhân"]):not(.checked)`);
+        }
+        for(let i = 0; i < ee.length; i++){
+            let e = ee[i];
+            e.classList.add('checked');
+            let id = e.getAttribute('href').replaceAll('https://www.facebook.com/', '').replaceAll('/', '');
+
+            let name = e.getAttribute('aria-label');
+            if((/\D+/g).test(id)) continue;
+            if(document.querySelector('div.infoCard[data-fbid="'+id+'"]')) continue;
+
+            let picUrl = e.querySelector('img')?.getAttribute('src');
+            if(!picUrl) continue;
+
+            let info = {id, name, picUrl};
+
+            console.log(info);
+
+            let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
+            let card = new InfoCard_1(info, p);
+        }
+        window.xxag = 1;
+
         window.timout = setTimeout(function(){
-            let ee = document.querySelectorAll(`a[aria-label][href^="/"][role="link"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.checked)`);
-            for(let i = 0; i < ee.length; i++){
-                let e = ee[i];
-                e.classList.add('checked');
-                let id = e.getAttribute('href').replaceAll('/', '');
-                let name = e.getAttribute('aria-label');
-                if((/\D+/g).test(id)) continue;
-                if(document.querySelector('div.infoCard[data-fbid="'+id+'"]')) continue;
-
-                let info = {id, name};
-
-                let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
-                let card = new InfoCard_1(info, p);
-            }
-        }, 300);
+            window.xxag = 0;
+        }, 1000);
     }
 
 })();
 
+
+// COMMENT FILTER //
 (function(){
     if(window.location.origin != 'https://www.facebook.com') return !1;
     let interv, timout;
@@ -572,12 +605,50 @@ Facebook Facebook Facebook
 
 
 /***
-Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 ***/
+
+// VIETTEL MAIN //
 (function($) {
     if(window.location.origin != 'https://viettelpost.vn') return !1;
 
@@ -592,13 +663,19 @@ Viettel Viettel Viettel Viettel
     /* ViettelPost custom css */`);
 
 
-    let dvId = window.localStorage.deviceId;
-    let token = dvId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
-    GM_setValue('vtp_deviceId', dvId);
-    GM_setValue('vtp_tokenKey', token);
+    const printableStatus = [-108,100,102,103,104];
+
+    vtpDeviceId = window.localStorage.deviceId;
+    vtpToken = vtpDeviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
+    GM_setValue('vtp_deviceId', vtpDeviceId);
+    GM_setValue('vtp_tokenKey', vtpToken);
+
 
     $(document).ready(async function(){
+
         if(window.location.pathname != '/order/tao-don-le') return !1;
+        const urlParams = new URLSearchParams(window.location.search);
+        let fbid = urlParams.get('fbid');
 
         let phoneNoInput = document.querySelector('input#phoneNo');
 
@@ -659,17 +736,60 @@ Viettel Viettel Viettel Viettel
                 $('button.close').click();
             }
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
-                $('#confirmCreateOrder button.btn.btn-viettel.btn-sm').click();
-                let i = setInterval(function(){
-                    let o = $('span.madonhang#rowOrderNo1').text();
-                    o && (window.opener?.postMessage({fbid: fbid, orderId: o}, '*'), clearInterval(i));
-                }, 500);
-                setTimeout(() => clearInterval(i), 5000);
+                if(e.shiftKey){
+                    $('#confirmSaveDraft button.btn.btn-viettel.btn-sm').click();
+                    return;
+                } else {
+                    $('#confirmCreateOrder button.btn.btn-viettel.btn-sm').click();
+                }
+
+                let phone = urlParams.get('phone');
+                if(!phone) return;
+
+                setTimeout(() => {
+                    getListOrdersVTP(phone).then(data => {
+                        let lastest = data.data.data.LIST_ORDER[0];
+                        if(!lastest) throw new Error('new order not found!');
+                        return(lastest);
+                    }).then(data => {
+                        let o = data.ORDER_NUMBER;
+                        let status = data.ORDER_STATUS;
+                        if(!~printableStatus.indexOf(status)){
+                            throw new Error('new order not found!');
+                        }
+                        viettelReqPost("https://api.viettelpost.vn/api/setting/encryptLinkPrintV2", {
+                            "TYPE": 100,
+                            "ORDER_NUMBER": o,
+                            "IS_SHOW_POSTAGE": 0,
+                            "PRINT_COPY": 1
+                        }).then(json => {
+                            if(json.error || !json.data.enCryptUrl) throw new Error('getPrintLink not found!');
+
+                            viettelReqPost('https://api.viettelpost.vn/api/orders/saveOrderPrint', {
+                                "OrderNumbers": [ o ],
+                                "Type": "Printed"
+                            }).then(res => {
+                                //alert(JSON.stringify(res));
+                                window.location.href = json.data.enCryptUrl+'&status='+status;
+                            }).catch(e => {
+                                alert(e.message);
+                            })
+
+                            console.log(json.data.enCryptUrl);
+                        }).then(link => {
+
+                        });
+                    }).catch(e => {
+                        alert(e.message);
+                    });
+                }, 1000)
             }
         });
 
-        const urlParams = new URLSearchParams(window.location.search);
-        let fbid = urlParams.get('fbid');
+        window.onbeforeunload = function(event) {
+            window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
+        };
+
 
         if(!fbid) return true;
 
@@ -713,11 +833,7 @@ Viettel Viettel Viettel Viettel
 
         let iv = setInterval(function(){
             updateCOD(function(){ clearInterval(iv) });
-        }, 1000);
-
-        window.onbeforeunload = function(event) {
-
-        };
+        }, 500);
     })
 })($);
 
