@@ -682,7 +682,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     GM_addStyle(`/* ViettelPost custom css */
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
     body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
-    body.vt-post.custom div.box-receiver div.card-body { max-height: 310px; overflow: auto; }
+    body.vt-post.custom div.box-receiver div.card-body { max-height: 400px; overflow: auto; }
     body.vt-post.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}
     body.vt-post.custom button {text-wrap: nowrap;}
     body.vt-post.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}
