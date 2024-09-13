@@ -94,6 +94,7 @@ const viettelReq = {
     }
 }
 
+/***
 function viettelReqPost(url, json){
     return new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
@@ -114,22 +115,23 @@ function viettelReqPost(url, json){
 }
 
 function viettelReqGet(url){
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                method: "GET",
-                synchronous: true,
-                headers: { 'Authorization': 'Bearer ' + vtpToken },
-                url: url,
-                onload: function (response) {
-                    return resolve(JSON.parse(response.responseText))
-                },
-                onerror: function(reponse) {
-                    return reject(reponse.message || 'Lỗi viettelReqGet');
-                }
-            })
+    return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+            method: "GET",
+            synchronous: true,
+            headers: { 'Authorization': 'Bearer ' + vtpToken },
+            url: url,
+            onload: function (response) {
+                return resolve(JSON.parse(response.responseText))
+            },
+            onerror: function(reponse) {
+                return reject(reponse.message || 'Lỗi viettelReqGet');
+            }
         })
-    }
+    })
+}
 
+***/
 function getListOrdersVTP(phone) {
     return new Promise((resolve, reject) => {
       if(!phone) return reject(new Error('Chưa có sdt'));
@@ -164,6 +166,29 @@ function makeid(length = 12) {
     return result;
 }
 
+function gglog(type, data, callback){
+    if(!type || !data) {
+        return callback(false);
+    };
+    let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ',
+        entry_type = 689021464,
+        entry_data = 354401759;
+    GM_xmlhttpRequest({
+        url: `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${entry_type}=${type}&entry.${entry_data}=${data}`,
+        method: "GET",
+        synchronous: true,
+        headers: {"Content-Type": "text/html; charset=utf-8"},
+        onload: function (res) {
+            callback(res);
+        },
+        onerror: function(res) {
+            console.log("error: ", res.message);
+            return alert('GG Log error: ' + res.message);
+            callback(false);
+        }
+    })
+    //https://docs.google.com/forms/d/e/1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ/viewform?usp=pp_url&entry.689021464=type&entry.354401759=data
+}
 
 /***
 Facebook Facebook Facebook
@@ -250,7 +275,7 @@ Facebook Facebook Facebook
 
     /*** CSS END ***/`);
 
-    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎁🎀 Khác'];
+    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎁🎀 Khác', "🍼🧃 Sữa"];
 
     const phoneBook = {
         data: null,
@@ -311,30 +336,6 @@ Facebook Facebook Facebook
         },
     };
     phoneBook.int();
-
-    function gglog(type, data, callback){
-        if(!type || !data) {
-            return callback(false);
-        };
-        let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ',
-            entry_type = 689021464,
-            entry_data = 354401759;
-        GM_xmlhttpRequest({
-            url: `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${entry_type}=${type}&entry.${entry_data}=${data}`,
-            method: "GET",
-            synchronous: true,
-            headers: {"Content-Type": "text/html; charset=utf-8"},
-            onload: function (res) {
-                callback(res);
-            },
-            onerror: function(res) {
-                console.log("error: ", res.message);
-                return alert('GG Log error: ' + res.message);
-                callback(false);
-            }
-        })
-       //https://docs.google.com/forms/d/e/1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ/viewform?usp=pp_url&entry.689021464=type&entry.354401759=data
-    }
 
     function getDeliveryRate(phone){
         return new Promise((resolve, reject) => {
@@ -690,7 +691,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     /* ViettelPost custom css */`);
 
 
-    const printableStatus = [-108,100,102,103,104];
 
     vtpDeviceId = window.localStorage.deviceId;
     vtpToken = vtpDeviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
@@ -765,13 +765,16 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
                 if(e.shiftKey){
                     $('#confirmSaveDraft button.btn.btn-viettel.btn-sm').click();
-                    return;
+                    // return;
                 } else {
                     $('#confirmCreateOrder button.btn.btn-viettel.btn-sm').click();
                 }
 
+                // IN TEM
+                let printableStatus = [-108,100,102,103,104];
                 let phone = urlParams.get('phone');
                 if(!phone) return;
+
 
                 setTimeout(() => {
                     getListOrdersVTP(phone).then(data => {
@@ -782,7 +785,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                         let o = data.ORDER_NUMBER;
                         let status = data.ORDER_STATUS;
                         if(!~printableStatus.indexOf(status)){
-                            throw new Error('new order not found!');
+                            // throw new Error('new order not found!');
                         }
                         viettelReq.post("https://api.viettelpost.vn/api/setting/encryptLinkPrintV2", {
                             "TYPE": 100,
@@ -808,15 +811,26 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                         });
                     }).catch(e => {
                         alert(e.message);
+                        window.location.href = 'https://viettelpost.vn/quan-ly-van-don';
                     });
                 }, 1000)
             }
         });
 
-        window.onbeforeunload = function(event) {
+         window.onbeforeunload = function(e) {
+            //e.preventDefault();
             window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
         };
 
+        /**
+        function beforeunload(e){
+            // Cancel the event
+            e.preventDefault();
+            // Chrome requires returnValue to be set
+            e.returnValue = '';
+        }
+        window.addEventListener('beforeunload',beforeunload);
+        **/
 
         if(!fbid) return true;
 
