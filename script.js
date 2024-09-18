@@ -10,6 +10,7 @@
 // @match        https://api.viettelpost.vn/*
 // @match        https://www.facebook.com/*
 // @match        https://www.messenger.com/*
+// @require https://code.jquery.com/jquery-3.6.0.min.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
 // @grant        GM_log
@@ -351,7 +352,38 @@ Facebook Facebook Facebook
         })
     }
 
-    const preOrderItemsList = [];
+    let preOrderItemsList = GM_getValue('preOrderItemsList', []);
+
+    function createPreOrder(i = {}){
+
+        let t = "Nhập thông tin sản phẩm order \nNote: các sản phẩm tách nhau bằng dấu cách \(space\)  \n" + (preOrderItemsList.map((v, k) => {
+            return "[" + k + "] " + v;
+        }).join("\n"));
+
+        let inputItems = prompt(t, "den,200");
+
+        if(!inputItems){
+            return;
+        }
+
+        let info = {
+            "orderId" : makeid(12),
+            "post": document.location.pathname.replace(/.*\/posts\//g, ""),
+            ...i,
+            "items": preOrderItemsList[inputItems] || inputItems
+        }
+
+        gglog('preOrder', JSON.stringify(Object.values(info).join(";")), function(result){
+            console.log(result);
+        });
+
+        preOrderItemsList.unshift(info.items);
+        preOrderItemsList = [...new Set(preOrderItemsList)];
+        GM_setValue('preOrderItemsList', preOrderItemsList);
+
+        console.log(info);
+        console.log(preOrderItemsList);
+    }
 
     class InfoCard_1{
         constructor(info, container){
@@ -407,33 +439,12 @@ Facebook Facebook Facebook
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
         preOrder(){
-            let t = "Nhập thông tin sản phẩm order, các item cách nhau bằng dấu ; \n " + (preOrderItemsList.map((v, k) => {
-                return "[" + k + "] " + v + "\n";
-            }));
-
             let info = {
-                "orderId" : makeid(12),
                 "uid": this.id,
                 "name": this.name,
-                "picUrl": encodeURIComponent(this.picUrl),
-                "post": document.location.pathname.replace(/.*\/posts\//g, ""),
-                "items": prompt(t, "den_200"),
+                "picUrl": encodeURIComponent(this.picUrl)
             }
-
-            if(!info.items){
-                return;
-            }
-
-            info.items = preOrderItemsList[info.items] || info.items;
-
-            gglog('pre-order', JSON.stringify(Object.values(info).join(";")), function(result){
-                console.log(result);
-            });
-
-            preOrderItemsList.push(info.items);
-            preOrderItemsList = [...new Set(preOrderItemsList)];
-
-            console.log((info));
+            createPreOrder(info);
         }
         refreshInfo(){
             if(this.isBusy) return;
@@ -630,6 +641,8 @@ Facebook Facebook Facebook
     commentFilterClick();
     window.addEventListener('urlchange', commentFilterClick);
 })();
+
+
 
 
 /***
@@ -874,6 +887,21 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         let iv = setInterval(function(){
             updateCOD(function(){ clearInterval(iv) });
+        }, 500);
+    })
+})($);
+
+(function($){
+    $(document).ready(function(){
+        if(window.location.href != 'https://viettelpost.vn/quan-ly-van-don') return;
+        let interval = setInterval(function(){
+            let select = document.querySelector('mat-select[role="listbox"][aria-label="Bản Ghi Mỗi Trang"]');
+            if(!select) return;
+            select.click();
+            let option = document.querySelector('mat-option#mat-option-3[role="option"]');
+            if(!option) return;
+            option.click();
+            clearInterval(interval);
         }, 500);
     })
 })($);
