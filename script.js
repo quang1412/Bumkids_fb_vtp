@@ -352,37 +352,70 @@ Facebook Facebook Facebook
         })
     }
 
-    let preOrderItemsList = GM_getValue('preOrderItemsList', []);
+    function gooogleSheetQuery(){
+        //https://opensheet.elk.sh/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/PreOrder!B2:H
+        let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
+        let ggsname = 'PreOrder';
+        let range = 'B3:H';
+        let query = '';
+        GM_xmlhttpRequest({
+            url: `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&tq=${query}`,
+            method: "GET",
+            synchronous: true,
+            headers: {"Content-Type": "text/html; charset=utf-8"},
+            onload: function (res) {
+                console.log(res);
+            },
+            onerror: function(res) {
+                console.log("error: ", res.message);
+                return alert('Error (gooogleSheetQuery): ' + res.message)
+            }
+        })
+    }
 
     function createPreOrder(i = {}){
+        let list = GM_getValue('preOrderItemsList', ['trang,xs']);
 
-        let t = "Nhập thông tin sản phẩm order \nNote: các sản phẩm tách nhau bằng dấu cách \(space\)  \n" + (preOrderItemsList.map((v, k) => {
+        let t = "Nhập thông tin sản phẩm order \nNote: các sản phẩm tách nhau bằng dấu cách \(space\)  \n" + (list.map((v, k) => {
             return "[" + k + "] " + v;
         }).join("\n"));
 
-        let inputItems = prompt(t, "den,200");
+        let inputItems = null,
+            regex = /^(\s{1}[\d\w]+\,{1}[\d\w]+)*$/;
 
-        if(!inputItems){
-            return;
+        let doAsk = function(){
+            let inp = prompt(t, list[0])?.trim();
+            if(inp == null) return false;
+
+            inp = list[inp] || inp
+
+            if(!regex.test(' ' +inp)){
+                return doAsk();
+            }
+            inputItems = inp;
         }
+        doAsk();
+
+        if(!inputItems) return;
 
         let info = {
             "orderId" : makeid(12),
             "post": document.location.pathname.replace(/.*\/posts\//g, ""),
             ...i,
-            "items": preOrderItemsList[inputItems] || inputItems
+            "items": list[inputItems] || inputItems
         }
 
         gglog('preOrder', JSON.stringify(Object.values(info).join(";")), function(result){
             console.log(result);
+            if(result.readyState == 4 && result.status == 200) alert('Đã gửi đơn order! \n ID: ' + info.orderId);
         });
 
-        preOrderItemsList.unshift(info.items);
-        preOrderItemsList = [...new Set(preOrderItemsList)];
-        GM_setValue('preOrderItemsList', preOrderItemsList);
+        list.unshift(info.items);
+        list = [...new Set(list)];
+        GM_setValue('preOrderItemsList', list);
 
         console.log(info);
-        console.log(preOrderItemsList);
+        console.log(list);
     }
 
     class InfoCard_1{
