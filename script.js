@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-08-31
+// @version      2024-09-22
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -95,45 +95,7 @@ const viettelReq = {
     }
 }
 
-/***
-function viettelReqPost(url, json){
-    return new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
-            url:  url,
-            method: "POST",
-            synchronous: true,
-            headers: { "Token": vtpToken, "Content-Type": "application/json" },
-            data: JSON.stringify({...json, "deviceId": vtpDeviceId}),
-            onload: function (response) {
-                return resolve(JSON.parse(response.responseText))
-            },
-            onerror: function(reponse) {
-                return reject(reponse.message || 'Lỗi viettelReqPost');
-            }
-        })
-
-    })
-}
-
-function viettelReqGet(url){
-    return new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
-            method: "GET",
-            synchronous: true,
-            headers: { 'Authorization': 'Bearer ' + vtpToken },
-            url: url,
-            onload: function (response) {
-                return resolve(JSON.parse(response.responseText))
-            },
-            onerror: function(reponse) {
-                return reject(reponse.message || 'Lỗi viettelReqGet');
-            }
-        })
-    })
-}
-
-***/
-function getListOrdersVTP(phone) {
+function getListOrdersVTP(phone = null) {
     return new Promise((resolve, reject) => {
       if(!phone) return reject(new Error('Chưa có sdt'));
         viettelReq.post("https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2", {
@@ -353,13 +315,15 @@ Facebook Facebook Facebook
     }
 
     function gooogleSheetQuery(){
+        //https://docs.google.com/spreadsheets/d/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/gviz/tq?tqx=out:json&sheet=PreOrder&range=A2:H&tq=SELECT%20*%20WHERE%20E%20=%20100046045537190
         //https://opensheet.elk.sh/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/PreOrder!B2:H
         let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
-        let ggsname = 'PreOrder';
+        let sheetName = 'PreOrder';
         let range = 'B3:H';
-        let query = '';
+        let query = 'SELECT * WHERE E = 100046045537190';
+
         GM_xmlhttpRequest({
-            url: `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&tq=${query}`,
+            url: `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheetName}&range=${range}tq=${query}`,
             method: "GET",
             synchronous: true,
             headers: {"Content-Type": "text/html; charset=utf-8"},
@@ -405,17 +369,17 @@ Facebook Facebook Facebook
             "items": list[inputItems] || inputItems
         }
 
-        gglog('preOrder', JSON.stringify(Object.values(info).join(";")), function(result){
+        gglog('preOrder', JSON.stringify(Object.values(info).join("; ")), function(result){
             console.log(result);
             if(result.readyState == 4 && result.status == 200) alert('Đã gửi đơn order! \n ID: ' + info.orderId);
         });
 
         list.unshift(info.items);
         list = [...new Set(list)];
-        GM_setValue('preOrderItemsList', list);
+        GM_setValue('preOrderItemsList', list.slice(0, 5));
 
         console.log(info);
-        console.log(list);
+//        console.log(list);
     }
 
     class InfoCard_1{
@@ -664,7 +628,8 @@ Facebook Facebook Facebook
 
         interv = setInterval(function(){
             if(!(/facebook\.com\/.*\/posts\//g).test(window.location.href)) return;
-            let i = getElementByXpath('//*[@id="facebook"]/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div/div/div/div/div/div/div/div/div/div/div/div[13]/div/div/div[4]/div/div/div[2]/div[2]/div/div/span/div/div/i');
+            let i = document.querySelector('div[role="button"] span[dir="auto"] i[data-visualcompletion="css-img"]');
+            // let i = getElementByXpath('//*[@id="facebook"]/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div/div/div/div/div/div/div/div/div/div/div/div[13]/div/div/div[4]/div/div/div[2]/div[2]/div/div/span/div/div/i');
             i && (clearInterval(interv), i.click());
         }, 500);
         timout = setTimeout(function(){
