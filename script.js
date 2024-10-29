@@ -133,11 +133,30 @@ function gglog(type, data, callback){
     if(!type || !data) {
         return callback(false);
     };
-    let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ',
-        entry_type = 689021464,
-        entry_data = 354401759;
+    let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ';
+        //entry_type = 689021464,
+        //entry_data = 354401759;
+    let fields = {
+        0: 689021464,
+        1: 354401759,
+        2: 1477078849,
+        3: 204892124,
+        4: 2101594477,
+        5: 1251442348,
+        6: 94653935,
+        7: 814190568,
+        8: 733397838,
+        9: 718607793,
+        10: 570486205,
+    }
+    let url = `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${fields[0]}=${type}&`;
+    url += data.map((d, i) => (`entry.${fields[i+1]}=${encodeURIComponent(d)}`)).join('&');
+
+    console.log(url);
+
     GM_xmlhttpRequest({
-        url: `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${entry_type}=${type}&entry.${entry_data}=${data}`,
+        //url: `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${entry_type}=${type}&entry.${entry_data}=${data}`,
+        url: url,
         method: "GET",
         synchronous: true,
         headers: {"Content-Type": "text/html; charset=utf-8"},
@@ -150,7 +169,6 @@ function gglog(type, data, callback){
             callback(false);
         }
     })
-    //https://docs.google.com/forms/d/e/1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ/viewform?usp=pp_url&entry.689021464=type&entry.354401759=data
 }
 
 /***
@@ -238,7 +256,7 @@ Facebook Facebook Facebook
 
     /*** CSS END ***/`);
 
-    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎁🎀 Khác', "🍼🧃 Sữa"];
+    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎁🎀 Khác', '🎒 Balo'];
 
     const phoneBook = {
         data: null,
@@ -315,15 +333,18 @@ Facebook Facebook Facebook
     }
 
     function gooogleSheetQuery(){
+        //https://docs.google.com/spreadsheets/d/{key}/gviz/tq?tqx=out:csv&sheet={sheet_name}
+
         //https://docs.google.com/spreadsheets/d/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/gviz/tq?tqx=out:json&sheet=PreOrder&range=A2:H&tq=SELECT%20*%20WHERE%20E%20=%20100046045537190
         //https://opensheet.elk.sh/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/PreOrder!B2:H
         let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
         let sheetName = 'PreOrder';
-        let range = 'B3:H';
-        let query = 'SELECT * WHERE E = 100046045537190';
-
+        let range = 'A2:G';
+        let query = encodeURIComponent('SELECT * WHERE E = 100008027762667');
+        let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheetName}&range=${range}&tq=${query}`;
+        console.log(url);
         GM_xmlhttpRequest({
-            url: `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheetName}&range=${range}tq=${query}`,
+            url: url,
             method: "GET",
             synchronous: true,
             headers: {"Content-Type": "text/html; charset=utf-8"},
@@ -336,6 +357,7 @@ Facebook Facebook Facebook
             }
         })
     }
+    gooogleSheetQuery();
 
     function createPreOrder(i = {}){
         let list = GM_getValue('preOrderItemsList', ['trang,xs']);
@@ -362,19 +384,21 @@ Facebook Facebook Facebook
 
         if(!inputItems) return;
 
-        let info = {
-            "orderId" : makeid(12),
-            "post": document.location.pathname.replace(/.*\/posts\//g, ""),
+        inputItems = list[inputItems] || inputItems;
+        let orderId = makeid(12);
+        let info = [
+            orderId,
             ...i,
-            "items": list[inputItems] || inputItems
-        }
+            inputItems,
+        ]
+        console.log(info);
 
-        gglog('preOrder', JSON.stringify(Object.values(info).join("; ")), function(result){
+        gglog('preOrder', info, function(result){
             console.log(result);
-            if(result.readyState == 4 && result.status == 200) alert('Đã gửi đơn order! \n ID: ' + info.orderId);
+            if(result.readyState == 4 && result.status == 200) alert('Đã gửi đơn order! \n ID: ' + orderId);
         });
 
-        list.unshift(info.items);
+        list.unshift(inputItems);
         list = [...new Set(list)];
         GM_setValue('preOrderItemsList', list.slice(0, 5));
 
@@ -411,7 +435,6 @@ Facebook Facebook Facebook
             let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:yellow;'});
             btn_4.innerText = 'Order';
             btn_4.onclick = _ => this.preOrder();
-            !(new RegExp(/.*\/posts\/.*/g).test(document.location.pathname)) && btn_4.remove();
 
             let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
             btn_3.innerText = 'Tạo đơn';
@@ -431,16 +454,20 @@ Facebook Facebook Facebook
                 }
             }
             let bg = GM_addElement(this.card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
-
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
         preOrder(){
-            let info = {
-                "uid": this.id,
-                "name": this.name,
-                "picUrl": encodeURIComponent(this.picUrl)
+            let orderid = document.querySelector('a[role="link"][href*="hashtag/orderid"]')?.innerText;
+            if(!orderid){
+                return alert('vui lòng chuyển tới trang bài đăng order');
             }
+            let info = [
+                orderid,
+                this.id,
+                this.name,
+                this.picUrl
+            ]
             createPreOrder(info);
         }
         refreshInfo(){
@@ -699,6 +726,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     body.vt-post.custom button {text-wrap: nowrap;}
     body.vt-post.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}
     body.vt-post.custom #content {width: 100% !important; margin-left: 0;}
+    div.dieukhoan {display:none;}
     /* ViettelPost custom css */`);
 
 
@@ -775,10 +803,10 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             }
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
                 if(e.shiftKey){
-                    $('#confirmSaveDraft button.btn.btn-viettel.btn-sm').click();
+                    $('#confirmCreateOrder button.btn.btn-viettel.btn-sm').click();
                     // return;
                 } else {
-                    $('#confirmCreateOrder button.btn.btn-viettel.btn-sm').click();
+                    $('#confirmSaveDraft button.btn.btn-viettel.btn-sm').click();
                 }
 
                 // IN TEM
@@ -871,7 +899,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         pr.value = price;
 
         let pw = document.querySelector('input#productWeight');
-        pw.value = 200;
+        pw.value = 500;
 
         phoneNoInput.value = phone;
 
