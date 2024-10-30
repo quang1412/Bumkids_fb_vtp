@@ -340,8 +340,8 @@ Facebook Facebook Facebook
         let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
         let sheetName = 'PreOrder';
         let range = 'A2:G';
-        let query = encodeURIComponent('SELECT * WHERE E = 100008027762667');
-        let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheetName}&range=${range}&tq=${query}`;
+        let query = encodeURIComponent('SELECT * WHERE E = 100009018345387');
+        let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheetName}&range=${range}&tq=${query}&callback=getReply`;
         console.log(url);
         GM_xmlhttpRequest({
             url: url,
@@ -349,7 +349,10 @@ Facebook Facebook Facebook
             synchronous: true,
             headers: {"Content-Type": "text/html; charset=utf-8"},
             onload: function (res) {
-                console.log(res);
+                var jsonString = res.response.match(/(?<="table":).*(?=}\);)/g)[0]
+                var json = JSON.parse(jsonString)
+
+                window.prompt("json", jsonString);
             },
             onerror: function(res) {
                 console.log("error: ", res.message);
@@ -458,10 +461,12 @@ Facebook Facebook Facebook
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
         preOrder(){
-            let orderid = document.querySelector('a[role="link"][href*="hashtag/orderid"]')?.innerText;
-            if(!orderid){
-                return alert('vui lòng chuyển tới trang bài đăng order');
-            }
+            let isPosts = (/\/.*\/posts\/[\d\w]*/g).test(window.location.href);
+            if(!isPosts) return alert('vui lòng chuyển tới trang bài đăng order');
+
+            let orderid = window.location.pathname.split('/').pop();
+            if(!orderid) return alert('Error!');
+
             let info = [
                 orderid,
                 this.id,
