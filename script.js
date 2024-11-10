@@ -251,12 +251,15 @@ Facebook Facebook Facebook
     /*** Sửa chiều cao khung chat ***/
     div:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div { height: 65vh; }
 
+    /**dsfdgdf**/
+    a[href*="/messages/e2ee/t/"]:after{content: ""; position: absolute; top: 0px; right: 0px; width: 0.7em; height: 0.7em; background: lightcoral; border-radius: 50%;}
+
     /*** Đánh dấu cmt của người đăng ***/
     /*div[role="article"][aria-label*="${myFbName}"] {border-left: 2px dashed gray; }*/
 
     /*** CSS END ***/`);
 
-    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎁🎀 Khác', '🎒 Balo'];
+    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎒 Balo', "🧰💊 Dược phẩm", '🎁🎀 Khác'];
 
     const phoneBook = {
         data: null,
@@ -360,7 +363,6 @@ Facebook Facebook Facebook
             }
         })
     }
-    gooogleSheetQuery();
 
     function createPreOrder(i = {}){
         let list = GM_getValue('preOrderItemsList', ['trang,xs']);
@@ -473,7 +475,8 @@ Facebook Facebook Facebook
                 this.name,
                 this.picUrl
             ]
-            createPreOrder(info);
+            gooogleSheetQuery();
+            // createPreOrder(info);
         }
         refreshInfo(){
             if(this.isBusy) return;
@@ -825,34 +828,25 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                         let lastest = data.data.data.LIST_ORDER[0];
                         if(!lastest) throw new Error('new order not found!');
                         return(lastest);
-                    }).then(data => {
+                    }).then(async data => {
                         let o = data.ORDER_NUMBER;
                         let status = data.ORDER_STATUS;
-                        if(!~printableStatus.indexOf(status)){
-                            // throw new Error('new order not found!');
-                        }
-                        viettelReq.post("https://api.viettelpost.vn/api/setting/encryptLinkPrintV2", {
+                        if(!~printableStatus.indexOf(status)){ /** throw new Error('new order not found!'); **/ }
+
+                        let json = await viettelReq.post("https://api.viettelpost.vn/api/setting/encryptLinkPrintV2", {
                             "TYPE": 100,
                             "ORDER_NUMBER": o,
                             "IS_SHOW_POSTAGE": 0,
                             "PRINT_COPY": 1
-                        }).then(json => {
-                            if(json.error || !json.data.enCryptUrl) throw new Error('getPrintLink not found!');
-
-                            viettelReq.post('https://api.viettelpost.vn/api/orders/saveOrderPrint', {
-                                "OrderNumbers": [ o ],
-                                "Type": "Printed"
-                            }).then(res => {
-                                //alert(JSON.stringify(res));
-                                window.location.href = json.data.enCryptUrl+'&status='+status;
-                            }).catch(e => {
-                                alert(e.message);
-                            })
-
-                            console.log(json.data.enCryptUrl);
-                        }).then(link => {
-
                         });
+                        if(json.error || !json.data.enCryptUrl) throw new Error('getPrintLink not found!');
+
+                        console.log(json.data.enCryptUrl);
+
+                        return json.data.enCryptUrl;
+
+                    }).then(link => {
+                        window.location.href = link+'&status='+status;
                     }).catch(e => {
                         alert(e.message);
                         window.location.href = 'https://viettelpost.vn/quan-ly-van-don';
