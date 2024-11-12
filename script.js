@@ -416,9 +416,15 @@ Facebook Facebook Facebook
         }
         preOrder(b){
             let isPosts = (/\/.*\/posts\/[\d\w]*/g).test(window.location.href);
-            if(!isPosts) return alert('vui lòng chuyển tới trang bài đăng order');
-            //let orderid = window.location.pathname.split('/').pop();
-            let hashTag = window.document.querySelector('a[href*="/hashtag/order"]')?.innerText
+            let hashTag = null;
+
+            if(isPosts) {
+                hashTag = window.document.querySelector('a[href*="/hashtag/order"]')?.innerText;
+            } else {
+                hashTag = prompt('Nhập hashtag thủ công', '');
+                if(hashTag == null) return false;
+            }
+
             if(!hashTag) return alert('Error! hashtag not found!');
 
             let list = GM_getValue('preOrderItemsList', ['trang,xs']);
@@ -453,7 +459,7 @@ Facebook Facebook Facebook
             ];
             console.log(info);
 
-            gglog('preOrder', info, function(result){
+            gglog('preOrder', info, result => {
                 console.log(result);
                 if(result.readyState == 4 && result.status == 200) return this.refreshInfo();
             });
