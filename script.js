@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-09-22
+// @version      2024-11-11
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -335,80 +335,32 @@ Facebook Facebook Facebook
         })
     }
 
-    function gooogleSheetQuery(){
-        //https://docs.google.com/spreadsheets/d/{key}/gviz/tq?tqx=out:csv&sheet={sheet_name}
+    function gooogleSheetQuery(queryStr = 'SELECT *', range = 'A2:G', sheetName = 'PreOrder'){
+        return new Promise((resolve, reject) => {
 
-        //https://docs.google.com/spreadsheets/d/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/gviz/tq?tqx=out:json&sheet=PreOrder&range=A2:H&tq=SELECT%20*%20WHERE%20E%20=%20100046045537190
-        //https://opensheet.elk.sh/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/PreOrder!B2:H
-        let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
-        let sheetName = 'PreOrder';
-        let range = 'A2:G';
-        let query = encodeURIComponent('SELECT * WHERE E = 100009018345387');
-        let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheetName}&range=${range}&tq=${query}&callback=getReply`;
-        console.log(url);
-        GM_xmlhttpRequest({
-            url: url,
-            method: "GET",
-            synchronous: true,
-            headers: {"Content-Type": "text/html; charset=utf-8"},
-            onload: function (res) {
-                var jsonString = res.response.match(/(?<="table":).*(?=}\);)/g)[0]
-                var json = JSON.parse(jsonString)
+            let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
+            let query = encodeURIComponent(queryStr);
+            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheetName}&range=${range}&tq=${query}`;
+            GM_xmlhttpRequest({
+                url: url,
+                method: "GET",
+                synchronous: true,
+                headers: {"Content-Type": "text/html; charset=utf-8"},
+                onload: function (res) {
+                    var jsonString = res.response.match(/(?<="table":).*(?=}\);)/g)[0]
+                    var json = JSON.parse(jsonString)
 
-                window.prompt("json", jsonString);
-            },
-            onerror: function(res) {
-                console.log("error: ", res.message);
-                return alert('Error (gooogleSheetQuery): ' + res.message)
-            }
+                    //window.prompt("json", jsonString);
+                    return resolve(json);
+                },
+                onerror: function(res) {
+                    console.log("error: ", res.message);
+                    //return alert('Error (gooogleSheetQuery): ' + res.message);
+
+                    return reject(res.message);
+                }
+            })
         })
-    }
-
-    function createPreOrder(i = {}){
-        let list = GM_getValue('preOrderItemsList', ['trang,xs']);
-
-        let t = "Nhập thông tin sản phẩm order \nNote: các sản phẩm tách nhau bằng dấu cách \(space\)  \n" + (list.map((v, k) => {
-            return "[" + k + "] " + v;
-        }).join("\n"));
-
-        let inputItems = null,
-            regex = /^(\s{1}[\d\w]+\,{1}[\d\w]+)*$/;
-
-        let doAsk = function(){
-            let inp = prompt(t, list[0])?.trim();
-            if(inp == null) return false;
-
-            inp = list[inp] || inp
-
-            if(!regex.test(' ' +inp)){
-                return doAsk();
-            }
-            inputItems = inp;
-        }
-        doAsk();
-
-        if(!inputItems) return;
-
-        inputItems = list[inputItems] || inputItems;
-        let orderId = makeid(12);
-        let info = [
-            orderId,
-            ...i,
-            inputItems,
-        ]
-        console.log(info);
-
-        gglog('preOrder', info, function(result){
-            console.log(result);
-            if(result.readyState == 4 && result.status == 200) alert('Đã gửi đơn order! \n ID: ' + orderId);
-        });
-
-        list.unshift(inputItems);
-        list = [...new Set(list)];
-        GM_setValue('preOrderItemsList', list.slice(0, 5));
-
-        console.log(info);
-//        console.log(list);
     }
 
     class InfoCard_1{
@@ -439,7 +391,7 @@ Facebook Facebook Facebook
 
             let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:yellow;'});
             btn_4.innerText = 'Order';
-            btn_4.onclick = _ => this.preOrder();
+            btn_4.onclick = _ => this.preOrder(btn_4);
 
             let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
             btn_3.innerText = 'Tạo đơn';
@@ -462,70 +414,100 @@ Facebook Facebook Facebook
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
-        preOrder(){
+        preOrder(b){
             let isPosts = (/\/.*\/posts\/[\d\w]*/g).test(window.location.href);
             if(!isPosts) return alert('vui lòng chuyển tới trang bài đăng order');
+            //let orderid = window.location.pathname.split('/').pop();
+            let hashTag = window.document.querySelector('a[href*="/hashtag/order"]')?.innerText
+            if(!hashTag) return alert('Error! hashtag not found!');
 
-            let orderid = window.location.pathname.split('/').pop();
-            if(!orderid) return alert('Error!');
+            let list = GM_getValue('preOrderItemsList', ['trang,xs']);
+
+            let t = "Nhập thông tin sản phẩm order \nNote: các sản phẩm tách nhau bằng dấu cách \(space\)  \n" + (list.map((v, k) => {
+                return "[" + k + "] " + v;
+            }).join("\n"));
+
+            let inputItems = null, regex = /^(\s{1}[\d\w]+\,{1}[\d\w]+)*$/
+            let doAsk = _ => {
+                let inp = prompt(t, list[0])?.trim();
+                if(inp == null) return false;
+                inp = list[inp] || inp;
+                if(!regex.test(' ' +inp)) return doAsk();
+                inputItems = inp;
+            }
+            doAsk();
+            if(!inputItems) return false;
+            inputItems = list[inputItems] || inputItems;
+
+            list.unshift(inputItems);
+            list = [...new Set(list)];
+            GM_setValue('preOrderItemsList', list.slice(0, 5));
 
             let info = [
-                orderid,
+                makeid(12),
+                hashTag,
                 this.id,
                 this.name,
-                this.picUrl
-            ]
-            gooogleSheetQuery();
-            // createPreOrder(info);
+                this.picUrl,
+                inputItems
+            ];
+            console.log(info);
+
+            gglog('preOrder', info, function(result){
+                console.log(result);
+                if(result.readyState == 4 && result.status == 200) return this.refreshInfo();
+            });
         }
         refreshInfo(){
             if(this.isBusy) return;
             this.isBusy = 1;
-            let i = {rate: 'Chưa có', total: 0, pending: 0, draft: 0, totalCOD: 0};
+            let i = {rate: 'Chưa có', total: 0, pending: 0, draft: 0, preOrder: 0, totalCOD: 0};
             this.infoList.innerHTML = '</tr><tr><td style=" ">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
             this.card.classList.add('refreshing');
-            getListOrdersVTP(this.phone).then(res => {
-                if(res.error) throw new Error('Viettel: ' + res.message);
 
-                // picked: 105,200,202,300,310,320,400,500,506,507,509,505,501,515,502,551,508,550,504,503
+            gooogleSheetQuery('SELECT * WHERE E = '+this.id, 'A2:H').then(json => {
+                console.log(json);
+                i.preOrder = (json.rows.length);
+            }).then(_ => getListOrdersVTP(this.phone)).then(res => {
+                if(res.error) throw new Error('Viettel: ' + res.message);
                 let list = res.data.data.LIST_ORDER;
                 i.total = res.data.data.TOTAL;
                 i.totalCOD = res.data.data.TOTAL_COLLECTION.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
                 i.pending = list.filter(function(o){ return !!~([-108,100,102,103,104]).indexOf(o.ORDER_STATUS) }).length;
                 i.draft = list.filter(function(o){ return (o.ORDER_STATUS == -100) }).length;
                 this.holdedOrders = (i.draft + i.pending);
-            }).then(_ => getDeliveryRate(this.phone)).then(info => {
+          /**  }).then(_ => getDeliveryRate(this.phone)).then(info => {
                 if(info.error) throw new Error('Viettel: ' + info.message);
                 if(!info.totalOrder || info.deliveryRate == -1) return;
 
                 let percent = (info.deliveryRate * 100).toFixed(2);
-                i.rate = (`${percent}% (${info.order501}/${info.totalOrder})`);
-            }).then(() => {
+                i.rate = (`${percent}% (${info.order501}/${info.totalOrder})`); **/
+            }).then(_ => {
                 let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.phone);
                 this.infoList.innerHTML = `
-                <!--<tr><td>ID:</td> <td>${this.id}</td></tr>-->
+                <tr style="display:none;"><td>ID:</td> <td>${this.id}</td></tr>
                 <tr>
-                  <td>SĐT: </td>
-                  <td>${this.phone}</td>
+                  <td>SĐT: </td> <td>${this.phone}</td>
+                </tr>
+                <tr style="display:none;">
+                  <td>Uy tín: </td> <td>${i.rate}</td>
                 </tr>
                 <tr>
-                  <td>Uy tín: </td>
-                  <td>${i.rate}</td>
+                  <td>Đặt trước: </td> <td>${i.preOrder}</td>
                 </tr>
                 <tr>
                   <td>Đơn giữ: </td>
                   <td><a href="${vtlink}" target="_blank" style="color: ${this.holdedOrders?'red':'inherit'}">${i.pending} chờ • ${i.draft} nháp</a></td>
                 </tr>
                 <tr>
-                  <td>Tổng COD: </td>
-                  <td>${i.total} đơn • ${i.totalCOD}</td>
+                  <td>Tổng COD: </td> <td>${i.total} đơn • ${i.totalCOD}</td>
                 </tr>`;
             }).catch(e => {
                 this.infoList.innerHTML = `<tr style="color:orangered; text-align: center;"><td>${e.message}</td></tr>`;
             }).finally(_ => {
                 this.isBusy = 0;
                 this.card.classList.remove('refreshing');
-            })
+            });
         }
         phoneSearching(){
             this.searchBtn.innerText = 'Dừng';
@@ -744,7 +726,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     GM_setValue('vtp_deviceId', vtpDeviceId);
     GM_setValue('vtp_tokenKey', vtpToken);
 
-
     $(document).ready(async function(){
 
         if(window.location.pathname != '/order/tao-don-le') return !1;
@@ -913,7 +894,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         let iv = setInterval(function(){
             updateCOD(function(){ clearInterval(iv) });
         }, 500);
-    })
+    });
+
 })($);
 
 (function($){
