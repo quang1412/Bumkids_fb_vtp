@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-11-11
+// @version      2024-11-13
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -813,11 +813,13 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 setTimeout(() => {
                     getListOrdersVTP(phone).then(data => {
                         let lastest = data.data.data.LIST_ORDER[0];
-                        if(!lastest) throw new Error('new order not found!');
+                        let lastest_date = new Date(Date.parse(lastest.ORDER_SYSTEMDATE)).getDate();
+                        let today_date = new Date().getDate();
+                        if(lastest_date != today_date || !lastest) throw new Error('new order not found!');
                         return(lastest);
-                    }).then(async data => {
-                        let o = data.ORDER_NUMBER;
-                        let status = data.ORDER_STATUS;
+                    }).then(async order => {
+                        let o = order.ORDER_NUMBER;
+                        let status = order.ORDER_STATUS;
                         if(!~printableStatus.indexOf(status)){ /** throw new Error('new order not found!'); **/ }
 
                         let json = await viettelReq.post("https://api.viettelpost.vn/api/setting/encryptLinkPrintV2", {
@@ -830,10 +832,14 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                         console.log(json.data.enCryptUrl);
 
-                        return json.data.enCryptUrl;
+                        let link = json.data.enCryptUrl+'&status='+status;
 
+                        window.open(link, "", "_blank");
+                        window.close();
+                        //window.location.href = link+'&status='+status;
+                        //return json.data.enCryptUrl+'&status='+status;
                     }).then(link => {
-                        window.location.href = link+'&status='+status;
+
                     }).catch(e => {
                         alert(e.message);
                         window.location.href = 'https://viettelpost.vn/quan-ly-van-don';
