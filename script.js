@@ -269,14 +269,17 @@ Facebook Facebook Facebook
             entrys: { fbid: '1158876406', phone: '1286223003' }
         },
         int: async function(){
+            let spreadsheetsId = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs',
+                gid = '314725270';
             //GM_deleteValue('fb_phoneBook');
-            let url = 'https://docs.google.com/spreadsheets/d/1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs/gviz/tq?tqx=out:json&tq&gid=314725270';
             this.data = await GM.getValue(this.key, null);
             GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
                 if(remote) this.data = newValue;
             });
 
             if(this.data) return true;
+
+            let url = 'https://docs.google.com/spreadsheets/d/'+spreadsheetsId+'/gviz/tq?tqx=out:json&tq&gid'+gid;
 
             GM_log('Tải phonebook từ google sheet');
             let res = await GM.xmlHttpRequest({ url: url, responseType: 'text', }).catch(e => console.error(e));
@@ -659,8 +662,8 @@ Facebook Facebook Facebook
             clearInterval(interv);
         }, 5000);
     }
-    commentFilterClick();
-    window.addEventListener('urlchange', commentFilterClick);
+    //commentFilterClick();
+    //window.addEventListener('urlchange', commentFilterClick);
 })();
 
 
