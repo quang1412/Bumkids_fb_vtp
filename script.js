@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-11-13
+// @version      2024-11-14
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -257,6 +257,11 @@ Facebook Facebook Facebook
     /*** Đánh dấu cmt của người đăng ***/
     /*div[role="article"][aria-label*="${myFbName}"] {border-left: 2px dashed gray; }*/
 
+    /*** comment ***/
+    div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="]{
+       color: red;
+    }
+
     /*** CSS END ***/`);
 
     const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎒 Balo', "🧰💊 Dược phẩm", '🎁🎀 Khác'];
@@ -477,6 +482,7 @@ Facebook Facebook Facebook
             gooogleSheetQuery('SELECT * WHERE E = '+this.id, 'A2:H').then(json => {
                 console.log(json);
                 i.preOrder = (json.rows.length);
+                console.log(json.rows);
             }).then(_ => getListOrdersVTP(this.phone)).then(res => {
                 if(res.error) throw new Error('Viettel: ' + res.message);
                 let list = res.data.data.LIST_ORDER;
@@ -816,9 +822,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 setTimeout(() => {
                     getListOrdersVTP(phone).then(data => {
                         let lastest = data.data.data.LIST_ORDER[0];
-                        let lastest_date = new Date(Date.parse(lastest.ORDER_SYSTEMDATE)).getDate();
+                        let lastest_date = new Date(Date.parse(lastest?.ORDER_SYSTEMDATE || 0)).getDate();
                         let today_date = new Date().getDate();
-                        if(lastest_date != today_date || !lastest) throw new Error('new order not found!');
+                        if( !lastest || lastest_date != today_date) throw new Error('Không tìm thấy đơn hàng mới!');
                         return(lastest);
                     }).then(async order => {
                         let o = order.ORDER_NUMBER;
@@ -831,14 +837,15 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                             "IS_SHOW_POSTAGE": 0,
                             "PRINT_COPY": 1
                         });
-                        if(json.error || !json.data.enCryptUrl) throw new Error('getPrintLink not found!');
+                        if(!json.error && json?.data?.enCryptUrl){
+                            let link = json.data.enCryptUrl+'&status='+status;
+                            console.log(link);
+                            window.open(link, "", "_blank");
+                            window.close();
+                        } else {
+                            throw new Error('getPrintLink not found!');
+                        }
 
-                        console.log(json.data.enCryptUrl);
-
-                        let link = json.data.enCryptUrl+'&status='+status;
-
-                        window.open(link, "", "_blank");
-                        window.close();
                         //window.location.href = link+'&status='+status;
                         //return json.data.enCryptUrl+'&status='+status;
                     }).then(link => {
