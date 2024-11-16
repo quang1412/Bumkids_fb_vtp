@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-11-14
+// @version      2024-11-16
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -259,7 +259,7 @@ Facebook Facebook Facebook
 
     /*** comment ***/
     div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="]{
-       color: red;
+
     }
 
     /*** CSS END ***/`);
@@ -422,7 +422,40 @@ Facebook Facebook Facebook
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
-        preOrder(b){
+        /** preorder **/
+        async preOrder(b){
+            let ot = b.innerText;
+            let oc = b.style.color;
+            if(this.preOd_busy) return;
+            this.preOd_busy = 1;
+            try{
+                b.style.color = 'gray';
+                b.innerText = 'loading...';
+                let json = await gooogleSheetQuery('SELECT *', 'A5:F');
+                //   alert(JSON.stringify(json));
+                console.log(json);
+                let cols = json.cols;
+                let orderList = json.rows.map(function(row, i){
+                    let r = {}
+                    row.c.forEach((o, i) => { r[cols[i].label] = o.f || o.v});
+                    return r;
+                });
+                console.log(orderList);
+
+            }
+            catch(e){
+            }
+            finally{
+                setTimeout(() => {
+                    b.innerText = ot;
+                    b.style.color = oc;
+                    this.preOd_busy = 0;
+                }, 500);
+            }
+
+            return false;
+
+
             let isPosts = (/\/.*\/posts\/[\d\w]*/g).test(window.location.href);
             let hashTag = null;
 
@@ -472,32 +505,26 @@ Facebook Facebook Facebook
                 if(result.readyState == 4 && result.status == 200) return this.refreshInfo();
             });
         }
-        refreshInfo(){
+        async refreshInfo(){
             if(this.isBusy) return;
             this.isBusy = 1;
             let i = {rate: 'Chưa có', total: 0, pending: 0, draft: 0, preOrder: 0, totalCOD: 0};
             this.infoList.innerHTML = '</tr><tr><td style=" ">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
             this.card.classList.add('refreshing');
 
-            gooogleSheetQuery('SELECT * WHERE E = '+this.id, 'A2:H').then(json => {
-                console.log(json);
-                i.preOrder = (json.rows.length);
-                console.log(json.rows);
-            }).then(_ => getListOrdersVTP(this.phone)).then(res => {
-                if(res.error) throw new Error('Viettel: ' + res.message);
-                let list = res.data.data.LIST_ORDER;
-                i.total = res.data.data.TOTAL;
-                i.totalCOD = res.data.data.TOTAL_COLLECTION.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+            try{
+                //let json = await gooogleSheetQuery('SELECT * WHERE E = '+this.id, 'A2:H');
+                //i.preOrder = json.rows.length;
+
+                let orderList = await getListOrdersVTP(this.phone);
+                if(orderList.error) throw new Error('Viettel: ' + orderList.message);
+                let list = orderList.data.data.LIST_ORDER;
+                i.total = orderList.data.data.TOTAL;
+                i.totalCOD = orderList.data.data.TOTAL_COLLECTION.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
                 i.pending = list.filter(function(o){ return !!~([-108,100,102,103,104]).indexOf(o.ORDER_STATUS) }).length;
                 i.draft = list.filter(function(o){ return (o.ORDER_STATUS == -100) }).length;
                 this.holdedOrders = (i.draft + i.pending);
-          /**  }).then(_ => getDeliveryRate(this.phone)).then(info => {
-                if(info.error) throw new Error('Viettel: ' + info.message);
-                if(!info.totalOrder || info.deliveryRate == -1) return;
 
-                let percent = (info.deliveryRate * 100).toFixed(2);
-                i.rate = (`${percent}% (${info.order501}/${info.totalOrder})`); **/
-            }).then(_ => {
                 let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.phone);
                 this.infoList.innerHTML = `
                 <tr style="display:none;"><td>ID:</td> <td>${this.id}</td></tr>
@@ -517,12 +544,14 @@ Facebook Facebook Facebook
                 <tr>
                   <td>Tổng COD: </td> <td>${i.total} đơn • ${i.totalCOD}</td>
                 </tr>`;
-            }).catch(e => {
+
+
+            } catch(e){
                 this.infoList.innerHTML = `<tr style="color:orangered; text-align: center;"><td>${e.message}</td></tr>`;
-            }).finally(_ => {
+            } finally{
                 this.isBusy = 0;
                 this.card.classList.remove('refreshing');
-            });
+            }
         }
         phoneSearching(){
             this.searchBtn.innerText = 'Dừng';
@@ -838,10 +867,10 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                             "PRINT_COPY": 1
                         });
                         if(!json.error && json?.data?.enCryptUrl){
-                            let link = json.data.enCryptUrl+'&status='+status;
-                            console.log(link);
-                            window.open(link, "", "_blank");
-                            window.close();
+                            let link = json.data.enCryptUrl
+                           // alert(link);
+                            window.open(link+'&status='+status, "", "_blank");
+                            setTimeout(window.close, 200);
                         } else {
                             throw new Error('getPrintLink not found!');
                         }
