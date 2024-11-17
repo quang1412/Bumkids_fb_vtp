@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-11-16
+// @version      2024-11-18
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -27,6 +27,15 @@
 // @grant        window.onurlchange
 
 // ==/UserScript==
+
+
+
+/**
+
+NOTE: điều chỉnh các trường thông tin đơn hàng pre-order
+
+**/
+
 
 const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.trinh.5011';
 let vtpDeviceId = GM_getValue('vtp_deviceId'), vtpToken = GM_getValue('vtp_tokenKey');
@@ -129,45 +138,47 @@ function makeid(length = 12) {
     return result;
 }
 
-function gglog(type, data, callback){
-    if(!type || !data) {
-        return callback(false);
-    };
-    let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ';
+function gglog(type, data){
+    return new Promise((resolve, reject) => {
+        if(!type || !data) {
+            return reject(false);
+        };
+        let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ';
         //entry_type = 689021464,
         //entry_data = 354401759;
-    let fields = {
-        0: 689021464,
-        1: 354401759,
-        2: 1477078849,
-        3: 204892124,
-        4: 2101594477,
-        5: 1251442348,
-        6: 94653935,
-        7: 814190568,
-        8: 733397838,
-        9: 718607793,
-        10: 570486205,
-    }
-    let url = `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${fields[0]}=${type}&`;
-    url += data.map((d, i) => (`entry.${fields[i+1]}=${encodeURIComponent(d)}`)).join('&');
-
-    console.log(url);
-
-    GM_xmlhttpRequest({
-        //url: `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${entry_type}=${type}&entry.${entry_data}=${data}`,
-        url: url,
-        method: "GET",
-        synchronous: true,
-        headers: {"Content-Type": "text/html; charset=utf-8"},
-        onload: function (res) {
-            callback(res);
-        },
-        onerror: function(res) {
-            console.log("error: ", res.message);
-            return alert('GG Log error: ' + res.message);
-            callback(false);
+        let fields = {
+            0: 689021464,
+            1: 354401759,
+            2: 1477078849,
+            3: 204892124,
+            4: 2101594477,
+            5: 1251442348,
+            6: 94653935,
+            7: 814190568,
+            8: 733397838,
+            9: 718607793,
+            10: 570486205,
         }
+        let url = `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${fields[0]}=${type}&`;
+        url += data.map((d, i) => (`entry.${fields[i+1]}=${encodeURIComponent(d)}`)).join('&');
+
+        console.log(url);
+
+        GM_xmlhttpRequest({
+            //url: `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${entry_type}=${type}&entry.${entry_data}=${data}`,
+            url: url,
+            method: "GET",
+            synchronous: true,
+            headers: {"Content-Type": "text/html; charset=utf-8"},
+            onload: function (res) {
+                resolve(res);
+            },
+            onerror: function(res) {
+                console.log("error: ", res.message);
+                return alert('GG Log error: ' + res.message);
+                reject(false);
+            }
+        })
     })
 }
 
@@ -188,7 +199,7 @@ Facebook Facebook Facebook
 
     @keyframes blinker { 50% { opacity: 0; }}
 
-    ._8ykn :not(.always-enable-animations) .infoCard{ transition-property: all !important; }
+    ._8ykn :not(.always-enable-animations) .infoCard{ /* transition-property: all !important; */ }
 
     div.infoCard {
     --border-color: lightgray;
@@ -265,7 +276,9 @@ Facebook Facebook Facebook
     /*** CSS END ***/`);
 
     const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎒 Balo', "🧰💊 Dược phẩm", '🎁🎀 Khác'];
-
+    const myUserName = 'hien.trinh.5011';
+//    let isPosts = window.location.pathname.includes(myUserName+'/posts/');
+    const preOrderPosts = [];
     const phoneBook = {
         data: null,
         key: 'fb_phoneBook',
@@ -371,6 +384,10 @@ Facebook Facebook Facebook
         })
     }
 
+    window.navigation.addEventListener("navigate", (event) => {
+        console.log('location changed!');
+    });
+
     class InfoCard_1{
         constructor(info, container){
             this.container = container;
@@ -424,86 +441,80 @@ Facebook Facebook Facebook
         }
         /** preorder **/
         async preOrder(b){
+            if(this.busy_xjr) return;
+            this.busy_xjr = 1;
+
             let ot = b.innerText;
             let oc = b.style.color;
-            if(this.preOd_busy) return;
-            this.preOd_busy = 1;
-            try{
-                b.style.color = 'gray';
-                b.innerText = 'loading...';
-                let json = await gooogleSheetQuery('SELECT *', 'A5:F');
-                //   alert(JSON.stringify(json));
-                console.log(json);
-                let cols = json.cols;
-                let orderList = json.rows.map(function(row, i){
-                    let r = {}
-                    row.c.forEach((o, i) => { r[cols[i].label] = o.f || o.v});
-                    return r;
-                });
-                console.log(orderList);
+            b.innerText = '...';
 
+            const preOrderInfo = { id: makeid(12), attr: 'default' }
+
+            try{
+                if(!preOrderPosts.length){
+                    let json = await gooogleSheetQuery('SELECT *', 'A5:G');
+                    console.log(json);
+                    let cols = json.cols;
+                    preOrderPosts.push(...json.rows.map(function(row, i){
+                        let r = {};
+                        row.c.forEach((o, i) => { r[cols[i].label] = o.f || o.v});
+                        return r;
+                    }));
+                }
+
+                /** Chọn order post **/
+                let t = 'Chọn order post:\n';
+                t += preOrderPosts.map((p, i) => `[${i+1}] ${p.name} | ${p.text.substring(0, 30)}...`).join('\n');
+                let i = window.prompt(t, window.lastest_prOd_i || '');
+                if(i == null) return;
+
+                let post = preOrderPosts[Number(i)-1];
+                if(!post) throw new Error('lựa chọn không hợp lệ! hãy thử lại');
+
+                console.log(post);
+
+                window.lastest_prOd_i = i;
+
+                preOrderInfo.userId = this.id;
+                preOrderInfo.postId = post.id;
+
+                if(true) {
+                    /** check trùng đơn **/
+                }
+
+                /** Chọn biến thể **/
+                if(post.attrs){
+                    /** Tổ hợp ra các biến thể **/
+                    let parts = post.attrs && post.attrs.split(/\;\s+/).map(attr1 => attr1.split(/\,\s+/));
+                    let attrs = parts?.reduce((a, b) => a.reduce((r, v) => r.concat(b.map(w => [].concat(v, w))), []));
+
+                    /** Yêu cầu nhập lựa chọn **/
+                    let t = 'Lựa chọn biến thể (các lựa chọn cách nhau bởi dấu cách (space):\n';
+                    t += attrs?.map((a, i) => `${i+1} - ${a.join(', ')}`).join('\n');
+                    let input = window.prompt(t, '');
+                    if(input == null) return;
+
+                    /** Tổng hợp các lựa chọn thành các biến thể **/
+                    preOrderInfo.attr = input.split(/\s+/).map(i => {
+                        let a = attrs[Number(i)-1];
+                        if(!a) throw new Error('biến thể ko hợp lệ! hãy thử lại');
+                        return a;
+                    }).join(';');
+                }
+
+                /** Nhập thông tin lên google form **/
+                let res = await gglog('preOrder', [...Object.values(preOrderInfo)]);
+                if(res.readyState == 4 && res.status == 200) return alert(JSON.stringify(preOrderInfo));
             }
             catch(e){
+                alert(e.message);
             }
             finally{
-                setTimeout(() => {
+                setTimeout(_ => {
                     b.innerText = ot;
-                    b.style.color = oc;
-                    this.preOd_busy = 0;
-                }, 500);
+                    this.busy_xjr = 0;
+                })
             }
-
-            return false;
-
-
-            let isPosts = (/\/.*\/posts\/[\d\w]*/g).test(window.location.href);
-            let hashTag = null;
-
-            if(isPosts) {
-                hashTag = window.document.querySelector('a[href*="/hashtag/order"]')?.innerText;
-            } else {
-                hashTag = prompt('Nhập hashtag thủ công', '');
-                if(hashTag == null) return false;
-            }
-
-            if(!hashTag) return alert('Error! hashtag not found!');
-
-            let list = GM_getValue('preOrderItemsList', ['trang,xs']);
-
-            let t = "Nhập thông tin sản phẩm order \nNote: các sản phẩm tách nhau bằng dấu cách \(space\)  \n" + (list.map((v, k) => {
-                return "[" + k + "] " + v;
-            }).join("\n"));
-
-            let inputItems = null, regex = /^(\s{1}[\d\w]+\,{1}[\d\w]+)*$/
-            let doAsk = _ => {
-                let inp = prompt(t, list[0])?.trim();
-                if(inp == null) return false;
-                inp = list[inp] || inp;
-                if(!regex.test(' ' +inp)) return doAsk();
-                inputItems = inp;
-            }
-            doAsk();
-            if(!inputItems) return false;
-            inputItems = list[inputItems] || inputItems;
-
-            list.unshift(inputItems);
-            list = [...new Set(list)];
-            GM_setValue('preOrderItemsList', list.slice(0, 5));
-
-            let info = [
-                makeid(12),
-                hashTag,
-                this.id,
-                this.name,
-                this.picUrl,
-                inputItems
-            ];
-            console.log(info);
-
-            gglog('preOrder', info, result => {
-                console.log(result);
-                if(result.readyState == 4 && result.status == 200) return this.refreshInfo();
-            });
         }
         async refreshInfo(){
             if(this.isBusy) return;
