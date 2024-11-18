@@ -324,6 +324,7 @@ Facebook Facebook Facebook
     };
     phoneBook.int();
 
+    /**
     function getDeliveryRate(phone){
         return new Promise((resolve, reject) => {
             if(!phone) return reject('Chưa có sdt');
@@ -337,38 +338,56 @@ Facebook Facebook Facebook
             });
         })
     }
+    **/
 
     function gooogleSheetQuery(queryStr = 'SELECT *', range = 'A2:G', sheetName = 'PreOrder'){
         return new Promise((resolve, reject) => {
-
             let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
             let query = encodeURIComponent(queryStr);
             let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheetName}&range=${range}&tq=${query}`;
+            console.log(url);
             GM_xmlhttpRequest({
                 url: url,
                 method: "GET",
                 synchronous: true,
                 headers: {"Content-Type": "text/html; charset=utf-8"},
                 onload: function (res) {
-                    var jsonString = res.response.match(/(?<="table":).*(?=}\);)/g)[0]
-                    var json = JSON.parse(jsonString)
-
-                    //window.prompt("json", jsonString);
+                    let jsonString = res.response.match(/(?<="table":).*(?=}\);)/g)[0];
+                    let json = JSON.parse(jsonString);
                     return resolve(json);
                 },
                 onerror: function(res) {
                     console.log("error: ", res.message);
-                    //return alert('Error (gooogleSheetQuery): ' + res.message);
-
                     return reject(res.message);
                 }
-            })
-        })
+            });
+        });
     }
 
     window.navigation.addEventListener("navigate", (event) => {
         console.log('location changed!');
     });
+
+      function getPreOrderPosts(){
+        return new Promise(async resolve => {
+            let json = await gooogleSheetQuery('SELECT *', 'A2:G13', 'PreOrder');
+            console.log(json);
+            let cols = json.cols;
+            let posts = new Array(...json.rows.map(function(row, i){
+                let r = new Object();
+                row.c.forEach((o, i) => { r[cols[i].label] = o.f || o.v});
+                // tổ hợp ra các biến thể
+                r.attrs = ['mặc định'];
+                if(!r.spec) return r;
+
+                let parts = r.spec.split(/\;\s*/).map(attr1 => attr1.split(/\,\s*/));
+                r.attrs = parts.reduce((a, b) => a.reduce((r, v) => r.concat(b.map(w => [].concat(v, w))), []));
+                r.attrs = r.attrs.map(e => e.join());
+                return r;
+            }));
+            return resolve(posts);
+        });
+    }
 
     class InfoCard_1{
         constructor(info, container){
@@ -379,6 +398,7 @@ Facebook Facebook Facebook
             this.phone = phoneBook.get(this.id);
             this.penddingOrders = 0;
             this.deliveryRate = 0;
+            this.preOrderPostsId = [];
 
             this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.id });
             if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') {
@@ -421,7 +441,7 @@ Facebook Facebook Facebook
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
-        /** preorder **/
+        // preorder
         async preOrder(b){
             if(this.busy_xjr) return;
             this.busy_xjr = 1;
@@ -430,65 +450,47 @@ Facebook Facebook Facebook
             let oc = b.style.color;
             b.innerText = '-----';
 
-            const preOrderInfo = { id:makeid(12), postId:'', userId:'', attrs:'' };
-
             try{
                 if(!preOrderPosts.length){
-                    let json = await gooogleSheetQuery('SELECT *', 'A2:G10', 'PreOrder');
-                    console.log(json);
-                    let cols = json.cols;
-                    preOrderPosts.push(...json.rows.map(function(row, i){
-                        let r = {};
-                        row.c.forEach((o, i) => { r[cols[i].label] = o.f || o.v});
-                        if(r.attrs){
-                            /** Tổ hợp ra các biến thể **/
-                            let parts = r.attrs.split(/\;\s*/).map(attr1 => attr1.split(/\,\s*/));
-                            r.attrs = parts?.reduce((a, b) => a.reduce((r, v) => r.concat(b.map(w => [].concat(v, w))), []));
-                            r.attrs = r.attrs.map(e => e.join());
-                        } else {
-                            r.attrs = ['mặc định'];
-                        }
-                        return r;
-                    }));
-                    console.log(preOrderPosts);
-               }
+                    let p = await getPreOrderPosts();
+                    preOrderPosts.push(...p);
+                }
 
                 /** Chọn order post **/
-                let t = 'Chọn order post:\n';
-                t += preOrderPosts.map((p, i) => `[${i+1}] ${p.name} | ${p.text.substring(0, 30)}...`).join('\n');
-                let i = window.prompt(t, window.lastest_prOd_i || '');
-                if(i == null) return;
+                let txt = 'Chọn order post:\n';
+                txt += preOrderPosts.map((p, i) => `[${i+1}] ${p.name} | ${p.text.substring(0, 30)}...`).join('\n');
+                let num = window.prompt(txt, window.lastest_prOd_i || '');
+                if(num == null) return;
 
-                let post = preOrderPosts[Number(i)-1];
-                if(!post) throw new Error('lựa chọn không hợp lệ! hãy thử lại');
+                let post = preOrderPosts[Number(num)-1];
+                if(!post) throw new Error('❌ lựa chọn không hợp lệ! hãy thử lại');
 
                 console.log(post);
 
-                window.lastest_prOd_i = i;
+                window.lastest_prOd_i = num;
 
+                const preOrderInfo = { id:makeid(12), postId:'', userId:'', attrs:'' };
                 preOrderInfo.userId = this.id;
                 preOrderInfo.postId = post.id;
 
-                if(true) {
-                    /** check trùng đơn **/
-                }
+                let jjj = await gooogleSheetQuery(`SELECT * WHERE O = ${this.id} AND N = ${post.id}`, 'N2:P', 'PreOrder');
+                if(jjj.rows.length) throw new Error('❌ Trùng order post');
 
                 /** Chọn biến thể **/
                 if(post.attrs){
                     /** Yêu cầu nhập lựa chọn **/
-                    let t = 'Lựa chọn biến thể (các lựa chọn cách nhau bởi dấu cách (space):\n';
-                    t += post.attrs?.map((a, i) => `[${i+1}] ${a}`).join('\n');
-                    let input = window.prompt(t, '');
+                    let txt = 'Lựa chọn biến thể (các lựa chọn cách nhau bởi dấu cách (space):\n';
+                    txt += post.attrs?.map((a, i) => `[${i+1}] ${a} ${( (i + 1) % 3 ? '   ' : '\n')}`).join('');
+                    let input = window.prompt(txt, '');
                     if(input == null) return;
 
                     /** Tổng hợp các lựa chọn thành các biến thể **/
                     preOrderInfo.attrs = input.split(/\s+/).map(i => {
                         let a = post.attrs[Number(i)-1];
-                        if(!a) throw new Error('biến thể ko hợp lệ! hãy thử lại');
+                        if(!a) throw new Error('❌ biến thể ko hợp lệ! hãy thử lại');
                         return a;
                     }).join(';');
                 }
-
                 console.log(preOrderInfo);
 
                 /** Nhập thông tin lên google form **/
@@ -513,8 +515,17 @@ Facebook Facebook Facebook
             this.card.classList.add('refreshing');
 
             try{
-                //let json = await gooogleSheetQuery('SELECT * WHERE E = '+this.id, 'A2:H');
-                //i.preOrder = json.rows.length;
+                /**
+                let json = await gooogleSheetQuery('SELECT * WHERE O = '+this.id, 'N2:P', 'PreOrder');
+                console.log(json);
+                let cols = json.cols;
+                let orders = new Array(...json.rows.map(function(row, i){
+                    let r = {};
+                    row.c.forEach((o, i) => { r[cols[i].label] = o.f || o.v});
+                    return r;
+                }));
+                this.preOrderPostsId.push(...orders.map(a => a.post_id));
+                **/
 
                 let orderList = await getListOrdersVTP(this.phone);
                 if(orderList.error) throw new Error('Viettel: ' + orderList.message);
