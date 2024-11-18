@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-11-18
+// @version      2024-11-18.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -140,43 +140,25 @@ function makeid(length = 12) {
 
 function gglog(type, data){
     return new Promise((resolve, reject) => {
-        if(!type || !data) {
-            return reject(false);
-        };
-        let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ';
-        //entry_type = 689021464,
-        //entry_data = 354401759;
-        let fields = {
-            0: 689021464,
-            1: 354401759,
-            2: 1477078849,
-            3: 204892124,
-            4: 2101594477,
-            5: 1251442348,
-            6: 94653935,
-            7: 814190568,
-            8: 733397838,
-            9: 718607793,
-            10: 570486205,
-        }
-        let url = `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${fields[0]}=${type}&`;
-        url += data.map((d, i) => (`entry.${fields[i+1]}=${encodeURIComponent(d)}`)).join('&');
+        if(!type || !data) { return reject(false) };
 
+        let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ';
+        let fields = [689021464,354401759,1477078849,2101594477,204892124,1251442348,94653935,814190568,733397838,718607793,570486205];
+        let url = `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${fields[0]}=${type}&${data.map((d, i) => (`entry.${fields[i+1]}=${encodeURIComponent(d)}`)).join('&')}`;
         console.log(url);
 
         GM_xmlhttpRequest({
-            //url: `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${entry_type}=${type}&entry.${entry_data}=${data}`,
             url: url,
             method: "GET",
             synchronous: true,
             headers: {"Content-Type": "text/html; charset=utf-8"},
             onload: function (res) {
                 resolve(res);
+                if(res.readyState == 4 && res.status == 200) resolve(res);
             },
             onerror: function(res) {
                 console.log("error: ", res.message);
-                return alert('GG Log error: ' + res.message);
-                reject(false);
+                return reject('GG Log error: ' + res.message);
             }
         })
     })
@@ -446,21 +428,30 @@ Facebook Facebook Facebook
 
             let ot = b.innerText;
             let oc = b.style.color;
-            b.innerText = '...';
+            b.innerText = '-----';
 
-            const preOrderInfo = { id: makeid(12), attr: 'default' }
+            const preOrderInfo = { id:makeid(12), postId:'', userId:'', attrs:'' };
 
             try{
                 if(!preOrderPosts.length){
-                    let json = await gooogleSheetQuery('SELECT *', 'A5:G');
+                    let json = await gooogleSheetQuery('SELECT *', 'A2:G10', 'PreOrder');
                     console.log(json);
                     let cols = json.cols;
                     preOrderPosts.push(...json.rows.map(function(row, i){
                         let r = {};
                         row.c.forEach((o, i) => { r[cols[i].label] = o.f || o.v});
+                        if(r.attrs){
+                            /** Tổ hợp ra các biến thể **/
+                            let parts = r.attrs.split(/\;\s*/).map(attr1 => attr1.split(/\,\s*/));
+                            r.attrs = parts?.reduce((a, b) => a.reduce((r, v) => r.concat(b.map(w => [].concat(v, w))), []));
+                            r.attrs = r.attrs.map(e => e.join());
+                        } else {
+                            r.attrs = ['mặc định'];
+                        }
                         return r;
                     }));
-                }
+                    console.log(preOrderPosts);
+               }
 
                 /** Chọn order post **/
                 let t = 'Chọn order post:\n';
@@ -484,23 +475,21 @@ Facebook Facebook Facebook
 
                 /** Chọn biến thể **/
                 if(post.attrs){
-                    /** Tổ hợp ra các biến thể **/
-                    let parts = post.attrs && post.attrs.split(/\;\s+/).map(attr1 => attr1.split(/\,\s+/));
-                    let attrs = parts?.reduce((a, b) => a.reduce((r, v) => r.concat(b.map(w => [].concat(v, w))), []));
-
                     /** Yêu cầu nhập lựa chọn **/
                     let t = 'Lựa chọn biến thể (các lựa chọn cách nhau bởi dấu cách (space):\n';
-                    t += attrs?.map((a, i) => `${i+1} - ${a.join(', ')}`).join('\n');
+                    t += post.attrs?.map((a, i) => `[${i+1}] ${a}`).join('\n');
                     let input = window.prompt(t, '');
                     if(input == null) return;
 
                     /** Tổng hợp các lựa chọn thành các biến thể **/
-                    preOrderInfo.attr = input.split(/\s+/).map(i => {
-                        let a = attrs[Number(i)-1];
+                    preOrderInfo.attrs = input.split(/\s+/).map(i => {
+                        let a = post.attrs[Number(i)-1];
                         if(!a) throw new Error('biến thể ko hợp lệ! hãy thử lại');
                         return a;
                     }).join(';');
                 }
+
+                console.log(preOrderInfo);
 
                 /** Nhập thông tin lên google form **/
                 let res = await gglog('preOrder', [...Object.values(preOrderInfo)]);
