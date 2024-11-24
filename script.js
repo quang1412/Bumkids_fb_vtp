@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-11-18.1
+// @version      2024-11-24
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -32,9 +32,50 @@
 const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.trinh.5011';
 let vtpDeviceId = GM_getValue('vtp_deviceId'), vtpToken = GM_getValue('vtp_tokenKey');
 
-const googleSheet = {
-    query: function(){
+const GoogleSheet = {
+    query: function(queryStr = 'SELECT *', range = 'A:A', sheet = 'PreOrder'){
+        return new Promise((resolve, reject) => {
+            let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
+            let tq = encodeURIComponent(queryStr);
+            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheet}&range=${range}&tq=${tq}`;
+            console.log(url);
+            GM_xmlhttpRequest({
+                url: url,
+                method: "GET",
+                synchronous: true,
+                headers: {"Content-Type": "text/html; charset=utf-8"},
+                onload: function (res) {
+                    let jsonString = res.response.match(/(?<="table":).*(?=}\);)/g)[0];
+                    let json = JSON.parse(jsonString);
+                    return resolve(json);
+                },
+                onerror: function(res) {
+                    console.log("error: ", res.message);
+                    return reject(res.message);
+                }
+            });
+        });
+    },
+    getPreOrderPosts: function(){
+        return new Promise((resolve, reject) => {
+            this.query('SELECT *', 'A2:G13', 'PreOrder').then(json => {
+                console.log(json);
+                let cols = json.cols;
+                let posts = new Array(...json.rows.map(function(row, i){
+                    let r = {'date':'', 'id':'', 'url':'', 'text':'', 'img_url':'', 'name':'', 'spec':'', 'attrs':['default']};
+                    row.c.forEach((o, i) => { r[cols[i].label] = o.f || o.v});
 
+                    // tổ hợp ra các biến thể;
+                    if(r.spec){
+                        let parts = r.spec.split(/\;\s*/).map(attr1 => attr1.split(/\,\s*/));
+                        let attrs = parts.reduce((a, b) => a.reduce((r, v) => r.concat(b.map(w => [].concat(v, w))), []));
+                        r.attrs = attrs.map(e => e.join ? e.join() : e);
+                    }
+                    return r;
+                }));
+                return resolve(posts);
+            }).catch(e => reject(e));
+        })
     },
     log: function(type = 'test', data = []){
         let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ';
@@ -50,7 +91,7 @@ const googleSheet = {
                 synchronous: true,
                 headers: {"Content-Type": "text/html; charset=utf-8"},
                 onload: function (res) {
-                    resolve(res);
+//                    resolve(res);
                     if(res.readyState == 4 && res.status == 200) resolve(res);
                 },
                 onerror: function(res) {
@@ -375,27 +416,6 @@ Facebook Facebook Facebook
         console.log('location changed!');
     });
 
-      function getPreOrderPosts(){
-        return new Promise(async resolve => {
-            let json = await gooogleSheetQuery('SELECT *', 'A2:G13', 'PreOrder');
-            console.log(json);
-            let cols = json.cols;
-            let posts = new Array(...json.rows.map(function(row, i){
-                let r = new Object();
-                row.c.forEach((o, i) => { r[cols[i].label] = o.f || o.v});
-                // tổ hợp ra các biến thể
-                r.attrs = ['mặc định'];
-                if(!r.spec) return r;
-
-                let parts = r.spec.split(/\;\s*/).map(attr1 => attr1.split(/\,\s*/));
-                r.attrs = parts.reduce((a, b) => a.reduce((r, v) => r.concat(b.map(w => [].concat(v, w))), []));
-                r.attrs = r.attrs.map(e => e.join());
-                return r;
-            }));
-            return resolve(posts);
-        });
-    }
-
     class InfoCard_1{
         constructor(info, container){
             this.container = container;
@@ -453,41 +473,48 @@ Facebook Facebook Facebook
             let isPost = window.location.href.includes('/posts/');
             if(!isPost) return alert('please open post!');
 
-            if(window.busy_xjr) return alert('busy');
+            if(window.busy_xjr) return false;
             window.busy_xjr = 1;
 
-            let img = this.picUrl;
-            let cmts = $('div[aria-label*="Bình luận dưới tên"][role="article"]');
-            let txt = window.document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"][data-ad-preview="message"]')?.innerText
-            let b64 = window.btoa(unescape(encodeURIComponent(txt)));
-            let info = {
-                postId: b64.substring(3, 15), postUrl: window.location.href,
-                userId: this.id, userName: this.name,
-                content:'',
-            };
+//            let txt = window.document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"][data-ad-preview="message"]')?.innerText
+//            let b64 = window.btoa(unescape(encodeURIComponent(txt)));
 
-            cmts.css({'border':'1px dashed gray', 'border-radius':'5px', 'cursor': 'copy'});
-            await new Promise(resolve => {
-                cmts.on('click', function(e){
-                    let content = $(e.target).find('span[lang]')[0]?.innerText.replaceAll('\n',' _ ');
-                    info.content = content;
-                    return resolve(true)
-                });
-                setTimeout(_ => resolve(false), 5000);
-            });
+            try{
+                if(!preOrderPosts.length){
+                    let p = await GoogleSheet.getPreOrderPosts();
+                    preOrderPosts.push(...p);
+                }
+                let txt = 'Chọn bài post:\n';
+                txt += preOrderPosts.map(({name, text}, index) => `[${index+1}] ${name} (${text.substring(0, 20)}...)`).join('\n');
+                let postIndex = window.prompt(txt, window.last_postIndex || 1);
+                if(postIndex == null) return true;
+                window.last_postIndex = postIndex;
 
-            cmts.css({'border':'unset', 'border-radius':'unset', 'cursor':'unset'}).off('click');
-            setTimeout(_ => { window.busy_xjr = 0 }, 500);
+                let post = preOrderPosts[postIndex-1];
+                let orderInfo = {id: makeid(12), postId: post.id, userId: this.id, attrs: ''};
 
-            let check = Object.values(info).filter(v => !v).length
-            !check && googleSheet.log('pre_order', Object.values(info)).then(_ => {
+                let attrs = post.attrs;
+                txt = 'Chọn biến thể post:\n';
+                txt += attrs.map((name, index) => `[${index+1}] ${name}`).join('\n');
+                let attrsIndex = window.prompt(txt, window.last_attrsIndex || 1);
+                if(attrsIndex == null) return true;
+
+                orderInfo.attrs = attrsIndex.split(' ').map(index => attrs[Number(index)-1]).join(";");
+                //alert(post.name + '\n' + attrsName);
+
+                let res = await GoogleSheet.log('pre_order', Object.values(orderInfo));
+//                console.log(res)
                 GM_notification({
                     title: "Tạo đơn đặt trước: "+ this.name,
-                    text: "Nội dung: " + info.content,
+                    text: 'Post name: ' + post.name + "\nBiến thể: " + orderInfo.attrs ,
                     image: this.picUrl,
                     timeout: 10000,
                 });
-            })
+            } catch(e){
+                alert(e.message);
+            } finally{
+                setTimeout(_ => { window.busy_xjr = 0 }, 200);
+            }
         }
         async refreshInfo(){
             if(this.isBusy) return;
