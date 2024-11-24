@@ -481,25 +481,30 @@ Facebook Facebook Facebook
 
             try{
                 if(!preOrderPosts.length){
-                    let p = await GoogleSheet.getPreOrderPosts();
-                    preOrderPosts.push(...p);
+                    let array = await GoogleSheet.getPreOrderPosts();
+                    preOrderPosts.push(...array);
                 }
                 let txt = 'Chọn bài post:\n';
                 txt += preOrderPosts.map(({name, text}, index) => `[${index+1}] ${name} (${text.substring(0, 20)}...)`).join('\n');
-                let postIndex = window.prompt(txt, window.last_postIndex || 1);
-                if(postIndex == null) return true;
-                window.last_postIndex = postIndex;
+                let pIndex = window.prompt(txt, window.last_pIndex || 1);
+                if(pIndex == null) return true;
+                window.last_pIndex = pIndex;
 
-                let post = preOrderPosts[postIndex-1];
+                let post = preOrderPosts[pIndex-1];
+                if(!post) throw new Error('Lựa chọn bài post không hợp lệ!');
                 let orderInfo = {id: makeid(12), postId: post.id, userId: this.id, attrs: ''};
 
                 let attrs = post.attrs;
                 txt = 'Chọn biến thể post:\n';
-                txt += attrs.map((name, index) => `[${index+1}] ${name}`).join('\n');
-                let attrsIndex = window.prompt(txt, window.last_attrsIndex || 1);
-                if(attrsIndex == null) return true;
+                txt += attrs.map((name, index) => `[${index+1}] ${name} ${((index+1) % 3 ? "     " : "\n")}`).join("");
+                let aIndex = window.prompt(txt, window.last_aIndex || 1);
+                if(aIndex == null) return true;
 
-                orderInfo.attrs = attrsIndex.split(' ').map(index => attrs[Number(index)-1]).join(";");
+                orderInfo.attrs = aIndex.split(' ').map(index => {
+                    let aName = attrs[Number(index)-1];
+                    if(!aName) throw new Error('Lựa chọn biến thể không hợp lệ!');
+                    return aName;
+                }).join(" + ");
                 //alert(post.name + '\n' + attrsName);
 
                 let res = await GoogleSheet.log('pre_order', Object.values(orderInfo));
@@ -510,6 +515,9 @@ Facebook Facebook Facebook
                     image: this.picUrl,
                     timeout: 10000,
                 });
+
+                window.last_pIndex = pIndex;
+                window.last_aIndex = aIndex;
             } catch(e){
                 alert(e.message);
             } finally{
