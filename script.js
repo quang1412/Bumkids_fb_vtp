@@ -29,16 +29,44 @@
 // ==/UserScript==
 
 
-
-/**
-
-NOTE: điều chỉnh các trường thông tin đơn hàng pre-order
-
-**/
-
-
 const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.trinh.5011';
 let vtpDeviceId = GM_getValue('vtp_deviceId'), vtpToken = GM_getValue('vtp_tokenKey');
+
+const googleSheet = {
+    query: function(){
+
+    },
+    log: function(type = 'test', data = []){
+        let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ';
+        let fields = [689021464,354401759,1477078849,2101594477,204892124,1251442348,94653935,814190568,733397838,718607793,570486205];
+        return new Promise((resolve, reject) => {
+            if(!type || !data) { return reject('input is invalid!') };
+            let url = `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${fields[0]}=${type}&${data.map((d, i) => (`entry.${fields[i+1]}=${encodeURIComponent(d)}`)).join('&')}`;
+            console.log(url);
+
+            GM_xmlhttpRequest({
+                url: url,
+                method: "GET",
+                synchronous: true,
+                headers: {"Content-Type": "text/html; charset=utf-8"},
+                onload: function (res) {
+                    resolve(res);
+                    if(res.readyState == 4 && res.status == 200) resolve(res);
+                },
+                onerror: function(res) {
+                    console.log("error: ", res.message);
+                    return reject('GG Log error: ' + res.message);
+                }
+            })
+        })
+    }
+}
+
+const viettel = {
+    getOrders: function(){
+
+    }
+}
 
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 function customEvent(n){
@@ -138,32 +166,6 @@ function makeid(length = 12) {
     return result;
 }
 
-function gglog(type, data){
-    return new Promise((resolve, reject) => {
-        if(!type || !data) { return reject(false) };
-
-        let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ';
-        let fields = [689021464,354401759,1477078849,2101594477,204892124,1251442348,94653935,814190568,733397838,718607793,570486205];
-        let url = `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${fields[0]}=${type}&${data.map((d, i) => (`entry.${fields[i+1]}=${encodeURIComponent(d)}`)).join('&')}`;
-        console.log(url);
-
-        GM_xmlhttpRequest({
-            url: url,
-            method: "GET",
-            synchronous: true,
-            headers: {"Content-Type": "text/html; charset=utf-8"},
-            onload: function (res) {
-                resolve(res);
-                if(res.readyState == 4 && res.status == 200) resolve(res);
-            },
-            onerror: function(res) {
-                console.log("error: ", res.message);
-                return reject('GG Log error: ' + res.message);
-            }
-        })
-    })
-}
-
 /***
 Facebook Facebook Facebook
 Facebook Facebook Facebook
@@ -174,7 +176,7 @@ Facebook Facebook Facebook
 ***/
 
 // FACEBOOK MAIN //
-(function() {
+(function(){
     if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
 
     GM_addStyle(`/* CSS START */
@@ -256,10 +258,15 @@ Facebook Facebook Facebook
     }
 
     /*** CSS END ***/`);
+})();
 
+(function() {
+    if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
+
+    const $ = window.jQuery;
     const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎒 Balo', "🧰💊 Dược phẩm", '🎁🎀 Khác'];
     const myUserName = 'hien.trinh.5011';
-//    let isPosts = window.location.pathname.includes(myUserName+'/posts/');
+    const myDisplayName = 'Trịnh Hiền'
     const preOrderPosts = [];
     const phoneBook = {
         data: null,
@@ -397,8 +404,8 @@ Facebook Facebook Facebook
             this.picUrl = info.picUrl;
             this.phone = phoneBook.get(this.id);
             this.penddingOrders = 0;
-            this.deliveryRate = 0;
-            this.preOrderPostsId = [];
+           // this.deliveryRate = 0;
+           // this.preOrderPostsId = [];
 
             this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.id });
             if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') {
@@ -443,69 +450,44 @@ Facebook Facebook Facebook
         }
         // preorder
         async preOrder(b){
-            if(this.busy_xjr) return;
-            this.busy_xjr = 1;
+            let isPost = window.location.href.includes('/posts/');
+            if(!isPost) return alert('please open post!');
 
-            let ot = b.innerText;
-            let oc = b.style.color;
-            b.innerText = '-----';
+            if(window.busy_xjr) return alert('busy');
+            window.busy_xjr = 1;
 
-            try{
-                if(!preOrderPosts.length){
-                    let p = await getPreOrderPosts();
-                    preOrderPosts.push(...p);
-                }
+            let img = this.picUrl;
+            let cmts = $('div[aria-label*="Bình luận dưới tên"][role="article"]');
+            let txt = window.document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"][data-ad-preview="message"]')?.innerText
+            let b64 = window.btoa(unescape(encodeURIComponent(txt)));
+            let info = {
+                postId: b64.substring(3, 15), postUrl: window.location.href,
+                userId: this.id, userName: this.name,
+                content:'',
+            };
 
-                /** Chọn order post **/
-                let txt = 'Chọn order post:\n';
-                txt += preOrderPosts.map((p, i) => `[${i+1}] ${p.name} | ${p.text.substring(0, 30)}...`).join('\n');
-                let num = window.prompt(txt, window.lastest_prOd_i || '');
-                if(num == null) return;
+            cmts.css({'border':'1px dashed gray', 'border-radius':'5px', 'cursor': 'copy'});
+            await new Promise(resolve => {
+                cmts.on('click', function(e){
+                    let content = $(e.target).find('span[lang]')[0]?.innerText.replaceAll('\n',' _ ');
+                    info.content = content;
+                    return resolve(true)
+                });
+                setTimeout(_ => resolve(false), 5000);
+            });
 
-                let post = preOrderPosts[Number(num)-1];
-                if(!post) throw new Error('❌ lựa chọn không hợp lệ! hãy thử lại');
+            cmts.css({'border':'unset', 'border-radius':'unset', 'cursor':'unset'}).off('click');
+            setTimeout(_ => { window.busy_xjr = 0 }, 500);
 
-                console.log(post);
-
-                window.lastest_prOd_i = num;
-
-                const preOrderInfo = { id:makeid(12), postId:'', userId:'', attrs:'' };
-                preOrderInfo.userId = this.id;
-                preOrderInfo.postId = post.id;
-
-                let jjj = await gooogleSheetQuery(`SELECT * WHERE O = ${this.id} AND N = ${post.id}`, 'N2:P', 'PreOrder');
-                if(jjj.rows.length) throw new Error('❌ Trùng order post');
-
-                /** Chọn biến thể **/
-                if(post.attrs){
-                    /** Yêu cầu nhập lựa chọn **/
-                    let txt = 'Lựa chọn biến thể (các lựa chọn cách nhau bởi dấu cách (space):\n';
-                    txt += post.attrs?.map((a, i) => `[${i+1}] ${a} ${( (i + 1) % 3 ? '   ' : '\n')}`).join('');
-                    let input = window.prompt(txt, '');
-                    if(input == null) return;
-
-                    /** Tổng hợp các lựa chọn thành các biến thể **/
-                    preOrderInfo.attrs = input.split(/\s+/).map(i => {
-                        let a = post.attrs[Number(i)-1];
-                        if(!a) throw new Error('❌ biến thể ko hợp lệ! hãy thử lại');
-                        return a;
-                    }).join(';');
-                }
-                console.log(preOrderInfo);
-
-                /** Nhập thông tin lên google form **/
-                let res = await gglog('preOrder', [...Object.values(preOrderInfo)]);
-                if(res.readyState == 4 && res.status == 200) return alert(JSON.stringify(preOrderInfo));
-            }
-            catch(e){
-                alert(e.message);
-            }
-            finally{
-                setTimeout(_ => {
-                    b.innerText = ot;
-                    this.busy_xjr = 0;
-                })
-            }
+            let check = Object.values(info).filter(v => !v).length
+            !check && googleSheet.log('pre_order', Object.values(info)).then(_ => {
+                GM_notification({
+                    title: "Tạo đơn đặt trước: "+ this.name,
+                    text: "Nội dung: " + info.content,
+                    image: this.picUrl,
+                    timeout: 10000,
+                });
+            })
         }
         async refreshInfo(){
             if(this.isBusy) return;
@@ -545,7 +527,7 @@ Facebook Facebook Facebook
                 <tr style="display:none;">
                   <td>Uy tín: </td> <td>${i.rate}</td>
                 </tr>
-                <tr>
+                <tr style="display:none;">
                   <td>Đặt trước: </td> <td>${i.preOrder}</td>
                 </tr>
                 <tr>
