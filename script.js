@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-11-24
+// @version      2024-11-25
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -317,48 +317,23 @@ Facebook Facebook Facebook
             entrys: { fbid: '1158876406', phone: '1286223003' }
         },
         int: async function(){
-            let spreadsheetsId = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs',
-                gid = '314725270';
-            //GM_deleteValue('fb_phoneBook');
             this.data = await GM.getValue(this.key, null);
             GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
                 if(remote) this.data = newValue;
             });
-
             if(this.data) return true;
-
-            let url = 'https://docs.google.com/spreadsheets/d/'+spreadsheetsId+'/gviz/tq?tqx=out:json&tq&gid'+gid;
-
             GM_log('Tải phonebook từ google sheet');
-            let res = await GM.xmlHttpRequest({ url: url, responseType: 'text', }).catch(e => console.error(e));
-            let txt = res.responseText.replace('/*O_o*/\ngoogle.visualization.Query.setResponse(', '').replace(');','');
-            let json = JSON.parse(txt);
-
-            GM_log(json);
+            let json = await GoogleSheet.query('SELECT *', 'B:C', 'phonebook');
             let object = new Object();
-            let remap = json.table.rows.map(r => {
-                try{ object[(r.c[1].v)] = r.c[2].v.replaceAll(/\D/g, "") }
-                catch(e){ console.error(e.message, r) }
+            let remap = json.rows.map(row => {
+                try{ object[(row.c[0].v)] = (row.c[1].f || row.c[1].v).replaceAll(/\D/g, "") }
+                catch(e){ console.error(e.message, row) }
             });
-
-            GM_log(object);
             this.data = object;
             GM_setValue(this.key, object);
         },
         upload_gg: function(fbid, phone){
-            GM_xmlhttpRequest({
-                url: `https://docs.google.com/forms/d/e/${this.ggForm.id}/formResponse?entry.${this.ggForm.entrys.fbid}=${fbid}&entry.${this.ggForm.entrys.phone}=${phone}`,
-                method: "GET",
-                synchronous: true,
-                headers: {"Content-Type": "text/html; charset=utf-8"},
-                onload: function (res) {
-                    console.log(res);
-                },
-                onerror: function(res) {
-                    console.log("error: ", res.message);
-                    return alert('GG phonebook error: ' + res.message)
-                }
-            })
+            GoogleSheet.log('userInfo', [fbid, phone]);
         },
         get: function(fbid){
             return this.data[fbid];
@@ -371,50 +346,6 @@ Facebook Facebook Facebook
         },
     };
     phoneBook.int();
-
-    /**
-    function getDeliveryRate(phone){
-        return new Promise((resolve, reject) => {
-            if(!phone) return reject('Chưa có sdt');
-
-            let token = GM_getValue('vtp_tokenKey');
-            if (!token) return reject('Chưa đăng nhập');
-            setTimeout(_ => resolve({totalOrder: 0, deliveryRate: -1}), 5000);
-
-            viettelReq.get("https://io.okd.viettelpost.vn/order/v1.0/kyc/" + phone).then(resolve).catch(e => {
-                reject(e.message);
-            });
-        })
-    }
-    **/
-
-    function gooogleSheetQuery(queryStr = 'SELECT *', range = 'A2:G', sheetName = 'PreOrder'){
-        return new Promise((resolve, reject) => {
-            let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
-            let query = encodeURIComponent(queryStr);
-            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheetName}&range=${range}&tq=${query}`;
-            console.log(url);
-            GM_xmlhttpRequest({
-                url: url,
-                method: "GET",
-                synchronous: true,
-                headers: {"Content-Type": "text/html; charset=utf-8"},
-                onload: function (res) {
-                    let jsonString = res.response.match(/(?<="table":).*(?=}\);)/g)[0];
-                    let json = JSON.parse(jsonString);
-                    return resolve(json);
-                },
-                onerror: function(res) {
-                    console.log("error: ", res.message);
-                    return reject(res.message);
-                }
-            });
-        });
-    }
-
-    window.navigation.addEventListener("navigate", (event) => {
-        console.log('location changed!');
-    });
 
     class InfoCard_1{
         constructor(info, container){
@@ -669,24 +600,25 @@ Facebook Facebook Facebook
         }
     }
 
-    document.onmousemove = function(){
-       // clearTimeout(window.timout);
+    window.document.onmousemove = function(){
+//        console.log('find find');
         if(window.xxag) return;
 
-        // console.log('find find');
-        let ee = document.querySelectorAll(`a[aria-label][href^="/"][role="link"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.checked)`);
+      //  console.log('find find');
+        let ee = window.document.querySelectorAll(`a[aria-label][href^="/"][role="link"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.checked)`);
         if(window.location.origin == 'https://www.messenger.com') {
-            ee = document.querySelectorAll(`a[aria-label][href^="https://www.facebook.com/"][role="link"]:not([aria-label=""], [aria-label="Xem tất cả trong Messenger"], [aria-label="Tin nhắn mới"], [aria-label="Mở ảnh"], [aria-label="Thông báo"], [aria-label="Trang cá nhân"]):not(.checked)`);
+            ee = window.document.querySelectorAll(`a[aria-label][href^="https://www.facebook.com/"][role="link"]:not([aria-label=""], [aria-label="Xem tất cả trong Messenger"], [aria-label="Tin nhắn mới"], [aria-label="Mở ảnh"], [aria-label="Thông báo"], [aria-label="Trang cá nhân"]):not(.checked)`);
         }
+        //console.log(ee);
         for(let i = 0; i < ee.length; i++){
             let e = ee[i];
             e.classList.add('checked');
+
             let id = e.getAttribute('href').replaceAll('https://www.facebook.com/', '').replaceAll('/', '');
+            if((/\D+/g).test(id)) continue;
+            if(window.document.querySelector('div.infoCard[data-fbid="'+id+'"]')) continue;
 
             let name = e.getAttribute('aria-label');
-            if((/\D+/g).test(id)) continue;
-            if(document.querySelector('div.infoCard[data-fbid="'+id+'"]')) continue;
-
             let picUrl = e.querySelector('img')?.getAttribute('src');
             if(!picUrl) continue;
 
@@ -699,7 +631,7 @@ Facebook Facebook Facebook
         }
         window.xxag = 1;
 
-        window.timout = setTimeout(function(){
+        window.timeout = setTimeout(function(){
             window.xxag = 0;
         }, 1000);
     }
@@ -709,6 +641,7 @@ Facebook Facebook Facebook
 
 // COMMENT FILTER //
 (function(){
+    return;
     if(window.location.origin != 'https://www.facebook.com') return !1;
     let interv, timout;
 
@@ -717,7 +650,7 @@ Facebook Facebook Facebook
 
         interv = setInterval(function(){
             if(!(/facebook\.com\/.*\/posts\//g).test(window.location.href)) return;
-            let i = document.querySelector('div[role="button"] span[dir="auto"] i[data-visualcompletion="css-img"]');
+            let i = window.document.querySelector('div[role="button"] span[dir="auto"] i[data-visualcompletion="css-img"]');
             // let i = getElementByXpath('//*[@id="facebook"]/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div/div/div/div/div/div/div/div/div/div/div/div[13]/div/div/div[4]/div/div/div[2]/div[2]/div/div/span/div/div/i');
             i && (clearInterval(interv), i.click());
         }, 500);
@@ -804,7 +737,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         const urlParams = new URLSearchParams(window.location.search);
         let fbid = urlParams.get('fbid');
 
-        let phoneNoInput = document.querySelector('input#phoneNo');
+        let phoneNoInput = window.document.querySelector('input#phoneNo');
 
         let status = GM_getValue('vtp_duplicateCheckStatus') || 200;
         $(phoneNoInput).attr('placeholder', `Nhập số điện thoại để tự điền thông tin người nhận \| check trùng ${status == 200 ? '🟢' : '🔴'}`);
@@ -835,18 +768,18 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         function updateCOD(callback){
             try{
-                let price = parseInt(document.querySelector('input#productPrice').value.replaceAll('.', '') || 0);
-                let fee = parseInt(document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
+                let price = parseInt(window.document.querySelector('input#productPrice').value.replaceAll('.', '') || 0);
+                let fee = parseInt(window.document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
                 if(!price || !fee) return false;
 
-                let input = document.querySelector('input#cod'),
+                let input = window.document.querySelector('input#cod'),
                     p = parseInt(price),
                     f = parseInt(fee)
                 input.value = p + f;
                 input.dispatchEvent(customEvent('input'));
                 input.dispatchEvent(customEvent('change'));
 
-                let n = document.querySelector('.box-product-info + div .ng-star-inserted .custom-switch input#switch1');
+                let n = window.document.querySelector('.box-product-info + div .ng-star-inserted .custom-switch input#switch1');
                 n.checked = true;
                 n.dispatchEvent(customEvent('change'));
 
@@ -944,20 +877,20 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.document.body.classList.add('custom');
         s.prependTo(p);
 
-        let fn = document.querySelector('input#fullName');
-        $(document.body).on('click keyup keydown', function(){
+        let fn = window.document.querySelector('input#fullName');
+        $(window.document.body).on('click keyup keydown', function(){
             fn.value = name;
             fn.dispatchEvent(customEvent('input'));
             fn.dispatchEvent(customEvent('change'));
         })
 
-        let pn = document.querySelector('input#productName');
+        let pn = window.document.querySelector('input#productName');
         pn.value = prdName;
 
-        let pr = document.querySelector('input#productPrice');
+        let pr = window.document.querySelector('input#productPrice');
         pr.value = price;
 
-        let pw = document.querySelector('input#productWeight');
+        let pw = window.document.querySelector('input#productWeight');
         pw.value = 500;
 
         phoneNoInput.value = phone;
@@ -978,13 +911,13 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 })($);
 
 (function($){
-    $(document).ready(function(){
+    $(window.document).ready(function(){
         if(window.location.href != 'https://viettelpost.vn/quan-ly-van-don') return;
         let interval = setInterval(function(){
-            let select = document.querySelector('mat-select[role="listbox"][aria-label="Bản Ghi Mỗi Trang"]');
+            let select = window.document.querySelector('mat-select[role="listbox"][aria-label="Bản Ghi Mỗi Trang"]');
             if(!select) return;
             select.click();
-            let option = document.querySelector('mat-option#mat-option-3[role="option"]');
+            let option = window.document.querySelector('mat-option#mat-option-3[role="option"]');
             if(!option) return;
             option.click();
             clearInterval(interval);
