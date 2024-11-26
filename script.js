@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-11-25
+// @version      2024-11-26
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -104,10 +104,90 @@ const GoogleSheet = {
 }
 
 const viettel = {
+    getReq: function(url){
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: "GET",
+                synchronous: true,
+                headers: { 'Authorization': 'Bearer ' + vtpToken },
+                url: url,
+                onload: function (response) {
+                    return resolve(JSON.parse(response.responseText))
+                },
+                onerror: function(reponse) {
+                    return reject(reponse.message || 'Lỗi viettelReqGet');
+                }
+            })
+        })
+    },
+    postReq: function(url, json){
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                url:  url,
+                method: "POST",
+                synchronous: true,
+                headers: { "Token": vtpToken, "Content-Type": "application/json" },
+                data: JSON.stringify({...json, "deviceId": vtpDeviceId}),
+                onload: function (response) {
+                    return resolve(JSON.parse(response.responseText))
+                },
+                onerror: function(reponse) {
+                    return reject(reponse.message || 'Lỗi viettelReqPost');
+                }
+            })
+
+        })
+    },
+    updateToken: async function(isForce){
+        let updateUrl = 'https://viettelpost.vn/cau-hinh-tai-khoan';
+        this.deviceId = await GM_getValue('vtp_deviceId', null);
+        this.tokenKey = await GM_getValue('vtp_tokenKey', null);
+
+        if(!(isForce || !this.deviceId || !this.tokenKey)) return true;
+
+        if(window.location.origin == 'https://viettelpost.vn' && window.location.href == updateUrl){
+            
+            setTimeout(function(){
+                window.opener.postMessage({
+                    type:'vtptoken',
+                    deviceId: window.localStorage.deviceId,
+                    token: JSON.parse(window.localStorage['vtp-token'] || '{}').tokenKey
+                }, '*');
+                setTimeout(window.close, 500);
+            }, 2000);
+        } else if(window.location.origin != 'https://viettelpost.vn' ){
+            let popUp = window.open(updateUrl, "popup", "width=600,height=400");
+            let newToken = '';
+            window.addEventListener('message', e => {
+                if (e.source !== popUp) return; // Skip message in this event listener
+                let {type, deviceId, token} = e.data;
+
+                if(type != 'vtptoken') return;
+                if(!deviceId || !token) return alert('dang nhap lai viettel');
+
+                this.deviceId = deviceId;
+                this.tokenKey = token;
+                newToken = token;
+
+                GM_setValue('vtp_deviceId', deviceId);
+                GM_setValue('vtp_tokenKey', token);
+
+                window.prompt('token:', deviceId + ' | ' + token);
+                //popUp && !popUp.closed && popUp.close();
+            });
+            setTimeout(function(){
+                if(!newToken) {
+                    popUp && !popUp.closed && popUp.close();
+                    return alert('dang nhap lai viettel');
+                }
+            }, 5000);
+        }
+    },
     getOrders: function(){
 
     }
-}
+};
+viettel.updateToken(1);
 
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 function customEvent(n){
@@ -401,8 +481,8 @@ Facebook Facebook Facebook
         }
         // preorder
         async preOrder(b){
-            let isPost = window.location.href.includes('/posts/');
-            if(!isPost) return alert('please open post!');
+         //   let isPost = window.location.href.includes('/posts/');
+           // if(!isPost) return alert('please open post!');
 
             if(window.busy_xjr) return false;
             window.busy_xjr = 1;
@@ -568,18 +648,19 @@ Facebook Facebook Facebook
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
 
-                let prices = prompt("B1 - Nhập giá (đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('fb_lastPrice', 1000));
+                let prices = prompt("B1 - Nhập giá (đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", window.lastPromptInp1);
                 if (prices == undefined || prices == null) { return false }
-                GM_setValue('fb_lastPrice', prices);
+                window.lastPromptInp1 = prices;
                 let price = prices.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
 
                 url += '&price=' + (price*1000);
 
                 let pl = prdList.map((p, i) => '[' + (i + 1) + '] ' + p + ( (i + 1) % 3 ? '    ' : '\n')).join('');
-                let iii = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn sản phẩm (phân tách bằng dấu cách)', 1);
+                let iii = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn sản phẩm (phân tách bằng dấu cách)', (window.lastPromptInp2 || 1));
                 if (iii == null || iii == undefined) { return false }
                 let prdNames = iii.split(/\D+/).map(i => prdList[i - 1]);
                 if(!!~prdNames.indexOf(undefined)){ throw new Error('Mã sản phẩm không hợp lệ!') }
+                window.lastPromptInp2 = iii;
 
                 url += '&prdName=' + prdNames.join(" %2B ") + ' - (' + prices + ')';
 
