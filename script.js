@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-11-26
+// @version      2024-11-27
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -32,6 +32,9 @@
 const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.trinh.5011';
 let vtpDeviceId = GM_getValue('vtp_deviceId'), vtpToken = GM_getValue('vtp_tokenKey');
 
+function wait(ms = 1000){
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 const GoogleSheet = {
     query: function(queryStr = 'SELECT *', range = 'A:A', sheet = 'PreOrder'){
         return new Promise((resolve, reject) => {
@@ -139,55 +142,38 @@ const viettel = {
         })
     },
     updateToken: async function(isForce){
-        let updateUrl = 'https://viettelpost.vn/cau-hinh-tai-khoan';
         this.deviceId = await GM_getValue('vtp_deviceId', null);
         this.tokenKey = await GM_getValue('vtp_tokenKey', null);
-
         if(!(isForce || !this.deviceId || !this.tokenKey)) return true;
-
+        let updateUrl = 'https://viettelpost.vn/cau-hinh-tai-khoan';
         if(window.location.origin == 'https://viettelpost.vn' && window.location.href == updateUrl){
-            
-            setTimeout(function(){
-                window.opener.postMessage({
-                    type:'vtptoken',
-                    deviceId: window.localStorage.deviceId,
-                    token: JSON.parse(window.localStorage['vtp-token'] || '{}').tokenKey
-                }, '*');
-                setTimeout(window.close, 500);
-            }, 2000);
-        } else if(window.location.origin != 'https://viettelpost.vn' ){
+            await wait(2000);
+            GM_setValue('vtp_deviceId', window.localStorage.deviceId);
+            GM_setValue('vtp_tokenKey', JSON.parse(window.localStorage['vtp-token'] || '{}').tokenKey);
+        } else if(window.location.origin == 'https://www.facebook.com'){
             let popUp = window.open(updateUrl, "popup", "width=600,height=400");
             let newToken = '';
-            window.addEventListener('message', e => {
-                if (e.source !== popUp) return; // Skip message in this event listener
-                let {type, deviceId, token} = e.data;
-
-                if(type != 'vtptoken') return;
-                if(!deviceId || !token) return alert('dang nhap lai viettel');
-
-                this.deviceId = deviceId;
-                this.tokenKey = token;
-                newToken = token;
-
-                GM_setValue('vtp_deviceId', deviceId);
-                GM_setValue('vtp_tokenKey', token);
-
-                window.prompt('token:', deviceId + ' | ' + token);
-                //popUp && !popUp.closed && popUp.close();
+            GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => {
+                this.deviceId = newValue;
             });
-            setTimeout(function(){
-                if(!newToken) {
-                    popUp && !popUp.closed && popUp.close();
-                    return alert('dang nhap lai viettel');
-                }
-            }, 5000);
+            GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
+                this.tokenKey = newValue
+                newToken = newValue
+                popUp && !popUp.closed && popUp.close();
+                alert(newValue)
+            });
+            await wait(5000);
+            if(!newToken) {
+                popUp && !popUp.closed && popUp.close();
+                return alert('dang nhap lai viettel');
+            }
         }
     },
     getOrders: function(){
 
     }
 };
-viettel.updateToken(1);
+viettel.updateToken(0);
 
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 function customEvent(n){
