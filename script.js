@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-11-27
+// @version      2024-11-28
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -465,17 +465,22 @@ Facebook Facebook Facebook
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
-        // preorder
+        //preorder
         async preOrder(b){
-         //   let isPost = window.location.href.includes('/posts/');
-           // if(!isPost) return alert('please open post!');
-
+            let isPost = window.location.href.includes('/posts/');
+            if(!isPost) return alert('please open post!');
             if(window.busy_xjr) return false;
             window.busy_xjr = 1;
 
-//            let txt = window.document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"][data-ad-preview="message"]')?.innerText
-//            let b64 = window.btoa(unescape(encodeURIComponent(txt)));
+            let txt = window.document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"][data-ad-preview="message"]')?.innerText
+            let b64 = window.btoa(unescape(encodeURIComponent(txt)));
 
+            let postId = b64.substr(3, 20);
+            alert(postId);
+
+            return false;
+
+            /**
             try{
                 if(!preOrderPosts.length){
                     let array = await GoogleSheet.getPreOrderPosts();
@@ -520,6 +525,7 @@ Facebook Facebook Facebook
             } finally{
                 setTimeout(_ => { window.busy_xjr = 0 }, 200);
             }
+            **/
         }
         async refreshInfo(){
             if(this.isBusy) return;
