@@ -10,7 +10,7 @@
 // @match        https://api.viettelpost.vn/*
 // @match        https://www.facebook.com/*
 // @match        https://www.messenger.com/*
-// @require https://code.jquery.com/jquery-3.6.0.min.js
+// @require      https://code.jquery.com/jquery-3.6.0.min.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
 // @grant        GM_log
@@ -107,13 +107,15 @@ const GoogleSheet = {
 }
 
 const viettel = {
+    deviceId: null,
+    tokenKey: null,
     getReq: function(url){
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
+                url: url,
                 method: "GET",
                 synchronous: true,
-                headers: { 'Authorization': 'Bearer ' + vtpToken },
-                url: url,
+                headers: { 'Authorization': 'Bearer ' + this.tokenKey },
                 onload: function (response) {
                     return resolve(JSON.parse(response.responseText))
                 },
@@ -129,8 +131,8 @@ const viettel = {
                 url:  url,
                 method: "POST",
                 synchronous: true,
-                headers: { "Token": vtpToken, "Content-Type": "application/json" },
-                data: JSON.stringify({...json, "deviceId": vtpDeviceId}),
+                headers: { "Token": this.tokenKey, "Content-Type": "application/json" },
+                data: JSON.stringify({...json, "deviceId": this.deviceId}),
                 onload: function (response) {
                     return resolve(JSON.parse(response.responseText))
                 },
@@ -145,6 +147,7 @@ const viettel = {
         this.deviceId = await GM_getValue('vtp_deviceId', null);
         this.tokenKey = await GM_getValue('vtp_tokenKey', null);
         if(!(isForce || !this.deviceId || !this.tokenKey)) return true;
+
         let updateUrl = 'https://viettelpost.vn/cau-hinh-tai-khoan';
         if(window.location.origin == 'https://viettelpost.vn' && window.location.href == updateUrl){
             await wait(2000);
@@ -158,9 +161,8 @@ const viettel = {
             });
             GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
                 this.tokenKey = newValue
-                newToken = newValue
+                newToken = newValue;
                 popUp && !popUp.closed && popUp.close();
-                alert(newValue)
             });
             await wait(5000);
             if(!newToken) {
@@ -169,8 +171,27 @@ const viettel = {
             }
         }
     },
-    getOrders: function(){
-
+    getListOrders: function(phone){
+        return new Promise((resolve, reject) => {
+            if(!phone) return reject(new Error('Chưa có sdt'));
+            this.postReq("https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2", {
+                "PAGE_INDEX": 1,
+                "PAGE_SIZE": 10,
+                "INVENTORY": null,
+                "TYPE": 0,
+                "DATE_FROM": getFormatedDate(-30),
+                "DATE_TO": getFormatedDate(),
+                "ORDER_PROPERTIES": phone,
+                "ORDER_PAYMENT": "",
+                "IS_FAST_DELIVERY": false,
+                "REASON_RETURN": null,
+                "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570",
+            }).then(res => {
+                resolve(res);
+            }).catch(e => {
+                reject(e.message)
+            });
+        })
     }
 };
 viettel.updateToken(0);
@@ -471,14 +492,29 @@ Facebook Facebook Facebook
             if(!isPost) return alert('please open post!');
             if(window.busy_xjr) return false;
             window.busy_xjr = 1;
+            try{
+                let attrsList = GM_getValue('preorder_history_attrs', ['Đen L', 'Đỏ S', 'Trắng L']) ;
+                let postTxt = window.document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"][data-ad-preview="message"]')?.innerText
+                let b64 = window.btoa(unescape(encodeURIComponent(postTxt)));
 
-            let txt = window.document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"][data-ad-preview="message"]')?.innerText
-            let b64 = window.btoa(unescape(encodeURIComponent(txt)));
+                var txt = 'chọn các biến thể:\n';
+                txt += attrsList.map((a, i)=> `[${i+1}] ${a} ${((i+1) % 3 ? '   ' : '\n')}`).join('');
+                let input = window.prompt(txt, 1);
+                if(input == null || input == undefined) return;
 
-            let postId = b64.substr(3, 20);
-            alert(postId);
+                let attrsText = (/^(\d*\s*)*$/).test(input) ? input.split(/\s+/g).map(i => attrsList[Number(i)-1]).join(', ') : input;
 
-            return false;
+                attrsList.unshift(attrsText);
+                GM_setValue('preorder_history_attrs', attrsList);
+                let info = {postId: b64.substr(3, 20), attrs: attrsText }
+                alert(JSON.stringify(info));
+
+                return true;
+            } catch(e){
+            } finally{
+                window.busy_xjr = 0;
+            }
+
 
             /**
             try{
@@ -547,7 +583,7 @@ Facebook Facebook Facebook
                 this.preOrderPostsId.push(...orders.map(a => a.post_id));
                 **/
 
-                let orderList = await getListOrdersVTP(this.phone);
+                let orderList = await viettel.getListOrders(this.phone);
                 if(orderList.error) throw new Error('Viettel: ' + orderList.message);
                 let list = orderList.data.data.LIST_ORDER;
                 i.total = orderList.data.data.TOTAL;
@@ -821,7 +857,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 this.dispatchEvent(customEvent('input'));
                 if(!isVNPhone(this.value)) return;
 
-                let res = await getListOrdersVTP(this.value).catch(e => {throw new Error()});
+                let res = await viettel.getListOrders(this.value).catch(e => {throw new Error()});
                 GM_setValue('vtp_duplicateCheckStatus', res?.status);
 
                 if(res?.status != 200) throw new Error();
@@ -883,7 +919,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
 
                 setTimeout(() => {
-                    getListOrdersVTP(phone).then(data => {
+                    viettel.getListOrders(phone).then(data => {
                         let lastest = data.data.data.LIST_ORDER[0];
                         let lastest_date = new Date(Date.parse(lastest?.ORDER_SYSTEMDATE || 0)).getDate();
                         let today_date = new Date().getDate();
