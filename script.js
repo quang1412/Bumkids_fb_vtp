@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-11-28
+// @version      2024-11-29
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -107,8 +107,7 @@ const GoogleSheet = {
 }
 
 const viettel = {
-    deviceId: null,
-    tokenKey: null,
+    deviceId: null, tokenKey: null,
     getReq: function(url){
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
@@ -146,6 +145,7 @@ const viettel = {
     updateToken: async function(isForce){
         this.deviceId = await GM_getValue('vtp_deviceId', null);
         this.tokenKey = await GM_getValue('vtp_tokenKey', null);
+
         if(!(isForce || !this.deviceId || !this.tokenKey)) return true;
 
         let updateUrl = 'https://viettelpost.vn/cau-hinh-tai-khoan';
@@ -174,7 +174,8 @@ const viettel = {
     getListOrders: function(phone){
         return new Promise((resolve, reject) => {
             if(!phone) return reject(new Error('Chưa có sdt'));
-            this.postReq("https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2", {
+            let url = 'https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2';
+            let json = {
                 "PAGE_INDEX": 1,
                 "PAGE_SIZE": 10,
                 "INVENTORY": null,
@@ -186,11 +187,8 @@ const viettel = {
                 "IS_FAST_DELIVERY": false,
                 "REASON_RETURN": null,
                 "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570",
-            }).then(res => {
-                resolve(res);
-            }).catch(e => {
-                reject(e.message)
-            });
+            };
+            this.postReq(url, json ).then(resolve).catch(e => reject(e.message));
         })
     }
 };
@@ -490,78 +488,44 @@ Facebook Facebook Facebook
         async preOrder(b){
             let isPost = window.location.href.includes('/posts/');
             if(!isPost) return alert('please open post!');
-            if(window.busy_xjr) return false;
+            if(window.busy_xjr) return alert('bận...');
             window.busy_xjr = 1;
+            let key = 'preorder_history_attrs1'
             try{
-                let attrsList = GM_getValue('preorder_history_attrs', ['Đen L', 'Đỏ S', 'Trắng L']) ;
+                let attrsList = await GM_getValue(key, ['Đen L', 'Đỏ S', 'Trắng L']) ;
                 let postTxt = window.document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"][data-ad-preview="message"]')?.innerText
                 let b64 = window.btoa(unescape(encodeURIComponent(postTxt)));
 
                 var txt = 'chọn các biến thể:\n';
-                txt += attrsList.map((a, i)=> `[${i+1}] ${a} ${((i+1) % 3 ? '   ' : '\n')}`).join('');
+                txt += attrsList.slice(0, 10).map((a, i)=> `[${i+1}] ${a}`).join('\n');
                 let input = window.prompt(txt, 1);
                 if(input == null || input == undefined) return;
 
-                let attrsText = (/^(\d*\s*)*$/).test(input) ? input.split(/\s+/g).map(i => attrsList[Number(i)-1]).join(', ') : input;
+                let attrsText = (/^(\d*\s*)*$/).test(input) ? input.split(/\s+/).map(i => attrsList[Number(i)-1]).join(', ') : input;
 
-                attrsList.unshift(attrsText);
-                GM_setValue('preorder_history_attrs', attrsList);
-                let info = {postId: b64.substr(3, 20), attrs: attrsText }
-                alert(JSON.stringify(info));
+                //attrsList.push(attrsText.trim());
+                attrsList.unshift(attrsText.trim());
+                attrsList = attrsList.filter(function(value, index, array) {
+                    return array.indexOf(value) === index;
+                })
+                GM_setValue(key, attrsList);
 
+                let info = {userId: this.id, userName: this.name, userPhone: this.phone, postId: b64.substr(3, 20), attrs: attrsText,};
+                //alert(JSON.stringify(info));
+
+                await GoogleSheet.log('preorder', Object.values(info)).then(res => {
+                    GM_notification({
+                        title: this.name + " - Tạo đơn đặt trước",
+                        text: "Post: "+ postTxt.substr(0, 30) + "...\nBiến thể: " + attrsText ,
+                        image: this.picUrl,
+                        timeout: 10000,
+                    });
+                });
                 return true;
             } catch(e){
             } finally{
                 window.busy_xjr = 0;
             }
-
-
-            /**
-            try{
-                if(!preOrderPosts.length){
-                    let array = await GoogleSheet.getPreOrderPosts();
-                    preOrderPosts.push(...array);
-                }
-                let txt = 'Chọn bài post:\n';
-                txt += preOrderPosts.map(({name, text}, index) => `[${index+1}] ${name} (${text.substring(0, 20)}...)`).join('\n');
-                let pIndex = window.prompt(txt, window.last_pIndex || 1);
-                if(pIndex == null) return true;
-                window.last_pIndex = pIndex;
-
-                let post = preOrderPosts[pIndex-1];
-                if(!post) throw new Error('Lựa chọn bài post không hợp lệ!');
-                let orderInfo = {id: makeid(12), postId: post.id, userId: this.id, attrs: ''};
-
-                let attrs = post.attrs;
-                txt = 'Chọn biến thể post:\n';
-                txt += attrs.map((name, index) => `[${index+1}] ${name} ${((index+1) % 3 ? "     " : "\n")}`).join("");
-                let aIndex = window.prompt(txt, window.last_aIndex || 1);
-                if(aIndex == null) return true;
-
-                orderInfo.attrs = aIndex.split(' ').map(index => {
-                    let aName = attrs[Number(index)-1];
-                    if(!aName) throw new Error('Lựa chọn biến thể không hợp lệ!');
-                    return aName;
-                }).join(" + ");
-                //alert(post.name + '\n' + attrsName);
-
-                let res = await GoogleSheet.log('pre_order', Object.values(orderInfo));
-//                console.log(res)
-                GM_notification({
-                    title: "Tạo đơn đặt trước: "+ this.name,
-                    text: 'Post name: ' + post.name + "\nBiến thể: " + orderInfo.attrs ,
-                    image: this.picUrl,
-                    timeout: 10000,
-                });
-
-                window.last_pIndex = pIndex;
-                window.last_aIndex = aIndex;
-            } catch(e){
-                alert(e.message);
-            } finally{
-                setTimeout(_ => { window.busy_xjr = 0 }, 200);
-            }
-            **/
         }
         async refreshInfo(){
             if(this.isBusy) return;
@@ -693,7 +657,7 @@ Facebook Facebook Facebook
                 url += '&prdName=' + prdNames.join(" %2B ") + ' - (' + prices + ')';
 
                 popupWindow?.focus();
-                var popupWindow = window.open(url, 'window','toolbar=no, menubar=no, resizable=yes, width=1200, height=800');
+                var popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
                 window.addEventListener('message', (ev) => { ev.data.fbid === this.id && this.refreshInfo() });
             }
             catch(e){ alert(e.message) }
@@ -939,7 +903,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                         if(!json.error && json?.data?.enCryptUrl){
                             let link = json.data.enCryptUrl
                            // alert(link);
-                            window.open(link+'&status='+status, "", "_blank");
+                            window.open(link+'&status='+status, '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=960"');
                             setTimeout(window.close, 200);
                         } else {
                             throw new Error('getPrintLink not found!');
