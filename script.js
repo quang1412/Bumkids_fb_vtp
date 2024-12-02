@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-11-29
+// @version      2024-12-02
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -59,27 +59,6 @@ const GoogleSheet = {
             });
         });
     },
-    getPreOrderPosts: function(){
-        return new Promise((resolve, reject) => {
-            this.query('SELECT *', 'A2:G13', 'PreOrder').then(json => {
-                console.log(json);
-                let cols = json.cols;
-                let posts = new Array(...json.rows.map(function(row, i){
-                    let r = {'date':'', 'id':'', 'url':'', 'text':'', 'img_url':'', 'name':'', 'spec':'', 'attrs':['default']};
-                    row.c.forEach((o, i) => { r[cols[i].label] = o.f || o.v});
-
-                    // tổ hợp ra các biến thể;
-                    if(r.spec){
-                        let parts = r.spec.split(/\;\s*/).map(attr1 => attr1.split(/\,\s*/));
-                        let attrs = parts.reduce((a, b) => a.reduce((r, v) => r.concat(b.map(w => [].concat(v, w))), []));
-                        r.attrs = attrs.map(e => e.join ? e.join() : e);
-                    }
-                    return r;
-                }));
-                return resolve(posts);
-            }).catch(e => reject(e));
-        })
-    },
     log: function(type = 'test', data = []){
         let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ';
         let fields = [689021464,354401759,1477078849,2101594477,204892124,1251442348,94653935,814190568,733397838,718607793,570486205];
@@ -103,7 +82,7 @@ const GoogleSheet = {
                 }
             })
         })
-    }
+    },
 }
 
 const viettel = {
@@ -453,7 +432,7 @@ Facebook Facebook Facebook
 
             this.searchBtn = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
             this.searchBtn.innerText = 'Tìm sđt';
-            this.searchBtn.onclick = _ => this.phoneSearching();
+            this.searchBtn.onclick = _ => this.phoneScanning();
 
             let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
             btn_2.innerText = 'Sửa sđt';
@@ -490,7 +469,7 @@ Facebook Facebook Facebook
             if(!isPost) return alert('please open post!');
             if(window.busy_xjr) return alert('bận...');
             window.busy_xjr = 1;
-            let key = 'preorder_history_attrs1'
+            let key = 'preorder_history_attrs2'
             try{
                 let attrsList = await GM_getValue(key, ['Đen L', 'Đỏ S', 'Trắng L']) ;
                 let postTxt = window.document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"][data-ad-preview="message"]')?.innerText
@@ -498,7 +477,7 @@ Facebook Facebook Facebook
 
                 var txt = 'chọn các biến thể:\n';
                 txt += attrsList.slice(0, 10).map((a, i)=> `[${i+1}] ${a}`).join('\n');
-                let input = window.prompt(txt, 1);
+                let input = window.prompt(txt, 1)?.trim();
                 if(input == null || input == undefined) return;
 
                 let attrsText = (/^(\d*\s*)*$/).test(input) ? input.split(/\s+/).map(i => attrsList[Number(i)-1]).join(', ') : input;
@@ -510,7 +489,7 @@ Facebook Facebook Facebook
                 })
                 GM_setValue(key, attrsList);
 
-                let info = {userId: this.id, userName: this.name, userPhone: this.phone, postId: b64.substr(3, 20), attrs: attrsText,};
+                let info = {userId: this.id, userName: this.name, postId: b64.substr(3, 20), attrs: attrsText};
                 //alert(JSON.stringify(info));
 
                 await GoogleSheet.log('preorder', Object.values(info)).then(res => {
@@ -584,31 +563,46 @@ Facebook Facebook Facebook
                 this.card.classList.remove('refreshing');
             }
         }
-        phoneSearching(){
-            this.searchBtn.innerText = 'Dừng';
-            if(this.searchLoop) return this.phoneSearching_Stop();
-            this.searchLoop = setInterval(() => {
-                this.container.querySelectorAll('div').forEach(d => { d.scrollTop = 0 });
+        phoneScanning(){
+            let txt = ["Tìm sđt", "Dừng"];
+            //aria-label="Xem tin nhắn mới đây nhất"
+            if(this.interval_4123){
+                window.clearInterval(this.interval_4123);
+                this.interval_4123 = 0;
+                this.searchBtn.innerText = txt[0];
+                return;
+            } else {
+                this.searchBtn.innerText = txt[1];
+                this.interval_4123 = setInterval(() => {
+                    this.container.querySelectorAll('div').forEach(d => { d.scrollTop = 0 });
 
-                let topAvt = this.container.querySelector('div[aria-label="'+this.name+'"][role="img"]');
-                topAvt && stop();
+                    let topAvt = this.container.querySelector('div[aria-label="'+this.name+'"][role="img"]');
+                    topAvt && this.phoneScanning();
 
-                let nodes = this.container.querySelectorAll('div:is(.__fb-dark-mode, .__fb-light-mode)[role="row"]:not(.scanned)');
+                    let rows = this.container.querySelectorAll('div:is(.__fb-dark-mode, .__fb-light-mode)[role="row"]:not(.scanned)');
 
-                for(let i = 1; i < nodes.length; i++){
-                    let m = nodes[nodes.length - i];
-                    m.classList.add('scanned');
+                    for (const row of rows) {
+                        console.log(row)
+                        row.classList.add('scanned');
 
-                    let text = m.innerText.replaceAll(/(\.|\,|\-|\s)/g, '');
-                    let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
-                    if(!match || !!~match.indexOf(myPhone)){
-                        continue;
-                    } else {
-                        this.phoneSearching_Stop(m);
-                        break;
+                        let text = row.innerText.replaceAll(/(\.|\,|\-|\s)/g, '');
+                        console.log(text)
+                        let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
+                        if(!match || !!~match.indexOf(myPhone)){
+                            continue;
+                        } else {
+                            this.phoneScanning();
+                            row.style.border = '1px solid red';
+                            row.style['border-radius'] = '5px';
+                            row.style.overflow = 'hidden';
+                            let i = setInterval(_ => row.scrollIntoView( {block: "center", inline: "nearest"}) , 1000);
+                            setTimeout(_ => clearInterval(i), 5000);
+                            break;
+                        }
                     }
-                }
-            }, 500);
+
+                }, 500);
+            }
         }
         phoneSearching_Stop(e){
             window.clearInterval(this.searchLoop);
