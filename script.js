@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-12-02
+// @version      2024-12-03
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -597,6 +597,7 @@ Facebook Facebook Facebook
                             row.style.overflow = 'hidden';
                             let i = setInterval(_ => row.scrollIntoView( {block: "center", inline: "nearest"}) , 1000);
                             setTimeout(_ => clearInterval(i), 5000);
+                            row.addEventListener('click', _ => clearInterval(i));
                             break;
                         }
                     }
