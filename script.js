@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-12-03
+// @version      2024-12-04
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -581,16 +581,15 @@ Facebook Facebook Facebook
 
                     let rows = this.container.querySelectorAll('div:is(.__fb-dark-mode, .__fb-light-mode)[role="row"]:not(.scanned)');
 
-                    for (const row of rows) {
+                    for (let i = (rows.length - 1); i >= 0; i--) {
+                        let row = rows[i];
                         console.log(row)
                         row.classList.add('scanned');
-
-                        let text = row.innerText.replaceAll(/(\.|\,|\-|\s)/g, '');
+                        let text1 = row.innerText;
+                        let text = text1.replaceAll(/(\.|\,|\-|\s)/g, '');
                         console.log(text)
                         let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
-                        if(!match || !!~match.indexOf(myPhone)){
-                            continue;
-                        } else {
+                        if(match && !~match.indexOf(myPhone)){
                             this.phoneScanning();
                             row.style.border = '1px solid red';
                             row.style['border-radius'] = '5px';
