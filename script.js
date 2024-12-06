@@ -795,16 +795,16 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
 
 
-    vtpDeviceId = window.localStorage.deviceId;
-    vtpToken = vtpDeviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
-    GM_setValue('vtp_deviceId', vtpDeviceId);
-    GM_setValue('vtp_tokenKey', vtpToken);
+    let i = window.localStorage.deviceId;
+    let t = i && JSON.parse(window.localStorage['vtp-token']).tokenKey;
+    GM_setValue('vtp_deviceId', i);
+    GM_setValue('vtp_tokenKey', t);
 
     $(document).ready(async function(){
 
         if(window.location.pathname != '/order/tao-don-le') return !1;
         const urlParams = new URLSearchParams(window.location.search);
-        let fbid = urlParams.get('fbid');
+        const fbid = urlParams.get('fbid');
 
         let phoneNoInput = window.document.querySelector('input#phoneNo');
 
@@ -962,9 +962,13 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         let pw = window.document.querySelector('input#productWeight');
         pw.value = 500;
 
+        let odn = window.document.querySelector('input#orderNo');
+        let d = new Date();
+        odn.value = fbid + '-' + d.getFullYear() + d.getMonth() + d.getDay();
+
         phoneNoInput.value = phone;
 
-        [pr, pn, pw, phoneNoInput].forEach(i => {
+        [pr, pn, pw, odn, phoneNoInput].forEach(i => {
             i.dispatchEvent(customEvent('input'));
             i.dispatchEvent(customEvent('change'))
         });
