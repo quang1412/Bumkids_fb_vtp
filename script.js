@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-12-05
+// @version      2024-12-21
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -116,7 +116,8 @@ const viettel = {
                 headers: { "Token": t, "Content-Type": "application/json" },
                 data: JSON.stringify({...json, "deviceId": i}),
                 onload: (response) => {
-                    return resolve(JSON.parse(response.responseText))
+                    let res = JSON.parse(response.responseText);
+                    return res.status == 200 ? resolve(res) : reject(res.message);
                 },
                 onerror: (e) => {
                     return reject(e.message || 'Lỗi viettelReqPost');
@@ -188,9 +189,11 @@ function customEvent(n){
         return event;
     }
 }
+/***
 function getElementByXpath(path) {
     return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 }
+***/
 function getFormatedDate(i = 0) {
     const today = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
     const yyyy = today.getFullYear();
@@ -202,6 +205,7 @@ function getFormatedDate(i = 0) {
     return formattedToday;
 }
 
+/***
 const viettelReq = {
     get: function(url){
         return new Promise((resolve, reject) => {
@@ -238,6 +242,7 @@ const viettelReq = {
         })
     }
 }
+***/
 
 function getListOrdersVTP(phone = null) {
     return new Promise((resolve, reject) => {
@@ -287,82 +292,141 @@ Facebook Facebook Facebook
     if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
 
     GM_addStyle(`/* CSS START */
+@keyframes blinker {
+  50% {
+    opacity: 0;
+  }
+}
 
-    @keyframes blinker { 50% { opacity: 0; }}
+div.infoCard {
+  --border-color: lightgray;
+  --bg-brightness: 1.5;
+  --bg-toolBar: rgb(231 231 231 / 60%);
+  --text-color: #000;
+  min-height: 115px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--text-color);
+  backdrop-filter: brightness(var(--bg-brightness)) blur(10px);
+  box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);
+  font-weight: bolder;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 10px;
+  width: calc(100% - 30px);
+  max-height: unset;
+  max-width: 350px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  filter: blur(0px);
+  transition: all 1.5s ease-in-out;
+  overflow: hidden;
+  opacity: 1;
+}
 
-    ._8ykn :not(.always-enable-animations) .infoCard{ /* transition-property: all !important; */ }
+html.__fb-dark-mode div.infoCard {
+  --border-color: gray;
+  --bg-brightness: 0.5;
+  --bg-toolBar: rgb(79 79 79 / 60%);
+  --text-color: whitesmoke;
+}
 
-    div.infoCard {
-    --border-color: lightgray;
-    --bg-brightness: 1.5;
-    --bg-toolBar: rgb(231 231 231 / 60%);
-    --text-color: #000;
+div.infoCard.refreshing {
+  /* filter: blur(5px); */
+}
 
-    color: var(--text-color);
-    backdrop-filter: brightness(var(--bg-brightness)) blur(10px);
-    box-shadow: 0 12px 28px 0 var(--shadow-1),0 2px 4px 0 var(--shadow-1);
-    font-weight: bolder;
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 10px;
-    width: calc(100% - 30px);
-    max-height: unset;
-    max-width: 350px;
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
-    padding: 8px;
-    filter: blur(0px);
-    transition: all 1.5s ease-in-out;
-    overflow: hidden;
-    opacity: 1;
-    }
+div.infoCard ::selection {
+  color: red;
+  background: yellow;
+}
+div.infoCard:after {
+  content: "";
+  position: absolute;
+  left: 4%;
+  top: 101%;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 6px solid var(--border-color);
+  clear: both;
+}
 
-    html.__fb-dark-mode div.infoCard {
-    --border-color: gray;
-    --bg-brightness: 0.5;
-    --bg-toolBar: rgb(79 79 79 / 60%);
-    --text-color: whitesmoke;
-    }
+div.infoCard.bottom {
+  left: 10px;
+  top: 64px;
+  right: unset;
+  bottom: unset;
+}
+div.infoCard.bottom:after {
+  top: -8px;
+  border-top: unset;
+  border-bottom: 6px solid var(--border-color);
+}
 
-    div.infoCard.refreshing{
-    /* filter: blur(5px); */
-    }
+div.infoCard div.toolBar {
+  text-align: center;
+  background-color: var(--bg-toolBar);
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-around;
+}
+div.infoCard div.toolBar a {
+  padding: 5px;
+  flex: 1;
+  opacity: 1;
+  transition: all 0.5s ease-in-out;
+}
+/* div.infoCard div.toolBar:hover a:not(:hover) { opacity: .3; } */
 
-    div.infoCard ::selection {color: red; background: yellow;}
-    div.infoCard:after { content: ''; position: absolute; left: 4%; top: 101%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 6px solid var(--border-color); clear: both; }
+div.infoCard div.card-bg {
+  background: #bdc3c7;
+  background: -webkit-linear-gradient(to right, #2c3e50, #bdc3c7);
+  background: linear-gradient(to right, #2c3e50, #bdc3c7);
+  z-index: -1;
+  opacity: 0.5;
+}
 
-    div.infoCard.bottom { left: 10px; top: 64px; right: unset; bottom: unset; }
-    div.infoCard.bottom:after { top: -8px; border-top: unset; border-bottom: 6px solid var(--border-color); }
+div.hasPhoneNum {
+  border: 2px dashed red;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+div[aria-label="Nhắn tin"][role="button"] {
+  border: 2px dashed red;
+  border-radius: 6px;
+}
+div[role="list"] div[role="listitem"] span:hover {
+  -webkit-line-clamp: 10 !important;
+}
 
-    div.infoCard div.toolBar { text-align: center; background-color: var(--bg-toolBar); border-radius: 6px; display: flex; justify-content: space-around; }
-    div.infoCard div.toolBar a { padding: 5px; flex: 1; opacity: 1; transition: all .5s ease-in-out; }
-    /* div.infoCard div.toolBar:hover a:not(:hover) { opacity: .3; } */
+/*** Sửa chiều cao khung chat ***/
+div:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {
+  height: 65vh;
+}
 
-    div.infoCard div.card-bg {
-    background: #bdc3c7;
-    background: -webkit-linear-gradient(to right, #2c3e50, #bdc3c7);
-    background: linear-gradient(to right, #2c3e50, #bdc3c7);
-    z-index: -1;
-    opacity: .5;
-    }
+/**dsfdgdf**/
+a[href*="/messages/e2ee/t/"]:after {
+  content: "";
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  width: 0.7em;
+  height: 0.7em;
+  background: lightcoral;
+  border-radius: 50%;
+}
 
-    div.hasPhoneNum { border: 2px dashed red; border-radius: 10px; overflow: hidden; margin-bottom: 5px; }
-    div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }
-    div[role="list"] div[role="listitem"] span:hover {-webkit-line-clamp: 10 !important;}
+/*** Đánh dấu cmt của người đăng ***/
+/*div[role="article"][aria-label*="${myFbName}"] {border-left: 2px dashed gray; }*/
 
-    /*** Sửa chiều cao khung chat ***/
-    div:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div { height: 65vh; }
+/*** comment ***/
+div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
+}
 
-    /**dsfdgdf**/
-    a[href*="/messages/e2ee/t/"]:after{content: ""; position: absolute; top: 0px; right: 0px; width: 0.7em; height: 0.7em; background: lightcoral; border-radius: 50%;}
-
-    /*** Đánh dấu cmt của người đăng ***/
-    /*div[role="article"][aria-label*="${myFbName}"] {border-left: 2px dashed gray; }*/
-
-    /*** comment ***/
-    div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="]{
-
-    }
 
     /*** CSS END ***/`);
 })();
@@ -374,7 +438,7 @@ Facebook Facebook Facebook
     const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎒 Balo', "🧰💊 Dược phẩm", '🎁🎀 Khác'];
     const myUserName = 'hien.trinh.5011';
     const myDisplayName = 'Trịnh Hiền'
-    const preOrderPosts = [];
+  //  const preOrderPosts = [];
     const phoneBook = {
         data: null,
         key: 'fb_phoneBook',
@@ -565,7 +629,7 @@ Facebook Facebook Facebook
                 this.card.classList.remove('refreshing');
             }
         }
-        phoneScanning(){
+        async phoneScanning(){
             let txt = ["Tìm sđt", "Dừng"];
             //aria-label="Xem tin nhắn mới đây nhất"
             if(this.interval_4123){
@@ -623,7 +687,7 @@ Facebook Facebook Facebook
                 }, i * 100);
             }
         }
-        setPhone(phone = window.prompt("Nhập sđt cho " + this.name, this.phone)){
+        async setPhone(phone = window.prompt("Nhập sđt cho " + this.name, this.phone)){
             if (phone == null || phone == "" || phone == this.phone || !isVNPhone(phone)) return false;
             this.phone = phone;
             phoneBook.set(this.id, this.phone);
@@ -634,14 +698,18 @@ Facebook Facebook Facebook
                 if(!this.phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
                 if(this.holdedOrders) throw new Error('❌ Có đơn chờ giao');
 
-                let url = 'https://viettelpost.vn/order/tao-don-le?fbid=' + this.id + '&phone=' + this.phone + '&name=' + this.name;
+                let url = 'https://viettelpost.vn/order/tao-don-le?i=';
+
+                let order = new Object();
+                order.fbid = this.id;
+                order.phone = this.phone;
+                order.name = this.name;
 
                 let prices = prompt("B1 - Nhập giá (đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
                 if (prices == undefined || prices == null) { return false }
                 GM_setValue('lastest_prices', prices);
                 let price = prices.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
 
-                url += '&price=' + (price*1000);
 
                 let pl = prdList.map((p, i) => '[' + (i + 1) + '] ' + p + ( (i + 1) % 3 ? '    ' : '\n')).join('');
                 let iii = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn sản phẩm (phân tách bằng dấu cách)', (GM_getValue('lastest_items', 1) || 1));
@@ -650,10 +718,19 @@ Facebook Facebook Facebook
                 if(!!~prdNames.indexOf(undefined)){ throw new Error('Mã sản phẩm không hợp lệ!') }
                 GM_setValue('lastest_items', iii);
 
-                url += '&prdName=' + prdNames.join(" %2B ") + ' - (' + prices + ')';
+                order.prdName = prdNames.join(" %2B ") + ' - \(' + prices + '\)';
+                order.price = (price*1000);
+
+                url += btoa(unescape(encodeURIComponent(JSON.stringify(order))));
+
+              //  url += '&prdName=' + prdNames.join(" %2B ") + ' - \(' + prices + '\)';
+             //   url += '&price=' + (price*1000);
 
                 popupWindow?.focus();
                 var popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
+              //  window.prompt('',JSON.stringify(json))
+
+            //    var popupWindow = window.open(url, '_blank');
                 window.addEventListener('message', (ev) => { ev.data.fbid === this.id && this.refreshInfo() });
             }
             catch(e){ alert(e.message) }
@@ -793,6 +870,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     div.dieukhoan {display:none;}
     /* ViettelPost custom css */`);
 
+    let prdNameSubfix = ' serumHA';
 
 
     let i = window.localStorage.deviceId;
@@ -800,17 +878,36 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     GM_setValue('vtp_deviceId', i);
     GM_setValue('vtp_tokenKey', t);
 
-    $(document).ready(async function(){
+    var total_price_func = function(e){
+        let value = e.target.value;
+        let match = (value).match((/\((\d+\s*)+\)/));
+        let total_price = 0, fee = 0, cod = 0;
+        fee = parseInt(($('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span')?.text() || 0 ).replaceAll(/\D/g,''));
+
+        if(fee && match && match[0]){
+            let ns = match[0].replace('(', '').replace(')', '');
+            total_price = ns.split(/\s+/).reduce((partialSum, a) => partialSum + Number(a)*1000, 0);
+            cod = fee + total_price;
+
+            prompt( `Giá: ${match[0].replaceAll(' ',' + ')} \nPhí ship: ${fee/1000}k \nTổng COD:`, cod);
+        }
+    }
+
+    //$(document).off('click', '#productName', total_price_func);
+    $(document).on('change', '#productName', total_price_func)
+
+
+    $(document).ready( async function(){
+        await new Promise(resolve => { setTimeout(resolve, 1000)});
 
         if(window.location.pathname != '/order/tao-don-le') return !1;
         const urlParams = new URLSearchParams(window.location.search);
-        const fbid = urlParams.get('fbid');
-
+        let info_encode = urlParams.get('i');
+        let info = JSON.parse(decodeURIComponent(escape(window.atob(info_encode.replaceAll(' ','+')))));
+        const fbid = info.fbid;
         let phoneNoInput = window.document.querySelector('input#phoneNo');
-
         let status = GM_getValue('vtp_duplicateCheckStatus') || 200;
         $(phoneNoInput).attr('placeholder', `Nhập số điện thoại để tự điền thông tin người nhận \| check trùng ${status == 200 ? '🟢' : '🔴'}`);
-
         $(phoneNoInput).on('change', async function(){
             try{
                 this.value = this.value.replaceAll(/\D/g, '');
@@ -874,7 +971,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                 // IN TEM
                 let printableStatus = [-108,100,102,103,104];
-                let phone = urlParams.get('phone');
+                let phone = info.phone;
                 if(!phone) return;
 
 
@@ -934,11 +1031,11 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         if(!fbid) return true;
 
-        let phone = urlParams.get('phone'),
-            addr = urlParams.get('addr'),
-            name = urlParams.get('name'),
-            price = urlParams.get('price'),
-            prdName = urlParams.get('prdName');
+        let phone = info.phone,
+            addr = info.addr,
+            name = info.name,
+            price = info.price,
+            prdName = info.prdName;
 
         let s = $('div.box-receiver'),
             p = s.parent();
@@ -954,7 +1051,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         })
 
         let pn = window.document.querySelector('input#productName');
-        pn.value = prdName;
+        pn.value = prdName + prdNameSubfix;
 
         let pr = window.document.querySelector('input#productPrice');
         pr.value = price;
