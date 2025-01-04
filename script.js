@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2024-12-21
+// @version      2025-01-04
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -29,8 +29,7 @@
 // ==/UserScript==
 
 
-const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.trinh.5011';
-
+const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.trinh.5011', prdNameSubfix = '';
 
 function wait(ms = 1000){
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -70,7 +69,7 @@ const GoogleSheet = {
             GM_xmlhttpRequest({
                 url: url,
                 method: "GET",
-                synchronous: true,
+                synchronous: false,
                 headers: {"Content-Type": "text/html; charset=utf-8"},
                 onload: function (res) {
 //                    resolve(res);
@@ -278,6 +277,51 @@ function makeid(length = 12) {
     return result;
 }
 
+const PhoneBook = {
+        data: null,
+        key: 'fb_phoneBook',
+        /** ggForm:{
+            id: '1FAIpQLSe_qTjWWDDWHlq-YvtpU0WnWeyL_HTA2gcSB3LDg8HNTTip0A',
+            entrys: { fbid: '1158876406', phone: '1286223003' }
+        }, **/
+        int: async function(){
+            this.data = await GM.getValue(this.key, null);
+            GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
+                if(remote) this.data = newValue;
+            });
+            if(this.data) return true;
+            GM_log('Tải phonebook từ google sheet');
+            let json = await GoogleSheet.query('SELECT *', 'B:E', 'phonebook');
+            let object = new Object();
+            let labels = json.cols.map(row => row.label);
+
+           /** let values = json.rows.map(row => {
+           }); **/
+
+            return console.log(labels);
+
+            let remap = json.rows.map(row => {
+                try{ object[(row.c[0].v)] = (row.c[1].f || row.c[1].v).replaceAll(/\D/g, "") }
+                catch(e){ console.error(e.message, row) }
+            });
+            this.data = object;
+            GM_setValue(this.key, object);
+        },
+        /** upload_gg: function(fbid, phone){
+            GoogleSheet.log('userInfo', [fbid, phone]);
+        }, **/
+        get: function(fbid){
+            return this.data[fbid];
+        },
+        set: function(fbid, phone, name){
+            this.data[fbid] = phone;
+            GM_setValue(this.key, this.data);
+            // this.upload_gg(fbid, phone, name);
+            GoogleSheet.log('userInfo', [fbid, phone, name]);
+            return true;
+        },
+    };
+
 /***
 Facebook Facebook Facebook
 Facebook Facebook Facebook
@@ -288,6 +332,8 @@ Facebook Facebook Facebook
 ***/
 
 // FACEBOOK MAIN //
+
+// STYLE
 (function(){
     if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
 
@@ -421,7 +467,11 @@ a[href*="/messages/e2ee/t/"]:after {
 }
 
 /*** Đánh dấu cmt của người đăng ***/
-/*div[role="article"][aria-label*="${myFbName}"] {border-left: 2px dashed gray; }*/
+div[aria-label*="Bình luận dưới tên Trịnh Hiền"] svg[role="none"] {
+    border: 2px solid red;
+    border-radius: 50%;
+    padding: 0px;
+}
 
 /*** comment ***/
 div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
@@ -431,59 +481,22 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
     /*** CSS END ***/`);
 })();
 
+// FUNCTIONS
 (function() {
     if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
 
-    const $ = window.jQuery;
     const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎒 Balo', "🧰💊 Dược phẩm", '🎁🎀 Khác'];
-    const myUserName = 'hien.trinh.5011';
-    const myDisplayName = 'Trịnh Hiền'
+    const $ = window.jQuery, myUserName = 'hien.trinh.5011', myDisplayName = 'Trịnh Hiền';
   //  const preOrderPosts = [];
-    const phoneBook = {
-        data: null,
-        key: 'fb_phoneBook',
-        ggForm:{
-            id: '1FAIpQLSe_qTjWWDDWHlq-YvtpU0WnWeyL_HTA2gcSB3LDg8HNTTip0A',
-            entrys: { fbid: '1158876406', phone: '1286223003' }
-        },
-        int: async function(){
-            this.data = await GM.getValue(this.key, null);
-            GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
-                if(remote) this.data = newValue;
-            });
-            if(this.data) return true;
-            GM_log('Tải phonebook từ google sheet');
-            let json = await GoogleSheet.query('SELECT *', 'B:C', 'phonebook');
-            let object = new Object();
-            let remap = json.rows.map(row => {
-                try{ object[(row.c[0].v)] = (row.c[1].f || row.c[1].v).replaceAll(/\D/g, "") }
-                catch(e){ console.error(e.message, row) }
-            });
-            this.data = object;
-            GM_setValue(this.key, object);
-        },
-        upload_gg: function(fbid, phone){
-            GoogleSheet.log('userInfo', [fbid, phone]);
-        },
-        get: function(fbid){
-            return this.data[fbid];
-        },
-        set: function(fbid, phone){
-            this.data[fbid] = phone;
-            GM_setValue(this.key, this.data);
-            this.upload_gg(fbid, phone);
-            return true;
-        },
-    };
-    phoneBook.int();
+    PhoneBook.int();
 
-    class InfoCard_1{
+    class InfoCard{
         constructor(info, container){
             this.container = container;
             this.id = info.id;
             this.name = info.name;
             this.picUrl = info.picUrl;
-            this.phone = phoneBook.get(this.id);
+            this.phone = PhoneBook.get(this.id);
             this.penddingOrders = 0;
            // this.deliveryRate = 0;
            // this.preOrderPostsId = [];
@@ -531,40 +544,27 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         }
         //preorder
         async preOrder(b){
-            let isPost = window.location.href.includes('/posts/');
-            if(!isPost) return alert('please open post!');
+            let match = window.location.pathname.match(/\/posts\/\w+/g);
+            let postId = match? match[0]?.replace('/posts/', '') : null;
+            if(!postId) return alert('Mở bài viết order!');
+            let story_message = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"]').innerText;
+
+            let note = window.prompt(`Nhập ghi chú cho đơn hàng ${this.name} \nBài post: "${story_message.substr(0, 50)}..."`, GM_getValue('lastest_preorder_note', ''));
+            if(note == null || note == 'null') return;
+            GM_setValue('lastest_preorder_note', note);
+
             if(window.busy_xjr) return alert('bận...');
             window.busy_xjr = 1;
-            let key = 'preorder_history_attrs2'
+
             try{
-                let attrsList = await GM_getValue(key, ['Đen L', 'Đỏ S', 'Trắng L']) ;
-                let postTxt = window.document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"][data-ad-preview="message"]')?.innerText
-                let b64 = window.btoa(unescape(encodeURIComponent(postTxt)));
-
-                var txt = 'chọn các biến thể:\n';
-                txt += attrsList.slice(0, 10).map((a, i)=> `[${i+1}] ${a}`).join('\n');
-                let input = window.prompt(txt, 1)?.trim();
-                if(input == null || input == undefined) return;
-
-                let attrsText = (/^(\d*\s*)*$/).test(input) ? input.split(/\s+/).map(i => attrsList[Number(i)-1]).join(', ') : input;
-
-                //attrsList.push(attrsText.trim());
-                attrsList.unshift(attrsText.trim());
-                attrsList = attrsList.filter(function(value, index, array) {
-                    return array.indexOf(value) === index;
-                })
-                GM_setValue(key, attrsList);
-
-                let info = {userId: this.id, userName: this.name, postId: b64.substr(3, 20), attrs: attrsText};
-                //alert(JSON.stringify(info));
-
-                await GoogleSheet.log('preorder', Object.values(info)).then(res => {
+                await GoogleSheet.log('preorder', [postId, this.id, this.name, this.picUrl, note]).then(res => {
                     GM_notification({
-                        title: this.name + " - Tạo đơn đặt trước",
-                        text: "Post: "+ postTxt.substr(0, 30) + "...\nBiến thể: " + attrsText ,
                         image: this.picUrl,
+                        title: "Tạo đơn order",
+                        text: this.name + ": " + note ,
                         timeout: 10000,
                     });
+                   // alert('Pre-order \n' + this.name)
                 });
                 return true;
             } catch(e){
@@ -690,7 +690,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         async setPhone(phone = window.prompt("Nhập sđt cho " + this.name, this.phone)){
             if (phone == null || phone == "" || phone == this.phone || !isVNPhone(phone)) return false;
             this.phone = phone;
-            phoneBook.set(this.id, this.phone);
+            PhoneBook.set(this.id, this.phone, this.name);
             this.refreshInfo();
         }
         createOrder(){
@@ -700,62 +700,70 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?i=';
 
-                let order = new Object();
-                order.fbid = this.id;
-                order.phone = this.phone;
-                order.name = this.name;
+                let info = new Object();
+                info.fbid = this.id;
+                info.phone = this.phone;
+                info.name = this.name;
 
-                let prices = prompt("B1 - Nhập giá (đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
-                if (prices == undefined || prices == null) { return false }
-                GM_setValue('lastest_prices', prices);
-                let price = prices.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
+                let prices_str = prompt("B1 - Nhập giá (đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
+                if (prices_str == undefined || prices_str == null) { return false }
+                let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
 
-
+                /**
                 let pl = prdList.map((p, i) => '[' + (i + 1) + '] ' + p + ( (i + 1) % 3 ? '    ' : '\n')).join('');
                 let iii = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn sản phẩm (phân tách bằng dấu cách)', (GM_getValue('lastest_items', 1) || 1));
                 if (iii == null || iii == undefined) { return false }
                 let prdNames = iii.split(/\D+/).map(i => prdList[i - 1]);
                 if(!!~prdNames.indexOf(undefined)){ throw new Error('Mã sản phẩm không hợp lệ!') }
                 GM_setValue('lastest_items', iii);
+                **/
 
-                order.prdName = prdNames.join(" %2B ") + ' - \(' + prices + '\)';
-                order.price = (price*1000);
+                let itemNameList = GM_getValue('lastest_items_list', []);
+                let list = itemNameList.map((e, i) => `[${i}] ${e}`).join('\n');
+                let itn = prompt(`Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n ${list}`, 0);
+                if (itn == null || itn == undefined) return false;
 
-                url += btoa(unescape(encodeURIComponent(JSON.stringify(order))));
+                itn = itemNameList[itn] || itn
+                itemNameList.unshift(itn);
+                itemNameList = itemNameList.filter((value, index, array) => array.indexOf(value) === index );
+                GM_setValue('lastest_items_list', itemNameList.slice(0, 10));
 
-              //  url += '&prdName=' + prdNames.join(" %2B ") + ' - \(' + prices + '\)';
-             //   url += '&price=' + (price*1000);
 
-                popupWindow?.focus();
-                var popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
-              //  window.prompt('',JSON.stringify(json))
+                info.prdName = itn + ' - \(' + prices_str + '\)';
+                info.price = (price*1000);
 
-            //    var popupWindow = window.open(url, '_blank');
+                url += btoa(unescape(encodeURIComponent(JSON.stringify(info))));
+
+                window.popupWindow?.focus();
+                window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
                 window.addEventListener('message', (ev) => { ev.data.fbid === this.id && this.refreshInfo() });
+
+                GM_setValue('lastest_prices', prices_str);
+                //GM_setValue('lastest_order_name', itn);
             }
             catch(e){ alert(e.message) }
         }
         eventsListener(){
             this.container.addEventListener("click", function(e){
                 const target = e.target.closest('div[aria-label="Trả lời"][role="button"]'); // Or any other selector.
+                target && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
+            });
 
-                if(target){
-                    GM_setClipboard("e gửi về địa chỉ này c nhé", "text", () => console.log("Clipboard set!"));
+            this.container.addEventListener("keypress", function(e) {
+                console.log(e);
+                if (e.keyCode == 113 && e.ctrlKey == true) {
+                    alert('hi.');
                 }
             });
         }
     }
 
     window.document.onmousemove = function(){
-//        console.log('find find');
-        if(window.xxag) return;
-
-      //  console.log('find find');
+        if(window.busy_xxag) return;
         let ee = window.document.querySelectorAll(`a[aria-label][href^="/"][role="link"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.checked)`);
         if(window.location.origin == 'https://www.messenger.com') {
             ee = window.document.querySelectorAll(`a[aria-label][href^="https://www.facebook.com/"][role="link"]:not([aria-label=""], [aria-label="Xem tất cả trong Messenger"], [aria-label="Tin nhắn mới"], [aria-label="Mở ảnh"], [aria-label="Thông báo"], [aria-label="Trang cá nhân"]):not(.checked)`);
         }
-        //console.log(ee);
         for(let i = 0; i < ee.length; i++){
             let e = ee[i];
             e.classList.add('checked');
@@ -769,90 +777,49 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             if(!picUrl) continue;
 
             let info = {id, name, picUrl};
-
             console.log(info);
 
             let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
-            let card = new InfoCard_1(info, p);
+            let card = new InfoCard(info, p);
         }
-        window.xxag = 1;
-
+        window.busy_xxag = 1;
         window.timeout = setTimeout(function(){
-            window.xxag = 0;
+            window.busy_xxag = 0;
         }, 1000);
     }
 
 })();
 
 
-// COMMENT FILTER //
-(function(){
-    return;
-    if(window.location.origin != 'https://www.facebook.com') return !1;
-    let interv, timout;
-
-    let commentFilterClick = function(){
-        clearInterval(interv); clearInterval(timout);
-
-        interv = setInterval(function(){
-            if(!(/facebook\.com\/.*\/posts\//g).test(window.location.href)) return;
-            let i = window.document.querySelector('div[role="button"] span[dir="auto"] i[data-visualcompletion="css-img"]');
-            // let i = getElementByXpath('//*[@id="facebook"]/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div/div/div/div/div/div/div/div/div/div/div/div[13]/div/div/div[4]/div/div/div[2]/div[2]/div/div/span/div/div/i');
-            i && (clearInterval(interv), i.click());
-        }, 500);
-        timout = setTimeout(function(){
-            clearInterval(interv);
-        }, 5000);
-    }
-    //commentFilterClick();
-    //window.addEventListener('urlchange', commentFilterClick);
-})();
-
-
-
-
 /***
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 ***/
 
 // VIETTEL MAIN //
@@ -870,32 +837,29 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     div.dieukhoan {display:none;}
     /* ViettelPost custom css */`);
 
-    let prdNameSubfix = ' serumHA';
-
 
     let i = window.localStorage.deviceId;
     let t = i && JSON.parse(window.localStorage['vtp-token']).tokenKey;
     GM_setValue('vtp_deviceId', i);
     GM_setValue('vtp_tokenKey', t);
 
-    var total_price_func = function(e){
+    function total_price_func(e){
         let value = e.target.value;
         let match = (value).match((/\((\d+\s*)+\)/));
         let total_price = 0, fee = 0, cod = 0;
         fee = parseInt(($('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span')?.text() || 0 ).replaceAll(/\D/g,''));
-
         if(fee && match && match[0]){
             let ns = match[0].replace('(', '').replace(')', '');
             total_price = ns.split(/\s+/).reduce((partialSum, a) => partialSum + Number(a)*1000, 0);
             cod = fee + total_price;
 
-            prompt( `Giá: ${match[0].replaceAll(' ',' + ')} \nPhí ship: ${fee/1000}k \nTổng COD:`, cod);
+            //prompt( `Giá: ${match[0].replaceAll(' ',' + ')} \nPhí ship: ${fee/1000}k \nTổng COD:`, cod);
+            $('input#productPrice').val(cod);
         }
     }
 
     //$(document).off('click', '#productName', total_price_func);
     $(document).on('change', '#productName', total_price_func)
-
 
     $(document).ready( async function(){
         await new Promise(resolve => { setTimeout(resolve, 1000)});
@@ -964,7 +928,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
                 if(e.shiftKey){
                     $('#confirmCreateOrder button.btn.btn-viettel.btn-sm').click();
-                    // return;
                 } else {
                     $('#confirmSaveDraft button.btn.btn-viettel.btn-sm').click();
                 }
