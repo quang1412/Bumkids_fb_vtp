@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-01-04
+// @version      2025-01-05
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -28,8 +28,7 @@
 
 // ==/UserScript==
 
-
-const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.trinh.5011', prdNameSubfix = '';
+const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.trinh.5011';
 
 function wait(ms = 1000){
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -278,49 +277,38 @@ function makeid(length = 12) {
 }
 
 const PhoneBook = {
-        data: null,
-        key: 'fb_phoneBook',
-        /** ggForm:{
-            id: '1FAIpQLSe_qTjWWDDWHlq-YvtpU0WnWeyL_HTA2gcSB3LDg8HNTTip0A',
-            entrys: { fbid: '1158876406', phone: '1286223003' }
-        }, **/
-        int: async function(){
-            this.data = await GM.getValue(this.key, null);
-            GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
-                if(remote) this.data = newValue;
-            });
-            if(this.data) return true;
-            GM_log('Tải phonebook từ google sheet');
-            let json = await GoogleSheet.query('SELECT *', 'B:E', 'phonebook');
-            let object = new Object();
-            let labels = json.cols.map(row => row.label);
+    data: null,
+    key: 'fb_phoneBook',
+    int: async function(){
+        this.data = await GM.getValue(this.key, null);
 
-           /** let values = json.rows.map(row => {
-           }); **/
+        GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
+            if(remote) this.data = newValue;
+        });
 
-            return console.log(labels);
+        if(this.data) return;
 
-            let remap = json.rows.map(row => {
-                try{ object[(row.c[0].v)] = (row.c[1].f || row.c[1].v).replaceAll(/\D/g, "") }
-                catch(e){ console.error(e.message, row) }
-            });
-            this.data = object;
-            GM_setValue(this.key, object);
-        },
-        /** upload_gg: function(fbid, phone){
-            GoogleSheet.log('userInfo', [fbid, phone]);
-        }, **/
-        get: function(fbid){
-            return this.data[fbid];
-        },
-        set: function(fbid, phone, name){
-            this.data[fbid] = phone;
-            GM_setValue(this.key, this.data);
-            // this.upload_gg(fbid, phone, name);
-            GoogleSheet.log('userInfo', [fbid, phone, name]);
-            return true;
-        },
-    };
+        this.data = new Object();
+
+        GM_log('Tải phonebook từ google sheet');
+        let json = await GoogleSheet.query('SELECT *', 'B:C', 'phonebook');
+
+        let remap = json.rows.map(row => {
+            try{ this.data[(row.c[0].v)] = (row.c[1].f || row.c[1].v).replaceAll(/\D/g, "") }
+            catch(e){ console.error(e.message, row) }
+        });
+        GM_setValue(this.key, this.data);
+    },
+    get: function(fbid){
+        return this.data[fbid];
+    },
+    set: function(fbid, phone, name){
+        this.data[fbid] = phone;
+        GM_setValue(this.key, this.data);
+        GoogleSheet.log('userInfo', [fbid, phone, name]);
+        return true;
+    },
+};
 
 /***
 Facebook Facebook Facebook
@@ -494,12 +482,10 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         constructor(info, container){
             this.container = container;
             this.id = info.id;
-            this.name = info.name;
+            this.name = info.name;2
             this.picUrl = info.picUrl;
             this.phone = PhoneBook.get(this.id);
             this.penddingOrders = 0;
-           // this.deliveryRate = 0;
-           // this.preOrderPostsId = [];
 
             this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.id });
             if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') {
@@ -705,18 +691,10 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 info.phone = this.phone;
                 info.name = this.name;
 
-                let prices_str = prompt("B1 - Nhập giá (đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
+                let prices_str = prompt("B1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
                 let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
-
-                /**
-                let pl = prdList.map((p, i) => '[' + (i + 1) + '] ' + p + ( (i + 1) % 3 ? '    ' : '\n')).join('');
-                let iii = prompt('Danh sách sản phẩm\n' + pl +'\n\nB2 - Chọn sản phẩm (phân tách bằng dấu cách)', (GM_getValue('lastest_items', 1) || 1));
-                if (iii == null || iii == undefined) { return false }
-                let prdNames = iii.split(/\D+/).map(i => prdList[i - 1]);
-                if(!!~prdNames.indexOf(undefined)){ throw new Error('Mã sản phẩm không hợp lệ!') }
-                GM_setValue('lastest_items', iii);
-                **/
+1
 
                 let itemNameList = GM_getValue('lastest_items_list', []);
                 let list = itemNameList.map((e, i) => `[${i}] ${e}`).join('\n');
@@ -1014,7 +992,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         })
 
         let pn = window.document.querySelector('input#productName');
-        pn.value = prdName + prdNameSubfix;
+        pn.value = prdName
 
         let pr = window.document.querySelector('input#productPrice');
         pr.value = price;
