@@ -33,22 +33,55 @@ const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.
 function wait(ms = 1000){
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+//var csv is the CSV file with headers
+function csvJSON(csv){
+
+  var lines=csv.split("\n");
+
+  var result = [];
+
+  // NOTE: If your columns contain commas in their values, you'll need
+  // to deal with those before doing the next step
+  // (you might convert them to &&& or something, then covert them back later)
+  // jsfiddle showing the issue https://jsfiddle.net/
+  var headers=lines[0].split(",");
+
+  for(var i=1;i<lines.length;i++){
+
+      var obj = {};
+      var currentline=lines[i].split(",");
+
+      for(var j=0;j<headers.length;j++){
+          let label = headers[j].replaceAll('\"','');
+          let value = currentline[j].replaceAll('\"','');
+          obj[label] = value;
+      }
+      result.push(obj);
+
+  }
+
+  //return result; //JavaScript object
+  return JSON.stringify(result); //JSON
+}
+
 const GoogleSheet = {
-    query: function(queryStr = 'SELECT *', range = 'A:A', sheet = 'PreOrder'){
+    query: function( sheet = 'PreOrder', range = 'A:A', queryStr = 'SELECT *'){
         return new Promise((resolve, reject) => {
             let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
             let tq = encodeURIComponent(queryStr);
-            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheet}&range=${range}&tq=${tq}`;
-            console.log(url);
+        //    let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheet}&range=${range}&tq=${tq}`;
+            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:csv&sheet=${sheet}&range=${range}&tq=${tq}`;
             GM_xmlhttpRequest({
                 url: url,
                 method: "GET",
                 synchronous: true,
                 headers: {"Content-Type": "text/html; charset=utf-8"},
                 onload: function (res) {
-                    let jsonString = res.response.match(/(?<="table":).*(?=}\);)/g)[0];
-                    let json = JSON.parse(jsonString);
-                    return resolve(json);
+                    let json = csvJSON(res.response);
+                    return resolve(JSON.parse(json));
+
+                    return GM_log(JSON.parse(json));
                 },
                 onerror: function(res) {
                     console.log("error: ", res.message);
@@ -203,47 +236,9 @@ function getFormatedDate(i = 0) {
     return formattedToday;
 }
 
-/***
-const viettelReq = {
-    get: function(url){
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                method: "GET",
-                synchronous: true,
-                headers: { 'Authorization': 'Bearer ' + vtpToken },
-                url: url,
-                onload: function (response) {
-                    return resolve(JSON.parse(response.responseText))
-                },
-                onerror: function(reponse) {
-                    return reject(reponse.message || 'Lỗi viettelReqGet');
-                }
-            })
-        })
-    },
-    post: function(url, json){
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                url:  url,
-                method: "POST",
-                synchronous: true,
-                headers: { "Token": vtpToken, "Content-Type": "application/json" },
-                data: JSON.stringify({...json, "deviceId": vtpDeviceId}),
-                onload: function (response) {
-                    return resolve(JSON.parse(response.responseText))
-                },
-                onerror: function(reponse) {
-                    return reject(reponse.message || 'Lỗi viettelReqPost');
-                }
-            })
-
-        })
-    }
-}
-***/
-
 function getListOrdersVTP(phone = null) {
     return new Promise((resolve, reject) => {
+        console.log('getListOrdersVTP', phone)
       if(!phone) return reject(new Error('Chưa có sdt'));
         viettel.postReq("https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2", {
             "PAGE_INDEX": 1,
@@ -275,40 +270,76 @@ function makeid(length = 12) {
     }
     return result;
 }
-
 const PhoneBook = {
     data: null,
     key: 'fb_phoneBook',
-    int: async function(){
+    int: async function(force = false){
         this.data = await GM.getValue(this.key, null);
-
         GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
             if(remote) this.data = newValue;
         });
 
-        if(this.data) return;
+        //console.log(this.data)
 
-        this.data = new Object();
+       if(this.data && !force) return;
 
         GM_log('Tải phonebook từ google sheet');
-        let json = await GoogleSheet.query('SELECT *', 'B:C', 'phonebook');
 
+        this.data = new Object();
+        let json = await GoogleSheet.query('phonebook', 'B:D', 'SELECT *' );
+        this.data = json;
+
+        /**
         let remap = json.rows.map(row => {
             try{ this.data[(row.c[0].v)] = (row.c[1].f || row.c[1].v).replaceAll(/\D/g, "") }
             catch(e){ console.error(e.message, row) }
         });
+        **/
         GM_setValue(this.key, this.data);
     },
     get: function(fbid){
-        return this.data[fbid];
+        console.log(fbid);
+        let match = this.data.filter(function(e){
+            return e.fbid == fbid;
+        });
+
+        let phone = match[match.length-1]?.phone;
+
+        //console.log(match, phone);
+
+        return phone
     },
-    set: function(fbid, phone, name){
-        this.data[fbid] = phone;
-        GM_setValue(this.key, this.data);
+    set: function(info){
+        let {fbid, phone, name} = info;
+        this.data.push({fbid, phone, name});
         GoogleSheet.log('userInfo', [fbid, phone, name]);
+        GM_setValue(this.key, this.data);
         return true;
     },
 };
+
+/**
+const Orders = {
+    key: 'ordersStorage',
+    data: null,
+    refresh: false,
+    get: function(){
+
+    },
+    set: function(info){
+
+        GM_setValue(this.key, this.data);
+    },
+    del: function(){
+
+        GM_setValue(this.key, this.data);
+    },
+    int: (async function(){
+
+        if(this.refresh) return;
+    })()
+}
+**/
 
 /***
 Facebook Facebook Facebook
@@ -472,8 +503,6 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 // FUNCTIONS
 (function() {
     if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
-
-    const prdList = ['👖👕 Quần Áo','💄💋 Mỹ Phẩm','👜👛 Túi xách','👒🧢 Mũ nón','👓 🕶️ Kính mắt','👠👢 Giày dép', '🧦🧦 Tất / Vớ', '🎒 Balo', "🧰💊 Dược phẩm", '🎁🎀 Khác'];
     const $ = window.jQuery, myUserName = 'hien.trinh.5011', myDisplayName = 'Trịnh Hiền';
   //  const preOrderPosts = [];
     PhoneBook.int();
@@ -528,22 +557,23 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
-        //preorder
-        async preOrder(b){
-            let match = window.location.pathname.match(/\/posts\/\w+/g);
-            let postId = match? match[0]?.replace('/posts/', '') : null;
-            if(!postId) return alert('Mở bài viết order!');
-            let story_message = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"]').innerText;
-
-            let note = window.prompt(`Nhập ghi chú cho đơn hàng ${this.name} \nBài post: "${story_message.substr(0, 50)}..."`, GM_getValue('lastest_preorder_note', ''));
-            if(note == null || note == 'null') return;
-            GM_setValue('lastest_preorder_note', note);
-
-            if(window.busy_xjr) return alert('bận...');
-            window.busy_xjr = 1;
-
+        async preOrder(b){ //preorder
             try{
-                await GoogleSheet.log('preorder', [postId, this.id, this.name, this.picUrl, note]).then(res => {
+                if(window.busy_xjr) throw new Error('bận...');
+
+                let match = window.location.pathname.match(/\/posts\/\w+/g);
+                let postId = match? match[0]?.replace('/posts/', '') : null;
+                if(!postId) throw new Error('Mở bài viết order!');
+
+                let story_message = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"]').innerText;
+
+                let note = window.prompt(`Nhập ghi chú cho đơn hàng: ${this.name} \n\nBài post: "${story_message.substr(0, 70)}..."`, GM_getValue('lastest_preorder_note', ''));
+                if(note == null || note == 'null') return;
+                GM_setValue('lastest_preorder_note', note);
+
+                let odid = makeid().toLowerCase();
+                window.busy_xjr = 1;
+                await GoogleSheet.log('preorder', [odid, postId, this.id, this.name, note]).then(res => {
                     GM_notification({
                         image: this.picUrl,
                         title: "Tạo đơn order",
@@ -554,6 +584,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 });
                 return true;
             } catch(e){
+                return alert(e.message);
             } finally{
                 window.busy_xjr = 0;
             }
@@ -577,7 +608,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 }));
                 this.preOrderPostsId.push(...orders.map(a => a.post_id));
                 **/
-
+                console.log(this.phone);
                 let orderList = await viettel.getListOrders(this.phone);
                 if(orderList.error) throw new Error('Viettel: ' + orderList.message);
                 let list = orderList.data.data.LIST_ORDER;
@@ -674,9 +705,12 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             }
         }
         async setPhone(phone = window.prompt("Nhập sđt cho " + this.name, this.phone)){
-            if (phone == null || phone == "" || phone == this.phone || !isVNPhone(phone)) return false;
+            if(phone == null || phone == '' || !isVNPhone(phone)) return;
             this.phone = phone;
-            PhoneBook.set(this.id, this.phone, this.name);
+            let inf = {fbid: this.id, phone: this.phone, name:this.name}
+            PhoneBook.set(inf);
+            //let data = {uid: this.id, phone:phone, name:this.name, tag:'tags'}
+            //Customers.set(data)
             this.refreshInfo();
         }
         createOrder(){
@@ -694,18 +728,16 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 let prices_str = prompt("B1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
                 let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
-1
 
                 let itemNameList = GM_getValue('lastest_items_list', []);
                 let list = itemNameList.map((e, i) => `[${i}] ${e}`).join('\n');
-                let itn = prompt(`Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n ${list}`, 0);
+                let itn = prompt(`Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n ${list}`, itemNameList[0] || '');
                 if (itn == null || itn == undefined) return false;
 
                 itn = itemNameList[itn] || itn
                 itemNameList.unshift(itn);
                 itemNameList = itemNameList.filter((value, index, array) => array.indexOf(value) === index );
                 GM_setValue('lastest_items_list', itemNameList.slice(0, 10));
-
 
                 info.prdName = itn + ' - \(' + prices_str + '\)';
                 info.price = (price*1000);
@@ -736,7 +768,8 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         }
     }
 
-    window.document.onmousemove = function(){
+
+    window.document.addEventListener('mousemove',function(){
         if(window.busy_xxag) return;
         let ee = window.document.querySelectorAll(`a[aria-label][href^="/"][role="link"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.checked)`);
         if(window.location.origin == 'https://www.messenger.com') {
@@ -764,7 +797,31 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         window.timeout = setTimeout(function(){
             window.busy_xxag = 0;
         }, 1000);
-    }
+    })
+
+    $(document).ready(function(){
+        window.document.addEventListener('mousemove', function(){
+            if((/facebook\.com\/.*posts\/[\d\w]+/g).test(location.href) == false) return true;
+            let post_id = location.pathname.split('\/').pop();
+            let text = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"]')?.innerText;
+            let custom_post_id = window.btoa(unescape(encodeURIComponent(text))).replaceAll(/[^\d\w]*/g, '').substr(0, 50);
+
+            let cmts = document.querySelectorAll('div[role="article"][aria-label*="Bình luận dưới tên '+myFbName+'"]:not(.checked)');
+            cmts.forEach(cmt => {
+                cmt.classList.add('checked');
+                let cmtSpan = cmt.querySelector('span[lang]');
+                let cmtId = cmt.querySelector('a[role="link"][href*="posts"][href*="comment_id"]')?.getAttribute('href').match(/comment_id=\d+/g)[0].replace('comment_id=', '');
+
+                let btn = GM_addElement(cmtSpan.parentNode, 'a', {href:'javascript:void()', style:'font-size: 90%; font-weight: 700; width: fit-content; color: yellow; display: block; margin-top: 10px;'});
+                btn.innerText = 'note đơn';
+                btn.onclick = function(){
+                    let cmtText = cmtSpan?.innerText.replaceAll('\n', ' ');
+                    alert(custom_post_id + '\n\n' + post_id + '\n\n' + cmtId + '\n\n' + cmtText);
+                }
+            })
+        })
+    });
+
 
 })();
 
@@ -813,9 +870,11 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     body.vt-post.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}
     body.vt-post.custom #content {width: 100% !important; margin-left: 0;}
     div.dieukhoan {display:none;}
+    .mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray;}
+
+
     /* ViettelPost custom css */`);
-
-
+//  .cdk-overlay-pane{position: fixed !important; left: var(--left-value) !important;}
     let i = window.localStorage.deviceId;
     let t = i && JSON.parse(window.localStorage['vtp-token']).tokenKey;
     GM_setValue('vtp_deviceId', i);
@@ -1023,7 +1082,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
 (function($){
     $(window.document).ready(function(){
-        if(window.location.href != 'https://viettelpost.vn/quan-ly-van-don') return;
+        if(!window.location.href.includes('viettelpost.vn')) return;
+        /**
         let interval = setInterval(function(){
             let select = window.document.querySelector('mat-select[role="listbox"][aria-label="Bản Ghi Mỗi Trang"]');
             if(!select) return;
@@ -1033,6 +1093,20 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             option.click();
             clearInterval(interval);
         }, 500);
+        **/
+
+        // menu quản lý đơn
+        var mouseX, mouseY;
+        $(document).mousemove(function(e) { mouseX = e.pageX; mouseY = e.pageY; });
+
+        $(document).on('contextmenu', 'div.vtp-bill-table > table > tbody > tr', function(e) {
+            event.preventDefault();
+            let row = $(e.currentTarget);
+            let btn = row.find('td.mat-column-ACTION label i.fa-bars');
+            btn && btn.click();
+            row.css('background-color', '#e3f0f0');
+            $('body').css('--left-value', mouseX+'px');
+        });
     })
 })($);
 
