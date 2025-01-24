@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-01-05
+// @version      2025-01-21
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -25,6 +25,7 @@
 // @grant        GM_webRequest
 // @grant        GM_setClipboard
 // @grant        window.onurlchange
+// @grant        GM_registerMenuCommand
 
 // ==/UserScript==
 
@@ -33,7 +34,6 @@ const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.
 function wait(ms = 1000){
     return new Promise(resolve => setTimeout(resolve, ms));
 }
-
 //var csv is the CSV file with headers
 function csvJSON(csv){
 
@@ -64,7 +64,6 @@ function csvJSON(csv){
   //return result; //JavaScript object
   return JSON.stringify(result); //JSON
 }
-
 const GoogleSheet = {
     query: function( sheet = 'PreOrder', range = 'A:A', queryStr = 'SELECT *'){
         return new Promise((resolve, reject) => {
@@ -115,8 +114,6 @@ const GoogleSheet = {
         })
     },
 }
-
-//let vtpDeviceId = GM_getValue('vtp_deviceId'), vtpToken = GM_getValue('vtp_tokenKey');
 const viettel = {
     deviceId: GM_getValue('vtp_deviceId', null),
     token: GM_getValue('vtp_tokenKey', null),
@@ -208,7 +205,6 @@ const viettel = {
         })
     }
 };
-
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 function customEvent(n){
     if(n == 'mouseover'){
@@ -220,11 +216,6 @@ function customEvent(n){
         return event;
     }
 }
-/***
-function getElementByXpath(path) {
-    return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-}
-***/
 function getFormatedDate(i = 0) {
     const today = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
     const yyyy = today.getFullYear();
@@ -235,7 +226,6 @@ function getFormatedDate(i = 0) {
     const formattedToday = dd + '/' + mm + '/' + yyyy;
     return formattedToday;
 }
-
 function getListOrdersVTP(phone = null) {
     return new Promise((resolve, reject) => {
         console.log('getListOrdersVTP', phone)
@@ -303,9 +293,7 @@ const PhoneBook = {
             return e.fbid == fbid;
         });
 
-        let phone = match[match.length-1]?.phone;
-
-        //console.log(match, phone);
+        let phone = match && match.pop()?.phone;
 
         return phone
     },
@@ -317,29 +305,6 @@ const PhoneBook = {
         return true;
     },
 };
-
-/**
-const Orders = {
-    key: 'ordersStorage',
-    data: null,
-    refresh: false,
-    get: function(){
-
-    },
-    set: function(info){
-
-        GM_setValue(this.key, this.data);
-    },
-    del: function(){
-
-        GM_setValue(this.key, this.data);
-    },
-    int: (async function(){
-
-        if(this.refresh) return;
-    })()
-}
-**/
 
 /***
 Facebook Facebook Facebook
@@ -499,6 +464,67 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
     /*** CSS END ***/`);
 })();
+
+const OrdersStorage = {
+    key:'storage_5',
+    data: null,
+    init: function(force){
+        this.data = GM_getValue(this.key, null);
+        (!this.data || typeof this.data != 'object' || force) && this.sync();
+
+        GM_registerMenuCommand("Đồng bộ lại đơn hàng!", function(event) {
+            alert("Đồng bộ lại đơn hàng!");
+        });
+
+        GM_registerMenuCommand("Reset toàn bộ đơn hàng!", (event) => {
+            this.data = new Array();
+            this.save();
+            GM_setValue(this.key, this.data);
+
+        });
+    },
+    sync: function(){
+        GM_log('sync from Clound!!');
+        this.data = [];
+    },
+    add: function(info){
+        return new Promise((resolve, reject) => {
+            let values = Object.values(info);
+
+            let {post_id_unique, post_id, cmt_id, cmt_txt, user_id, user_name} = info;
+
+         //   if(!values.length) return alert('Dữ liệu không hợp lệ \nMã lỗi: #520');
+
+            GoogleSheet.log('preorder', [post_id_unique, post_id, cmt_id, cmt_txt, user_id, user_name]).then(_ => {
+
+                this.data = this.data.filter(o => o.cmt_id != cmt_id);
+                this.data.push({post_id_unique, post_id, cmt_id, cmt_txt, user_id, user_name});
+                this.save();
+
+                console.log(this.data);
+                return resolve(true);
+            }).catch(error => {
+                reject(error.message);
+            })
+        });
+    },
+    get: function(k){
+        return this.data.filter(e => (e.user_id == k || e.cmt_id == k || e.post_id_unique == k || e.post_id == k));
+    },
+    del: function(k){
+
+    },
+    save: function(){
+        console.clear();
+        console.table(this.data);
+        GM_setValue(this.key, this.data);
+        GM_notification({
+            title: "Order saved",
+            text: "....",
+        });
+    }
+};
+OrdersStorage.init(0);
 
 // FUNCTIONS
 (function() {
@@ -768,10 +794,10 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         }
     }
 
-
     window.document.addEventListener('mousemove',function(){
         if(window.busy_xxag) return;
-        let ee = window.document.querySelectorAll(`a[aria-label][href^="/"][role="link"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.checked)`);
+        let ee = window.document.querySelectorAll(`div:not([hidden]) > div:is(.__fb-dark-mode, .__fb-light-mode) div[role="button"][aria-label="Cài đặt chat"] a[role="link"][href^="/"][aria-label]`);
+//        let ee = window.document.querySelectorAll(`a[aria-label][href^="/"][role="link"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.checked)`);
         if(window.location.origin == 'https://www.messenger.com') {
             ee = window.document.querySelectorAll(`a[aria-label][href^="https://www.facebook.com/"][role="link"]:not([aria-label=""], [aria-label="Xem tất cả trong Messenger"], [aria-label="Tin nhắn mới"], [aria-label="Mở ảnh"], [aria-label="Thông báo"], [aria-label="Trang cá nhân"]):not(.checked)`);
         }
@@ -800,30 +826,131 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
     })
 
     $(document).ready(function(){
+        ////////////////////////////////////////////////////////////////
+        class PreOderBtn{
+            constructor(article){
+                let cmt_text_elm = article.querySelector('span[lang]');
+                this.cmt_txt = cmt_text_elm?.innerText.replaceAll('\n', ' ');
+                this.cmt_id = article.querySelector('a[role="link"][href*="posts"][href*="comment_id"]')?.getAttribute('href').match(/comment_id=\d+/g)[0].replace('comment_id=', '');
+
+                this.btn = GM_addElement(cmt_text_elm.parentNode, 'span', {
+                    style:'font-size: 90%; font-weight: 700; width: fit-content; color: yellow; display: block; margin-top: 10px; cursor: pointer;'
+                });
+
+                this.btn.innerText = '👩‍💼 định danh';
+
+                this.check();
+                this.btn.onclick = _ => this.handleClick();
+            }
+            check(){
+                let matchs = OrdersStorage.get(this.cmt_id);
+                if(matchs && matchs.length){
+                    let current = matchs.pop();
+                    let {cmt_id, user_id, user_name} = current;
+                   // user_name = unescape(user_name);
+                    this.user_id = user_id;
+                    this.user_name = user_name;
+
+                    this.btn.innerText = '👩‍💼 ' + (user_name || user_id);
+                    this.btn.style.color = 'red';
+                };
+            }
+            handleClick(){
+                if(!this.user_id) this.selectUser();
+                else {
+                    let i = prompt('Chọn thao tác: \n[0] - Mở facebook '+ this.user_name + '\n[1] - Sửa thông tin', '0');
+                    if(i === null) return;
+                    switch(i){
+                        case '0':
+                            window.open('https://fb.com/'+this.user_id, '_blank');
+                            break;
+                        case '1':
+                            this.selectUser();
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            selectUser(){
+                let story_message = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"]')?.innerText;
+                let cmt_info = {
+                    post_id: location.pathname.split('\/').pop(),
+                    post_id_unique: window.btoa(unescape(encodeURIComponent(story_message))).replaceAll(/[^\d\w]*/g, '').substr(0, 50),
+                    cmt_id: this.cmt_id,
+                    cmt_txt: this.cmt_txt
+                };
+
+                let chatBoxs = document.querySelectorAll('div:not([hidden]) > div:is(.__fb-dark-mode, .__fb-light-mode) div[role="button"][aria-label="Cài đặt chat"] a[role="link"][href^="/"][aria-label]');
+                let chatList = Object.values(chatBoxs).map(e => {
+                    return {name: e.getAttribute('aria-label'), id: e.getAttribute('href').replaceAll('/','')}
+                });
+                if(!chatList.length) return alert('⚠ Không có khung chat nào đang mở! \nVui lòng mở khung chat với khách hàng trước khi thao tác! \nMã lỗi: #865');
+                let selectList = chatList.map((e, i) => `[${i}] - ${e.name} - id: ${e.id}`).join('\n');
+
+               // GM_log(cmt_info);
+                let n = prompt('Nội dung Comment: ' + cmt_info.cmt_txt + '\n\nChọn thông tin khách theo số thứ tự dưới đây:\n' + selectList, 0);
+                if(n == null) return;
+
+                let {name, id} = chatList[n];
+                if(!name || !id) return alert('Dữ liệu nhập vào không hợp lệ!! \nMã lỗi: #875');
+
+                cmt_info.user_id = id;
+                cmt_info.user_name = name;
+              //  GM_log(cmt_info);
+
+                OrdersStorage.add(cmt_info).then(_ => {
+                    this.check();
+                });
+            }
+        }
+
         window.document.addEventListener('mousemove', function(){
             if((/facebook\.com\/.*posts\/[\d\w]+/g).test(location.href) == false) return true;
             let post_id = location.pathname.split('\/').pop();
             let text = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"]')?.innerText;
-            let custom_post_id = window.btoa(unescape(encodeURIComponent(text))).replaceAll(/[^\d\w]*/g, '').substr(0, 50);
+            let post_id_unique = window.btoa(unescape(encodeURIComponent(text))).replaceAll(/[^\d\w]*/g, '').substr(0, 50);
 
-            let cmts = document.querySelectorAll('div[role="article"][aria-label*="Bình luận dưới tên '+myFbName+'"]:not(.checked)');
-            cmts.forEach(cmt => {
-                cmt.classList.add('checked');
-                let cmtSpan = cmt.querySelector('span[lang]');
-                let cmtId = cmt.querySelector('a[role="link"][href*="posts"][href*="comment_id"]')?.getAttribute('href').match(/comment_id=\d+/g)[0].replace('comment_id=', '');
+            let articles = document.querySelectorAll('div[role="article"][aria-label*="Bình luận dưới tên '+myFbName+'"]:not(.checked)');
+            articles.forEach(article => {
+                article.classList.add('checked');
+                Object.values(article.querySelectorAll('div[role="button"]')).forEach(b => b.innerText == 'Xem thêm' && b.click());
 
-                let btn = GM_addElement(cmtSpan.parentNode, 'a', {href:'javascript:void()', style:'font-size: 90%; font-weight: 700; width: fit-content; color: yellow; display: block; margin-top: 10px;'});
-                btn.innerText = 'note đơn';
-                btn.onclick = function(){
-                    let cmtText = cmtSpan?.innerText.replaceAll('\n', ' ');
-                    alert(custom_post_id + '\n\n' + post_id + '\n\n' + cmtId + '\n\n' + cmtText);
-                }
+                new PreOderBtn(article);
             })
-        })
+        });
     });
 
+    $(document).ready(function(){
+        if((window.location.origin != 'https://www.facebook.com')) return !1;
+        if(!(/\/posts\/.+/g).test(window.location.pathname)) return !1;
+
+        let post_id = window.location.pathname.split('/').pop();
+        console.log(post_id);
+
+        let table = GM_addElement(document.body, 'table', {id:'orderUserList'});
+        let reload = function(){
+            let story_message = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"]')?.innerText;
+            let post_id_unique = window.btoa(unescape(encodeURIComponent(story_message))).replaceAll(/[^\d\w]*/g, '').substr(0, 50);
+            let matchs = OrdersStorage.get(post_id_unique);
+            console.table(matchs);
+            table.innerHTML = '<thead><tr><th>Name</th><th>Comment</th></tr></thead>';
+            table.innerHTML += '<tbody>';
+            table.innerHTML += matchs.map(r => `<tr><td><a href="https://fb.com/${r.user_id}" target="_blank">${r.user_name}</a></td><td><a href="?comment_id=${r.cmt_id}">${r.cmt_txt}</a></td></tr>`).join('');
+            table.innerHTML +='</tbody>';
+        }
+        setTimeout(reload, 1000);
+        GM_addValueChangeListener(OrdersStorage.key, function(key, oldValue, newValue, remote) {
+            reload();
+        });
+
+
+        GM_addStyle('#orderUserList{color: white; position: absolute; top: 0; left: 0; text-align: left; padding: 10px; max-width: 500px;}');
+        GM_addStyle('#orderUserList tr > td:first-child{white-space: nowrap}');
+    });
 
 })();
+
 
 
 /***
