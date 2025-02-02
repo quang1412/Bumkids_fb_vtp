@@ -29,6 +29,7 @@
 
 // ==/UserScript==
 
+
 const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.trinh.5011';
 
 function wait(ms = 1000){
@@ -80,7 +81,7 @@ const GoogleSheet = {
                     let json = csvJSON(res.response);
                     return resolve(JSON.parse(json));
 
-                    return GM_log(JSON.parse(json));
+                  //  return GM_log(JSON.parse(json));
                 },
                 onerror: function(res) {
                     console.log("error: ", res.message);
@@ -89,14 +90,30 @@ const GoogleSheet = {
             });
         });
     },
+    submitForm: function(url){
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                url: url,
+                method: "GET",
+                synchronous: false,
+                headers: {"Content-Type": "text/html; charset=utf-8"},
+                onload: function (res) {
+                    if(res.readyState == 4 && res.status == 200) resolve(res);
+                },
+                onerror: function(res) {
+                    console.log("error: ", res.message);
+                    return reject('GG Log error: ' + res.message);
+                }
+            })
+        })
+    },
     log: function(type = 'test', data = []){
         let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ';
         let fields = [689021464,354401759,1477078849,2101594477,204892124,1251442348,94653935,814190568,733397838,718607793,570486205];
         return new Promise((resolve, reject) => {
             if(!type || !data) { return reject('input is invalid!') };
             let url = `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${fields[0]}=${type}&${data.map((d, i) => (`entry.${fields[i+1]}=${encodeURIComponent(d)}`)).join('&')}`;
-            console.log(url);
-
+            //console.log(url);
             GM_xmlhttpRequest({
                 url: url,
                 method: "GET",
@@ -260,42 +277,42 @@ function makeid(length = 12) {
     }
     return result;
 }
+function isPost(url){ return (/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(url)};
+
 const PhoneBook = {
-    data: null,
+    data: [],
     key: 'fb_phoneBook',
-    int: async function(force = false){
-        this.data = await GM.getValue(this.key, null);
+    int: async function(){
+        this.data = await GM.getValue(this.key, []);
         GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
             if(remote) this.data = newValue;
         });
 
-        //console.log(this.data)
-
-       if(this.data && !force) return;
-
+        GM_registerMenuCommand("Đồng bộ danh bạ.", this.sync );
+    },
+    sync: async function(){
         GM_log('Tải phonebook từ google sheet');
+        try{
+            this.data = [];
+            let json = await GoogleSheet.query('phonebook', 'B:H', 'SELECT *' );
+            this.data = json;
+            GM_setValue(this.key, this.data);
 
-        this.data = new Object();
-        let json = await GoogleSheet.query('phonebook', 'B:D', 'SELECT *' );
-        this.data = json;
-
-        /**
-        let remap = json.rows.map(row => {
-            try{ this.data[(row.c[0].v)] = (row.c[1].f || row.c[1].v).replaceAll(/\D/g, "") }
-            catch(e){ console.error(e.message, row) }
-        });
-        **/
-        GM_setValue(this.key, this.data);
+            console.log(this.data);
+            confirm('Đồng bộ thành công ' + this.data.length + ' mã khách hàng \nBạn có muốn tải lại trang ko?') && window.reload();
+        }catch(e){
+        alert(e.message);
+        }
     },
     get: function(fbid){
-        console.log(fbid);
-        let match = this.data.filter(function(e){
+        //console.log(fbid);
+        let matchs = this.data.filter(function(e){
             return e.fbid == fbid;
         });
 
-        let phone = match && match.pop()?.phone;
+        return matchs;
 
-        return phone
+//        let phone = matchs && matchs.pop()?.phone;
     },
     set: function(info){
         let {fbid, phone, name} = info;
@@ -306,6 +323,139 @@ const PhoneBook = {
     },
 };
 
+const OrdersStorage = {
+    key:'storage_5',
+    data: [],
+    ggForm:{
+        id: '1FAIpQLScGgvVzi2U_2rWLVmuzrOYdFG40tCMnhK1nOG8F0jhWz7MJkw',
+        entry:{
+            post_id: 1429611565,
+            cmt_id: 654208817,
+            user_id: 436883162,
+            user_name: 1981615867,
+            cmt_txt: 21212061,
+            status: 522750528,
+        }
+    },
+    sheetName: 'PreOrder',
+    init: function(force){
+        this.data = GM_getValue(this.key, []);
+        (!this.data || typeof this.data != 'object' || force) && this.sync();
+
+        GM_registerMenuCommand("Đồng bộ đơn hàng!", this.sync);
+    },
+    sync: async function(){
+        try{
+            GM_log('sync from Clound!!');
+            this.data = [];
+            let json = await GoogleSheet.query(this.sheetName, 'B:G', 'SELECT *' );
+            this.data = json;
+            GM_setValue(this.key, this.data);
+
+            console.log(this.data);
+            confirm('Đồng bộ thành công ' + this.data.length + ' đơn hàng \nBạn có muốn tải lại trang ko?') && window.reload();
+        } catch(e){
+            alert(e.message);
+        }
+    },
+    add: function(info, callback){
+        let {cmt_id} = info;
+        let entry = Object.keys(this.ggForm.entry).map(key => `entry.${this.ggForm.entry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
+        let url = `https://docs.google.com/forms/d/e/${this.ggForm.id}/formResponse?${entry}`;
+        GoogleSheet.submitForm(url).then(_ => {
+            this.data = this.data.filter(o => o.cmt_id != cmt_id);
+            this.data.push(info);
+            this.save();
+
+            console.log(this.data);
+            return callback();
+        }).catch(error => {
+            alert(error.message);
+        });
+
+        console.log(info, url)
+        /***
+        let {post_id, cmt_id, cmt_txt, user_id, user_name, status} = info;
+        //if(!values.length) return alert('Dữ liệu không hợp lệ \nMã lỗi: #520');
+        GoogleSheet.log('preorder', [post_id, cmt_id, cmt_txt, user_id, user_name, status]).then(_ => {
+
+            this.data = this.data.filter(o => o.cmt_id != cmt_id);
+            this.data.push({post_id, cmt_id, cmt_txt, user_id, user_name, status});
+            this.save();
+
+            console.log(this.data);
+            return callback();
+        }).catch(error => {
+            alert(error.message);
+        })
+        ***/
+    },
+    get: function(k){
+        return (this.data.filter(e => (e.user_id == k || e.cmt_id == k || e.post_id == k)));
+    },
+    del: function(k){
+        if(!window.confirm("Bạn có chắc chắn xoá đơn hàng #" + k + "? \nThao tác này không thể hoàn tác!")) return;
+        this.data = this.data.filter(e => e.cmt_id != k);
+        this.save();
+    },
+    save: function(){
+        console.clear();
+        console.table(this.data);
+        GM_setValue(this.key, this.data);
+        GM_notification({
+            title: "Order saved",
+            text: "....",
+            timeout: 5000,
+        });
+    },
+};
+OrdersStorage.init(0);
+
+const PostsList = {
+    key: '',
+    data: [],
+    ggForm:{
+        id: 'xxxxxx',
+        entry:{
+            post_id: 1429611565,
+            cmt_id: 654208817,
+            user_id: 436883162,
+            user_name: 1981615867,
+            cmt_txt: 21212061,
+            status: 522750528,
+        }
+    },
+    sheetName: 'PreOrder',
+    init: function(){
+        window.navigation.addEventListener("navigate", (event) => {
+            if(!(/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(event.destination.url)) return;
+            let data = {};
+            let interval = setInterval(_ => {
+                let post_url = window.location.pathname.split('/').pop();
+                let post_id = makeid(12);
+                let post_txt = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"]')?.innerText;
+                let post_img = '';
+
+                console.log({post_url, post_id, post_txt, post_img});
+
+                if(!post_txt || !post_img) return;
+
+                data = {post_url, post_id, post_txt, post_img};
+                clearInterval(interval);
+                alert(JSON.stringify(data));
+            }, 1000);
+        })
+
+    },
+    sync: function(){
+
+    },
+    add: function(){
+
+    },
+};
+//PostsList.init();
+
 /***
 Facebook Facebook Facebook
 Facebook Facebook Facebook
@@ -315,9 +465,7 @@ Facebook Facebook Facebook
 Facebook Facebook Facebook
 ***/
 
-// FACEBOOK MAIN //
-
-// STYLE
+// CSS STYLE
 (function(){
     if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
 
@@ -465,72 +613,27 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
     /*** CSS END ***/`);
 })();
 
-const OrdersStorage = {
-    key:'storage_5',
+const CustomerData = {
+    storageKey: '',
     data: null,
-    init: function(force){
-        this.data = GM_getValue(this.key, null);
-        (!this.data || typeof this.data != 'object' || force) && this.sync();
+    init: async function(force){
+        this.data = await GM_getValue(this.storageKey, null);
 
-        GM_registerMenuCommand("Đồng bộ lại đơn hàng!", function(event) {
-            alert("Đồng bộ lại đơn hàng!");
-        });
+        if(this.data && typeof this.data == 'object' && this.data.length) return;
 
-        GM_registerMenuCommand("Reset toàn bộ đơn hàng!", (event) => {
-            this.data = new Array();
-            this.save();
-            GM_setValue(this.key, this.data);
+        GM_log('load cloud!');
 
-        });
-    },
-    sync: function(){
-        GM_log('sync from Clound!!');
-        this.data = [];
-    },
-    add: function(info){
-        return new Promise((resolve, reject) => {
-            let values = Object.values(info);
-
-            let {post_id_unique, post_id, cmt_id, cmt_txt, user_id, user_name} = info;
-
-         //   if(!values.length) return alert('Dữ liệu không hợp lệ \nMã lỗi: #520');
-
-            GoogleSheet.log('preorder', [post_id_unique, post_id, cmt_id, cmt_txt, user_id, user_name]).then(_ => {
-
-                this.data = this.data.filter(o => o.cmt_id != cmt_id);
-                this.data.push({post_id_unique, post_id, cmt_id, cmt_txt, user_id, user_name});
-                this.save();
-
-                console.log(this.data);
-                return resolve(true);
-            }).catch(error => {
-                reject(error.message);
-            })
-        });
-    },
-    get: function(k){
-        return this.data.filter(e => (e.user_id == k || e.cmt_id == k || e.post_id_unique == k || e.post_id == k));
-    },
-    del: function(k){
-
-    },
-    save: function(){
-        console.clear();
-        console.table(this.data);
-        GM_setValue(this.key, this.data);
-        GM_notification({
-            title: "Order saved",
-            text: "....",
-        });
+        this.data = new Array();
+        GM_setValue(this.storageKey, this.data);
     }
 };
-OrdersStorage.init(0);
+
+
 
 // FUNCTIONS
 (function() {
     if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
     const $ = window.jQuery, myUserName = 'hien.trinh.5011', myDisplayName = 'Trịnh Hiền';
-  //  const preOrderPosts = [];
     PhoneBook.int();
 
     class InfoCard{
@@ -539,8 +642,10 @@ OrdersStorage.init(0);
             this.id = info.id;
             this.name = info.name;2
             this.picUrl = info.picUrl;
-            this.phone = PhoneBook.get(this.id);
+            this.user = PhoneBook.get(this.id)?.pop();
+            this.phone = this.user?.phone;
             this.penddingOrders = 0;
+            this.preOrders = 0;
 
             this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.id });
             if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') {
@@ -558,9 +663,11 @@ OrdersStorage.init(0);
             btn_2.innerText = 'Sửa sđt';
             btn_2.onclick = _ => this.setPhone();
 
+            /**
             let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:yellow;'});
             btn_4.innerText = 'Order';
             btn_4.onclick = _ => this.preOrder(btn_4);
+            **/
 
             let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
             btn_3.innerText = 'Tạo đơn';
@@ -583,7 +690,8 @@ OrdersStorage.init(0);
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
-        async preOrder(b){ //preorder
+        /**
+        async preOrder(b){
             try{
                 if(window.busy_xjr) throw new Error('bận...');
 
@@ -615,26 +723,18 @@ OrdersStorage.init(0);
                 window.busy_xjr = 0;
             }
         }
+        **/
         async refreshInfo(){
             if(this.isBusy) return;
             this.isBusy = 1;
             let i = {rate: 'Chưa có', total: 0, pending: 0, draft: 0, preOrder: 0, totalCOD: 0};
             this.infoList.innerHTML = '</tr><tr><td style=" ">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
             this.card.classList.add('refreshing');
-
             try{
-                /**
-                let json = await gooogleSheetQuery('SELECT * WHERE O = '+this.id, 'N2:P', 'PreOrder');
-                console.log(json);
-                let cols = json.cols;
-                let orders = new Array(...json.rows.map(function(row, i){
-                    let r = {};
-                    row.c.forEach((o, i) => { r[cols[i].label] = o.f || o.v});
-                    return r;
-                }));
-                this.preOrderPostsId.push(...orders.map(a => a.post_id));
-                **/
-                console.log(this.phone);
+                //console.log(this.phone);
+                this.preOrders = OrdersStorage.get(this.id);
+
+
                 let orderList = await viettel.getListOrders(this.phone);
                 if(orderList.error) throw new Error('Viettel: ' + orderList.message);
                 let list = orderList.data.data.LIST_ORDER;
@@ -653,15 +753,15 @@ OrdersStorage.init(0);
                 <tr style="display:none;">
                   <td>Uy tín: </td> <td>${i.rate}</td>
                 </tr>
-                <tr style="display:none;">
-                  <td>Đặt trước: </td> <td>${i.preOrder}</td>
-                </tr>
                 <tr>
                   <td>Đơn giữ: </td>
                   <td><a href="${vtlink}" target="_blank" style="color: ${this.holdedOrders?'red':'inherit'}">${i.pending} chờ • ${i.draft} nháp</a></td>
                 </tr>
                 <tr>
                   <td>Tổng COD: </td> <td>${i.total} đơn • ${i.totalCOD}</td>
+                </tr>
+                <tr>
+                  <td>Đặt trước: </td> <td>${this.preOrders.length}</td>
                 </tr>`;
 
 
@@ -733,7 +833,7 @@ OrdersStorage.init(0);
         async setPhone(phone = window.prompt("Nhập sđt cho " + this.name, this.phone)){
             if(phone == null || phone == '' || !isVNPhone(phone)) return;
             this.phone = phone;
-            let inf = {fbid: this.id, phone: this.phone, name:this.name}
+            let inf = {fbid: this.id, phone: this.phone.toString(), name:this.name}
             PhoneBook.set(inf);
             //let data = {uid: this.id, phone:phone, name:this.name, tag:'tags'}
             //Customers.set(data)
@@ -744,20 +844,24 @@ OrdersStorage.init(0);
                 if(!this.phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
                 if(this.holdedOrders) throw new Error('❌ Có đơn chờ giao');
 
+                let title = 'Tạo đơn hàng cho ' + this.name;
                 let url = 'https://viettelpost.vn/order/tao-don-le?i=';
 
-                let info = new Object();
-                info.fbid = this.id;
-                info.phone = this.phone;
-                info.name = this.name;
+                let orderInfo = { fbid: this.id, phone: this.phone, name: this.name };
 
-                let prices_str = prompt("B1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
+                if(this.preOrders.length){
+                    let txt = this.preOrders.map((o, i) => (`[${i}] - ${o.cmt_txt}`)).join('\n');
+                    let ro = prompt(title + '\n\nChọn đơn hàng liên quan: \n' + txt, '0');
+                    if(ro == null) return false;
+                }
+
+                let prices_str = prompt(title + "\n\nB1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
                 let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
 
                 let itemNameList = GM_getValue('lastest_items_list', []);
                 let list = itemNameList.map((e, i) => `[${i}] ${e}`).join('\n');
-                let itn = prompt(`Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n ${list}`, itemNameList[0] || '');
+                let itn = prompt(title + '\n\nChọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + list, itemNameList[0] || '');
                 if (itn == null || itn == undefined) return false;
 
                 itn = itemNameList[itn] || itn
@@ -765,10 +869,10 @@ OrdersStorage.init(0);
                 itemNameList = itemNameList.filter((value, index, array) => array.indexOf(value) === index );
                 GM_setValue('lastest_items_list', itemNameList.slice(0, 10));
 
-                info.prdName = itn + ' - \(' + prices_str + '\)';
-                info.price = (price*1000);
+                orderInfo.prdName = itn + ' - \(' + prices_str + '\)';
+                orderInfo.price = (price*1000);
 
-                url += btoa(unescape(encodeURIComponent(JSON.stringify(info))));
+                url += btoa(unescape(encodeURIComponent(JSON.stringify(orderInfo))));
 
                 window.popupWindow?.focus();
                 window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
@@ -793,11 +897,9 @@ OrdersStorage.init(0);
             });
         }
     }
-
     window.document.addEventListener('mousemove',function(){
         if(window.busy_xxag) return;
         let ee = window.document.querySelectorAll(`div:not([hidden]) > div:is(.__fb-dark-mode, .__fb-light-mode) div[role="button"][aria-label="Cài đặt chat"] a[role="link"][href^="/"][aria-label]`);
-//        let ee = window.document.querySelectorAll(`a[aria-label][href^="/"][role="link"]:not([aria-label=""], [aria-label="Mở ảnh"], [aria-label="Trang cá nhân"]):not(.checked)`);
         if(window.location.origin == 'https://www.messenger.com') {
             ee = window.document.querySelectorAll(`a[aria-label][href^="https://www.facebook.com/"][role="link"]:not([aria-label=""], [aria-label="Xem tất cả trong Messenger"], [aria-label="Tin nhắn mới"], [aria-label="Mở ảnh"], [aria-label="Thông báo"], [aria-label="Trang cá nhân"]):not(.checked)`);
         }
@@ -823,116 +925,163 @@ OrdersStorage.init(0);
         window.timeout = setTimeout(function(){
             window.busy_xxag = 0;
         }, 1000);
-    })
+    });
+
+})();
+
+(function(){
+    const $ = window.jQuery;
+    let isPost = url => (/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(url);
+
+    /***********************************
+
+    GM_addStyle(`
+      #post_inf_card{font-size: 14px; color: #fff; background-color: #00000070; position: absolute; top: 0; left: 0; text-align: left; padding: 10px; margin: 10px; border-radius: 10px; max-width: 400px; z-index: 99999999; }
+      #post_inf_card *{color: #fff;}
+      #post_inf_card p{margin: 0;}
+    `);
+
+    class PostInfoCard{
+        constructor(){
+            let card = GM_addElement(document.body, 'div', {id: 'post_inf_card'});
+            this.card = card;
+
+            let title = GM_addElement(card, 'div', {style:'text-align: center;'});
+            title.innerHTML = '<h3>Post info</h3><h4>sub title</h4>';
+
+            let list = GM_addElement(card, 'ul', {});
+            this.list = list;
+
+            this.refresh();
+            GM_addValueChangeListener(OrdersStorage.key, (key, oldValue, newValue, remote) => {
+                this.refresh();
+            });
+        }
+        destroy(){
+            this.card.remove();
+        }
+        refresh(){
+            let post_id = window.location.pathname.split('/').pop();
+            let matchs = OrdersStorage.get(post_id);
+            let html = matchs.map(r => `<li style="margin-bottom: .8em;"><p><strong><a href="https://fb.com/${r.user_id}" target="_blank">${r.user_name}</a></strong></p><p><small><a href="?comment_id=${r.cmt_id}">${r.cmt_txt}</a></small></p></li>`).join('');
+            this.list.innerHTML = html;
+        }
+    }
+    $(document).ready(function(){
+        if(isPost(window.location.href)){
+            window.postInfoCard = new PostInfoCard();
+        }
+        window.navigation.addEventListener("navigate", (event) => {
+            window.postInfoCard?.destroy();
+            if(isPost(event.destination.url)){
+                window.postInfoCard = new PostInfoCard();
+            }
+        })
+    });
+
+    ***********************************/
+
 
     $(document).ready(function(){
-        ////////////////////////////////////////////////////////////////
+        GM_addStyle(`.fb-article-btn{font-size: 90%; font-weight: 700; width: fit-content; color: white; display: block; margin-top: 10px; cursor: pointer; background-color: #000000db; border-radius: 5px; padding: 2px 6px; }`);
+
         class PreOderBtn{
             constructor(article){
                 let cmt_text_elm = article.querySelector('span[lang]');
                 this.cmt_txt = cmt_text_elm?.innerText.replaceAll('\n', ' ');
-                this.cmt_id = article.querySelector('a[role="link"][href*="posts"][href*="comment_id"]')?.getAttribute('href').match(/comment_id=\d+/g)[0].replace('comment_id=', '');
+                this.cmt_id = article.querySelector('div:not([role="article"]) a[role="link"][href*="posts"][href*="comment_id"]')?.getAttribute('href').match(/((reply_comment_id)|(comment_id))\=\d+/g).pop().replace(/((reply_comment_id)|(comment_id))\=/g, '');
 
-                this.btn = GM_addElement(cmt_text_elm.parentNode, 'span', {
-                    style:'font-size: 90%; font-weight: 700; width: fit-content; color: yellow; display: block; margin-top: 10px; cursor: pointer;'
-                });
-
-                this.btn.innerText = '👩‍💼 định danh';
+                this.btn = GM_addElement(cmt_text_elm.parentNode, 'span', { class: 'fb-article-btn' });
+                this.btn.onclick = _ => this.onClick();
 
                 this.check();
-                this.btn.onclick = _ => this.handleClick();
+            }
+            onClick(){
+                let i = !this.user_id ? '1' : prompt('Chọn thao tác: \n[0] - Mở facebook '+ this.user_name + '\n[1] - Sửa thông tin \n[2] - Xoá thông tin', '0');
+                if(i === null) return;
+                switch(i){
+                    case '0':
+                        window.open('https://fb.com/'+this.user_id, '_blank');
+                        break;
+                    case '1':
+                        this.addOrder();
+                        break;
+                    case '2':
+                        OrdersStorage.del(this.cmt_id);
+                        this.check();
+                        break;
+                    default:
+                        break;
+                }
             }
             check(){
                 let matchs = OrdersStorage.get(this.cmt_id);
-                if(matchs && matchs.length){
-                    let current = matchs.pop();
-                    let {cmt_id, user_id, user_name} = current;
-                   // user_name = unescape(user_name);
-                    this.user_id = user_id;
-                    this.user_name = user_name;
+                let last = matchs?.pop();
+                let {user_id, user_name} = last || {};
 
-                    this.btn.innerText = '👩‍💼 ' + (user_name || user_id);
-                    this.btn.style.color = 'red';
-                };
+                let phone = PhoneBook.get(user_id)?.pop()?.phone;
+
+                this.user_id = user_id;
+                this.user_name = user_name;
+                this.user_phone = phone;
+
+                this.btn.innerText = '👩‍💼 ' + (user_name || user_id || '---');
+                this.btn.innerText += phone ? ' • ' + phone : '';
+                this.btn.style['background-color'] = user_id ? 'darkgreen' : 'darkgrey';
             }
-            handleClick(){
-                if(!this.user_id) this.selectUser();
-                else {
-                    let i = prompt('Chọn thao tác: \n[0] - Mở facebook '+ this.user_name + '\n[1] - Sửa thông tin', '0');
-                    if(i === null) return;
-                    switch(i){
-                        case '0':
-                            window.open('https://fb.com/'+this.user_id, '_blank');
-                            break;
-                        case '1':
-                            this.selectUser();
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-            selectUser(){
-                let story_message = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"]')?.innerText;
+            addOrder(){
                 let cmt_info = {
                     post_id: location.pathname.split('\/').pop(),
-                    post_id_unique: window.btoa(unescape(encodeURIComponent(story_message))).replaceAll(/[^\d\w]*/g, '').substr(0, 50),
-                    cmt_id: this.cmt_id,
-                    cmt_txt: this.cmt_txt
+                    cmt_id: this.cmt_id.toString(),
+                    cmt_txt: this.cmt_txt,
+                    status: ''
                 };
 
-                let chatBoxs = document.querySelectorAll('div:not([hidden]) > div:is(.__fb-dark-mode, .__fb-light-mode) div[role="button"][aria-label="Cài đặt chat"] a[role="link"][href^="/"][aria-label]');
+//                let chatBoxs = document.querySelectorAll('div:not([hidden]) > div:is(.__fb-dark-mode, .__fb-light-mode) div[role="button"][aria-label="Cài đặt chat"] a[role="link"][href^="/"][aria-label]');
+                let chatBoxs = document.querySelectorAll('div:is(.__fb-dark-mode, .__fb-light-mode) div[role="button"][aria-label="Cài đặt chat"] a[role="link"][href^="/"][aria-label]');
                 let chatList = Object.values(chatBoxs).map(e => {
-                    return {name: e.getAttribute('aria-label'), id: e.getAttribute('href').replaceAll('/','')}
+                    return {user_name: e.getAttribute('aria-label'), user_id: e.getAttribute('href').replaceAll('/','')}
                 });
                 if(!chatList.length) return alert('⚠ Không có khung chat nào đang mở! \nVui lòng mở khung chat với khách hàng trước khi thao tác! \nMã lỗi: #865');
-                let selectList = chatList.map((e, i) => `[${i}] - ${e.name} - id: ${e.id}`).join('\n');
+                let selectList = chatList.map((e, i) => `[${i}] - ${e.user_name} - id: ${e.user_id}`).join('\n');
 
-               // GM_log(cmt_info);
-                let n = prompt('Nội dung Comment: ' + cmt_info.cmt_txt + '\n\nChọn thông tin khách theo số thứ tự dưới đây:\n' + selectList, 0);
+                let n = prompt('Nội dung Comment: ' + cmt_info.cmt_txt + '\n\nChọn tk khách theo số thứ tự dưới đây:\n' + selectList, 0);
                 if(n == null) return;
 
-                let {name, id} = chatList[n];
-                if(!name || !id) return alert('Dữ liệu nhập vào không hợp lệ!! \nMã lỗi: #875');
+                let {user_name, user_id} = chatList[n];
 
-                cmt_info.user_id = id;
-                cmt_info.user_name = name;
-              //  GM_log(cmt_info);
+                this.user_id = user_id.toString();
+                this.user_name = user_name;
 
-                OrdersStorage.add(cmt_info).then(_ => {
-                    this.check();
-                });
+                if(!user_name || !user_id) return alert('Dữ liệu nhập vào không hợp lệ!! \nMã lỗi: #875');
+
+                OrdersStorage.add({...cmt_info, user_id, user_name}, _ => this.check())
             }
         }
-
         window.document.addEventListener('mousemove', function(){
             if((/facebook\.com\/.*posts\/[\d\w]+/g).test(location.href) == false) return true;
+            if(window.busy_asdxa == true) return;
+            window.busy_asdxa = true;
             let post_id = location.pathname.split('\/').pop();
-            let text = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"]')?.innerText;
-            let post_id_unique = window.btoa(unescape(encodeURIComponent(text))).replaceAll(/[^\d\w]*/g, '').substr(0, 50);
-
-            let articles = document.querySelectorAll('div[role="article"][aria-label*="Bình luận dưới tên '+myFbName+'"]:not(.checked)');
+            let articles = document.querySelectorAll('div[role="article"][aria-label*="dưới tên '+myFbName+'"]');
             articles.forEach(article => {
-                article.classList.add('checked');
                 Object.values(article.querySelectorAll('div[role="button"]')).forEach(b => b.innerText == 'Xem thêm' && b.click());
-
-                new PreOderBtn(article);
-            })
+                !article.querySelector('.fb-article-btn') && new PreOderBtn(article);
+            });
+            setTimeout(_ => {window.busy_asdxa = false}, 1000);
         });
     });
 
+/**
     $(document).ready(function(){
+        return;
         if((window.location.origin != 'https://www.facebook.com')) return !1;
         if(!(/\/posts\/.+/g).test(window.location.pathname)) return !1;
-
         let post_id = window.location.pathname.split('/').pop();
         console.log(post_id);
-
         let table = GM_addElement(document.body, 'table', {id:'orderUserList'});
         let reload = function(){
-            let story_message = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"]')?.innerText;
-            let post_id_unique = window.btoa(unescape(encodeURIComponent(story_message))).replaceAll(/[^\d\w]*/g, '').substr(0, 50);
-            let matchs = OrdersStorage.get(post_id_unique);
+            let matchs = OrdersStorage.get(post_id);
             console.table(matchs);
             table.innerHTML = '<thead><tr><th>Name</th><th>Comment</th></tr></thead>';
             table.innerHTML += '<tbody>';
@@ -948,10 +1097,8 @@ OrdersStorage.init(0);
         GM_addStyle('#orderUserList{color: white; position: absolute; top: 0; left: 0; text-align: left; padding: 10px; max-width: 500px;}');
         GM_addStyle('#orderUserList tr > td:first-child{white-space: nowrap}');
     });
-
+**/
 })();
-
-
 
 /***
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
