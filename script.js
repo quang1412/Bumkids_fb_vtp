@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-02-02
+// @version      2025-02-04
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
@@ -70,7 +70,6 @@ const GoogleSheet = {
         return new Promise((resolve, reject) => {
             let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
             let tq = encodeURIComponent(queryStr);
-        //    let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:json&sheet=${sheet}&range=${range}&tq=${tq}`;
             let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:csv&sheet=${sheet}&range=${range}&tq=${tq}`;
             GM_xmlhttpRequest({
                 url: url,
@@ -84,7 +83,7 @@ const GoogleSheet = {
                   //  return GM_log(JSON.parse(json));
                 },
                 onerror: function(res) {
-                    console.log("error: ", res.message);
+                    GM_log("error: ", res.message);
                     return reject(res.message);
                 }
             });
@@ -101,7 +100,7 @@ const GoogleSheet = {
                     if(res.readyState == 4 && res.status == 200) resolve(res);
                 },
                 onerror: function(res) {
-                    console.log("error: ", res.message);
+                    GM_log("error: ", res.message);
                     return reject('GG Log error: ' + res.message);
                 }
             })
@@ -113,7 +112,7 @@ const GoogleSheet = {
         return new Promise((resolve, reject) => {
             if(!type || !data) { return reject('input is invalid!') };
             let url = `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${fields[0]}=${type}&${data.map((d, i) => (`entry.${fields[i+1]}=${encodeURIComponent(d)}`)).join('&')}`;
-            //console.log(url);
+            //GM_log(url);
             GM_xmlhttpRequest({
                 url: url,
                 method: "GET",
@@ -124,7 +123,7 @@ const GoogleSheet = {
                     if(res.readyState == 4 && res.status == 200) resolve(res);
                 },
                 onerror: function(res) {
-                    console.log("error: ", res.message);
+                    GM_log("error: ", res.message);
                     return reject('GG Log error: ' + res.message);
                 }
             })
@@ -245,7 +244,7 @@ function getFormatedDate(i = 0) {
 }
 function getListOrdersVTP(phone = null) {
     return new Promise((resolve, reject) => {
-        console.log('getListOrdersVTP', phone)
+        GM_log('getListOrdersVTP', phone)
       if(!phone) return reject(new Error('Chưa có sdt'));
         viettel.postReq("https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2", {
             "PAGE_INDEX": 1,
@@ -277,121 +276,108 @@ function makeid(length = 12) {
     }
     return result;
 }
-function isPost(url){ return (/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(url)};
+
+const Imgbb = {
+    key: 'd2c959c2bb733f020987806e60640feb',
+    upload: function(src, name){
+        let key = this.key;
+        var formData = new FormData();
+        formData.append('image', src);
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                url:  'https://api.imgbb.com/1/upload?key='+ key + '&name=' + name,
+                method: "POST",
+                synchronous: true,
+                data: formData,
+                onload: (response) => {
+                    let res = JSON.parse(response.responseText);
+                  //GM_log(res);
+                    return res.status == 200 ? resolve(res) : reject(res.message);
+                },
+                onerror: (e) => {
+                    return reject(e.message || 'Lỗi viettelReqPost');
+                }
+            });
+        });
+    }
+};
 
 const PhoneBook = {
     data: [],
     key: 'fb_phoneBook',
+    ggFormId: '1FAIpQLSdpUDJ_mQvRQqvzYHrFuhPpuCvs9DA7P74s2YLDQDFwOyHXAw',
+    ggFormEntry:{ id: 937098229, phone: 130151803, name: 648384740, img: 549043843,},
+    sheetName: 'PhoneBook',
     int: async function(){
         this.data = await GM.getValue(this.key, []);
         GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
             if(remote) this.data = newValue;
         });
-
-        GM_registerMenuCommand("Đồng bộ danh bạ.", this.sync );
     },
     sync: async function(){
-        GM_log('Tải phonebook từ google sheet');
-        try{
+        GM_log('Đồng bộ danh bạ');
+        return new Promise((resolve, reject) => {
             this.data = [];
-            let json = await GoogleSheet.query('phonebook', 'B:H', 'SELECT *' );
-            this.data = json;
-            GM_setValue(this.key, this.data);
-
-            console.log(this.data);
-            confirm('Đồng bộ thành công ' + this.data.length + ' mã khách hàng \nBạn có muốn tải lại trang ko?') && window.reload();
-        }catch(e){
-        alert(e.message);
-        }
-    },
-    get: function(fbid){
-        //console.log(fbid);
-        let matchs = this.data.filter(function(e){
-            return e.fbid == fbid;
+            GoogleSheet.query(this.sheetName, 'B:F', 'SELECT * WHERE E IS NOT NULL' ).then(json => {
+                this.data = json;
+                GM_setValue(this.key, this.data);
+                return resolve('Đồng bộ thành công ' + this.data.length + ' danh bạ');
+            });
         });
-
+    },
+    get: function(id){
+        let matchs = this.data.filter(function(obj){
+            return !!~Object.values(obj).indexOf(id);
+        });
         return matchs;
-
-//        let phone = matchs && matchs.pop()?.phone;
     },
     set: function(info){
-        let {fbid, phone, name} = info;
-        this.data.push({fbid, phone, name});
-        GoogleSheet.log('userInfo', [fbid, phone, name]);
-        GM_setValue(this.key, this.data);
-        return true;
+        let {id, phone, name, img} = info;
+        Imgbb.upload(img, id).then(r => {
+            info.img = r.data.image.url;
+
+            let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
+            let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
+            return GoogleSheet.submitForm(url);
+        }).then(_ => {
+            this.data.push(info);
+            GM_setValue(this.key, this.data);
+            return true;
+        }).catch(e => {
+            alert(e.message);
+        })
     },
 };
 
 const OrdersStorage = {
     key:'storage_5',
     data: [],
-    ggForm:{
-        id: '1FAIpQLScGgvVzi2U_2rWLVmuzrOYdFG40tCMnhK1nOG8F0jhWz7MJkw',
-        entry:{
-            post_id: 1429611565,
-            cmt_id: 654208817,
-            user_id: 436883162,
-            user_name: 1981615867,
-            cmt_txt: 21212061,
-            status: 522750528,
-        }
-    },
+    ggFormId: '1FAIpQLScGgvVzi2U_2rWLVmuzrOYdFG40tCMnhK1nOG8F0jhWz7MJkw',
+    ggFormEntry:{ post_id: 1429611565, cmt_id: 654208817, user_id: 436883162, user_name: 1981615867, cmt_txt: 21212061, status: 522750528, },
     sheetName: 'PreOrder',
-    init: function(force){
+    start: function(force){
         this.data = GM_getValue(this.key, []);
-        (!this.data || typeof this.data != 'object' || force) && this.sync();
-
-        GM_registerMenuCommand("Đồng bộ đơn hàng!", this.sync);
-    },
-    sync: async function(){
-        try{
-            GM_log('sync from Clound!!');
-            this.data = [];
-            let json = await GoogleSheet.query(this.sheetName, 'B:G', 'SELECT *' );
-            this.data = json;
-            GM_setValue(this.key, this.data);
-
-            console.log(this.data);
-            confirm('Đồng bộ thành công ' + this.data.length + ' đơn hàng \nBạn có muốn tải lại trang ko?') && window.reload();
-        } catch(e){
-            alert(e.message);
-        }
     },
     add: function(info, callback){
         let {cmt_id} = info;
-        let entry = Object.keys(this.ggForm.entry).map(key => `entry.${this.ggForm.entry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
-        let url = `https://docs.google.com/forms/d/e/${this.ggForm.id}/formResponse?${entry}`;
+        let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
+        let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
         GoogleSheet.submitForm(url).then(_ => {
             this.data = this.data.filter(o => o.cmt_id != cmt_id);
             this.data.push(info);
             this.save();
-
-            console.log(this.data);
+            GM_log(info);
             return callback();
         }).catch(error => {
             alert(error.message);
         });
-
-        console.log(info, url)
-        /***
-        let {post_id, cmt_id, cmt_txt, user_id, user_name, status} = info;
-        //if(!values.length) return alert('Dữ liệu không hợp lệ \nMã lỗi: #520');
-        GoogleSheet.log('preorder', [post_id, cmt_id, cmt_txt, user_id, user_name, status]).then(_ => {
-
-            this.data = this.data.filter(o => o.cmt_id != cmt_id);
-            this.data.push({post_id, cmt_id, cmt_txt, user_id, user_name, status});
-            this.save();
-
-            console.log(this.data);
-            return callback();
-        }).catch(error => {
-            alert(error.message);
-        })
-        ***/
     },
     get: function(k){
-        return (this.data.filter(e => (e.user_id == k || e.cmt_id == k || e.post_id == k)));
+        let matchs = this.data.filter(function(obj){
+            return !!~Object.values(obj).indexOf(k);
+        });
+        return matchs;
+       // return (this.data.filter(e => (e.user_id == k || e.cmt_id == k || e.post_id == k)));
     },
     del: function(k){
         if(!window.confirm("Bạn có chắc chắn xoá đơn hàng #" + k + "? \nThao tác này không thể hoàn tác!")) return;
@@ -399,62 +385,110 @@ const OrdersStorage = {
         this.save();
     },
     save: function(){
-        console.clear();
-        console.table(this.data);
         GM_setValue(this.key, this.data);
         GM_notification({
             title: "Order saved",
-            text: "....",
-            timeout: 5000,
+            text: " ",
+            timeout: 1000,
+        });
+    },
+    sync: function(){
+        return new Promise((resolve, reject) => {
+            GM_log('Đồng bộ đơn hàng');
+            this.data = [];
+            GoogleSheet.query(this.sheetName, 'B:G', 'SELECT *' ).then(json => {
+                this.data = json;
+                GM_setValue(this.key, this.data);
+                return resolve('Đồng bộ thành công ' + this.data.length + ' đơn hàng');
+            });
         });
     },
 };
-OrdersStorage.init(0);
+OrdersStorage.start();
 
-const PostsList = {
-    key: '',
+const PostCollector = {
+    key: 'postList_1',
     data: [],
-    ggForm:{
-        id: 'xxxxxx',
-        entry:{
-            post_id: 1429611565,
-            cmt_id: 654208817,
-            user_id: 436883162,
-            user_name: 1981615867,
-            cmt_txt: 21212061,
-            status: 522750528,
-        }
+    ggFormId: '1FAIpQLSdfeoPmxxbEvUBdbcpPG4f2RabbslqpbrDCCvfX29WfijGJPA',
+    ggFormEntry:{id: 1370929995, url: 1270605326, txt: 1381764206, thumb: 1374708965, img: 1194118624,},
+    sheetName: 'Posts',
+    start: function(){
+        this.data = GM_getValue(this.key, []);
+        this.lopping();
+        window.navigation.addEventListener("navigate", e => {
+            this.lopping(e.destination.url);
+        });
     },
-    sheetName: 'PreOrder',
-    init: function(){
-        window.navigation.addEventListener("navigate", (event) => {
-            if(!(/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(event.destination.url)) return;
-            let data = {};
-            let interval = setInterval(_ => {
-                let post_url = window.location.pathname.split('/').pop();
-                let post_id = makeid(12);
-                let post_txt = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"]')?.innerText;
-                let post_img = '';
+    lopping: function(url = window.location.href){
+        this.showPostInfo?.remove();
+        window.POST_ID = null;
+        if(!(/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(url)) return;
+        if(!url.includes(myFbUserName)) return;
 
-                console.log({post_url, post_id, post_txt, post_img});
+        clearInterval(this.loop);
+        this.loop = setInterval(_ => {
+            let dialog = Array.from(document.querySelectorAll('div[role="dialog"]')).pop(),
+                url = window.location.pathname.split('/').pop(),
+                txt = dialog?.querySelector('div[data-ad-rendering-role="story_message"]')?.innerText?.replaceAll('\n',' '),
+                id = txt && window.btoa(unescape(encodeURIComponent(txt))).replaceAll(/[^\d\w]/g, '').substr(0, 20),
+                img = dialog?.querySelector('a[role="link"] img[src*="scontent"]')?.getAttribute('src'),
+                thumb = '';
 
-                if(!post_txt || !post_img) return;
+            if(!txt || !img) return false;
 
-                data = {post_url, post_id, post_txt, post_img};
-                clearInterval(interval);
-                alert(JSON.stringify(data));
-            }, 1000);
+            clearInterval(this.loop);
+
+            window.POST_ID = id;
+            this.showPostInfo = GM_addElement(window.document.body, 'div', { style:'background-color: #363636; color: white; padding: 8px; border-radius: 5px; position: absolute; bottom: 5px; left: 5px; opacity: 1;'});
+            this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> <div>Khách hàng: ${OrdersStorage.get(id).map(o => `<a href="https://fb.com/${o.user_id}" target="_blank" style="color:#fff;">${o.user_name}</a>`).join(' / ')}</div>`;
+
+            let match = this.data.filter(p => p.id == id);
+            if(match.length) return;
+
+            Imgbb.upload(img, id).then(r => {
+                img = r.data.image.url;
+                thumb = r.data.thumb.url;
+            }).catch(e => {
+                /** catch **/
+            }).then(e => {
+                let info = {url, id, txt, img, thumb};
+                let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
+                let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
+                GoogleSheet.submitForm(url).then(_ => {
+                    this.data.push(info);
+                    GM_setValue(this.key, this.data);
+                }).catch(error => {
+                    alert('error' + error.message + '\nMã lỗi #0470');
+                });
+            });
+        }, 1000);
+    },
+    sync: async function(){
+        return new Promise((resolve, reject) => {
+            GM_log('Đồng bộ bài đăng');
+            this.data = [];
+            GoogleSheet.query(this.sheetName, 'B:F', 'SELECT *' ).then(json => {
+                this.data = json;
+                GM_setValue(this.key, this.data);
+                return resolve('Đồng bộ thành công ' + this.data.length + ' bài đăng');
+                //   confirm('Đồng bộ thành công ' + this.data.length + ' bài post \nBạn có muốn tải lại trang ko?') && window.location.reload();
+            });
         })
-
-    },
-    sync: function(){
-
-    },
-    add: function(){
-
     },
 };
-//PostsList.init();
+PostCollector.start();
+
+GM_registerMenuCommand("Đồng bộ Google!", _ => {
+    PostCollector.sync().then(r => {
+        GM_log(r);
+    }).then(_ => PhoneBook.sync()).then(r => {
+        GM_log(r);
+    }).then(_ => OrdersStorage.sync()).then(r => {
+        GM_log(r);
+    }).then(_ => {
+        if(confirm('Đã đồng bộ xong, bạn có muốn tải lại trang?')) window.location.reload();
+    })
+});
 
 /***
 Facebook Facebook Facebook
@@ -468,6 +502,8 @@ Facebook Facebook Facebook
 // CSS STYLE
 (function(){
     if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
+
+    GM_addStyle('div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}');
 
     GM_addStyle(`/* CSS START */
 @keyframes blinker {
@@ -613,23 +649,6 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
     /*** CSS END ***/`);
 })();
 
-const CustomerData = {
-    storageKey: '',
-    data: null,
-    init: async function(force){
-        this.data = await GM_getValue(this.storageKey, null);
-
-        if(this.data && typeof this.data == 'object' && this.data.length) return;
-
-        GM_log('load cloud!');
-
-        this.data = new Array();
-        GM_setValue(this.storageKey, this.data);
-    }
-};
-
-
-
 // FUNCTIONS
 (function() {
     if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
@@ -640,8 +659,8 @@ const CustomerData = {
         constructor(info, container){
             this.container = container;
             this.id = info.id;
-            this.name = info.name;2
-            this.picUrl = info.picUrl;
+            this.name = info.name;
+            this.img = info.img;
             this.user = PhoneBook.get(this.id)?.pop();
             this.phone = this.user?.phone;
             this.penddingOrders = 0;
@@ -662,12 +681,6 @@ const CustomerData = {
             let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
             btn_2.innerText = 'Sửa sđt';
             btn_2.onclick = _ => this.setPhone();
-
-            /**
-            let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:yellow;'});
-            btn_4.innerText = 'Order';
-            btn_4.onclick = _ => this.preOrder(btn_4);
-            **/
 
             let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
             btn_3.innerText = 'Tạo đơn';
@@ -690,40 +703,6 @@ const CustomerData = {
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
             copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
-        /**
-        async preOrder(b){
-            try{
-                if(window.busy_xjr) throw new Error('bận...');
-
-                let match = window.location.pathname.match(/\/posts\/\w+/g);
-                let postId = match? match[0]?.replace('/posts/', '') : null;
-                if(!postId) throw new Error('Mở bài viết order!');
-
-                let story_message = document.querySelector('div[role="dialog"] div[data-ad-rendering-role="story_message"] div[data-ad-comet-preview="message"]').innerText;
-
-                let note = window.prompt(`Nhập ghi chú cho đơn hàng: ${this.name} \n\nBài post: "${story_message.substr(0, 70)}..."`, GM_getValue('lastest_preorder_note', ''));
-                if(note == null || note == 'null') return;
-                GM_setValue('lastest_preorder_note', note);
-
-                let odid = makeid().toLowerCase();
-                window.busy_xjr = 1;
-                await GoogleSheet.log('preorder', [odid, postId, this.id, this.name, note]).then(res => {
-                    GM_notification({
-                        image: this.picUrl,
-                        title: "Tạo đơn order",
-                        text: this.name + ": " + note ,
-                        timeout: 10000,
-                    });
-                   // alert('Pre-order \n' + this.name)
-                });
-                return true;
-            } catch(e){
-                return alert(e.message);
-            } finally{
-                window.busy_xjr = 0;
-            }
-        }
-        **/
         async refreshInfo(){
             if(this.isBusy) return;
             this.isBusy = 1;
@@ -731,7 +710,7 @@ const CustomerData = {
             this.infoList.innerHTML = '</tr><tr><td style=" ">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
             this.card.classList.add('refreshing');
             try{
-                //console.log(this.phone);
+                //GM_log(this.phone);
                 this.preOrders = OrdersStorage.get(this.id);
 
 
@@ -792,11 +771,11 @@ const CustomerData = {
 
                     for (let i = (rows.length - 1); i >= 0; i--) {
                         let row = rows[i];
-                        console.log(row)
+                    //    GM_log(row)
                         row.classList.add('scanned');
                         let text1 = row.innerText;
                         let text = text1.replaceAll(/(\.|\,|\-|\s)/g, '');
-                        console.log(text)
+                        GM_log(text)
                         let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
                         if(match && !~match.indexOf(myPhone)){
                             this.phoneScanning();
@@ -833,8 +812,8 @@ const CustomerData = {
         async setPhone(phone = window.prompt("Nhập sđt cho " + this.name, this.phone)){
             if(phone == null || phone == '' || !isVNPhone(phone)) return;
             this.phone = phone;
-            let inf = {fbid: this.id, phone: this.phone.toString(), name:this.name}
-            PhoneBook.set(inf);
+            let info = {id: this.id, phone: this.phone.toString(), name:this.name, img:this.img}
+            PhoneBook.set(info);
             //let data = {uid: this.id, phone:phone, name:this.name, tag:'tags'}
             //Customers.set(data)
             this.refreshInfo();
@@ -851,7 +830,7 @@ const CustomerData = {
 
                 if(this.preOrders.length){
                     let txt = this.preOrders.map((o, i) => (`[${i}] - ${o.cmt_txt}`)).join('\n');
-                    let ro = prompt(title + '\n\nChọn đơn hàng liên quan: \n' + txt, '0');
+                    let ro = prompt(title + '\n\nChọn đơn hàng liên quan: \n' + txt);
                     if(ro == null) return false;
                 }
 
@@ -890,7 +869,7 @@ const CustomerData = {
             });
 
             this.container.addEventListener("keypress", function(e) {
-                console.log(e);
+                GM_log(e);
                 if (e.keyCode == 113 && e.ctrlKey == true) {
                     alert('hi.');
                 }
@@ -912,11 +891,11 @@ const CustomerData = {
             if(window.document.querySelector('div.infoCard[data-fbid="'+id+'"]')) continue;
 
             let name = e.getAttribute('aria-label');
-            let picUrl = e.querySelector('img')?.getAttribute('src');
-            if(!picUrl) continue;
+            let img = e.querySelector('img')?.getAttribute('src');
+            if(!img) continue;
 
-            let info = {id, name, picUrl};
-            console.log(info);
+            let info = {id, name, img};
+            GM_log(info);
 
             let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
             let card = new InfoCard(info, p);
@@ -931,56 +910,6 @@ const CustomerData = {
 
 (function(){
     const $ = window.jQuery;
-    let isPost = url => (/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(url);
-
-    /***********************************
-
-    GM_addStyle(`
-      #post_inf_card{font-size: 14px; color: #fff; background-color: #00000070; position: absolute; top: 0; left: 0; text-align: left; padding: 10px; margin: 10px; border-radius: 10px; max-width: 400px; z-index: 99999999; }
-      #post_inf_card *{color: #fff;}
-      #post_inf_card p{margin: 0;}
-    `);
-
-    class PostInfoCard{
-        constructor(){
-            let card = GM_addElement(document.body, 'div', {id: 'post_inf_card'});
-            this.card = card;
-
-            let title = GM_addElement(card, 'div', {style:'text-align: center;'});
-            title.innerHTML = '<h3>Post info</h3><h4>sub title</h4>';
-
-            let list = GM_addElement(card, 'ul', {});
-            this.list = list;
-
-            this.refresh();
-            GM_addValueChangeListener(OrdersStorage.key, (key, oldValue, newValue, remote) => {
-                this.refresh();
-            });
-        }
-        destroy(){
-            this.card.remove();
-        }
-        refresh(){
-            let post_id = window.location.pathname.split('/').pop();
-            let matchs = OrdersStorage.get(post_id);
-            let html = matchs.map(r => `<li style="margin-bottom: .8em;"><p><strong><a href="https://fb.com/${r.user_id}" target="_blank">${r.user_name}</a></strong></p><p><small><a href="?comment_id=${r.cmt_id}">${r.cmt_txt}</a></small></p></li>`).join('');
-            this.list.innerHTML = html;
-        }
-    }
-    $(document).ready(function(){
-        if(isPost(window.location.href)){
-            window.postInfoCard = new PostInfoCard();
-        }
-        window.navigation.addEventListener("navigate", (event) => {
-            window.postInfoCard?.destroy();
-            if(isPost(event.destination.url)){
-                window.postInfoCard = new PostInfoCard();
-            }
-        })
-    });
-
-    ***********************************/
-
 
     $(document).ready(function(){
         GM_addStyle(`.fb-article-btn{font-size: 90%; font-weight: 700; width: fit-content; color: white; display: block; margin-top: 10px; cursor: pointer; background-color: #000000db; border-radius: 5px; padding: 2px 6px; }`);
@@ -1030,13 +959,14 @@ const CustomerData = {
                 this.btn.style['background-color'] = user_id ? 'darkgreen' : 'darkgrey';
             }
             addOrder(){
+                if(!window.POST_ID) return alert('⚠ Không tìm thấy POST_ID \nVui lòng mở baif post trước khi thao tác! \nMã lỗi: #1026');
+
                 let cmt_info = {
-                    post_id: location.pathname.split('\/').pop(),
+                    post_id: window.POST_ID,
                     cmt_id: this.cmt_id.toString(),
                     cmt_txt: this.cmt_txt,
                     status: ''
                 };
-
 //                let chatBoxs = document.querySelectorAll('div:not([hidden]) > div:is(.__fb-dark-mode, .__fb-light-mode) div[role="button"][aria-label="Cài đặt chat"] a[role="link"][href^="/"][aria-label]');
                 let chatBoxs = document.querySelectorAll('div:is(.__fb-dark-mode, .__fb-light-mode) div[role="button"][aria-label="Cài đặt chat"] a[role="link"][href^="/"][aria-label]');
                 let chatList = Object.values(chatBoxs).map(e => {
@@ -1060,44 +990,19 @@ const CustomerData = {
         }
         window.document.addEventListener('mousemove', function(){
             if((/facebook\.com\/.*posts\/[\d\w]+/g).test(location.href) == false) return true;
+
             if(window.busy_asdxa == true) return;
             window.busy_asdxa = true;
+            setTimeout(_ => {window.busy_asdxa = false}, 1000);
+
             let post_id = location.pathname.split('\/').pop();
             let articles = document.querySelectorAll('div[role="article"][aria-label*="dưới tên '+myFbName+'"]');
             articles.forEach(article => {
                 Object.values(article.querySelectorAll('div[role="button"]')).forEach(b => b.innerText == 'Xem thêm' && b.click());
                 !article.querySelector('.fb-article-btn') && new PreOderBtn(article);
             });
-            setTimeout(_ => {window.busy_asdxa = false}, 1000);
         });
     });
-
-/**
-    $(document).ready(function(){
-        return;
-        if((window.location.origin != 'https://www.facebook.com')) return !1;
-        if(!(/\/posts\/.+/g).test(window.location.pathname)) return !1;
-        let post_id = window.location.pathname.split('/').pop();
-        console.log(post_id);
-        let table = GM_addElement(document.body, 'table', {id:'orderUserList'});
-        let reload = function(){
-            let matchs = OrdersStorage.get(post_id);
-            console.table(matchs);
-            table.innerHTML = '<thead><tr><th>Name</th><th>Comment</th></tr></thead>';
-            table.innerHTML += '<tbody>';
-            table.innerHTML += matchs.map(r => `<tr><td><a href="https://fb.com/${r.user_id}" target="_blank">${r.user_name}</a></td><td><a href="?comment_id=${r.cmt_id}">${r.cmt_txt}</a></td></tr>`).join('');
-            table.innerHTML +='</tbody>';
-        }
-        setTimeout(reload, 1000);
-        GM_addValueChangeListener(OrdersStorage.key, function(key, oldValue, newValue, remote) {
-            reload();
-        });
-
-
-        GM_addStyle('#orderUserList{color: white; position: absolute; top: 0; left: 0; text-align: left; padding: 10px; max-width: 500px;}');
-        GM_addStyle('#orderUserList tr > td:first-child{white-space: nowrap}');
-    });
-**/
 })();
 
 /***
@@ -1418,14 +1323,14 @@ function phone2Recievers(phone = null) {
             },
             url:  "https://io.okd.viettelpost.vn/order/v1.0/receiver/_suggest?q=" + phone,
             onload: function (response) {
-                console.log (
+                GM_log (
                     "GM_xmlhttpRequest() response is:\n",
                     response.responseText.substring (0, 80) + '...'
                 );
                 return resolve(JSON.parse(response.responseText));
             },
             onerror: function(reponse) {
-                console.log("error: ", reponse);
+                GM_log("error: ", reponse);
                 return reject(reponse)
             }
 
