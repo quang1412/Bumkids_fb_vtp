@@ -276,7 +276,6 @@ function makeid(length = 12) {
     }
     return result;
 }
-
 const Imgbb = {
     key: 'd2c959c2bb733f020987806e60640feb',
     upload: function(src, name){
@@ -321,7 +320,8 @@ const PhoneBook = {
             GoogleSheet.query(this.sheetName, 'B:F', 'SELECT * WHERE E IS NOT NULL' ).then(json => {
                 this.data = json;
                 GM_setValue(this.key, this.data);
-                return resolve('Đồng bộ thành công ' + this.data.length + ' danh bạ');
+                GM_log('Đồng bộ thành công ' + this.data.length + ' danh bạ');
+                return resolve()
             });
         });
     },
@@ -399,7 +399,8 @@ const OrdersStorage = {
             GoogleSheet.query(this.sheetName, 'B:G', 'SELECT *' ).then(json => {
                 this.data = json;
                 GM_setValue(this.key, this.data);
-                return resolve('Đồng bộ thành công ' + this.data.length + ' đơn hàng');
+                GM_log('Đồng bộ thành công ' + this.data.length + ' đơn hàng');
+                return resolve(true);
             });
         });
     },
@@ -444,7 +445,6 @@ const PostCollector = {
 
             let match = this.data.filter(p => p.id == id);
             if(match.length) return;
-
             Imgbb.upload(img, id).then(r => {
                 img = r.data.image.url;
                 thumb = r.data.thumb.url;
@@ -453,14 +453,14 @@ const PostCollector = {
             }).then(e => {
                 let info = {url, id, txt, img, thumb};
                 let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
-                let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-                GoogleSheet.submitForm(url).then(_ => {
+                let u = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
+                GoogleSheet.submitForm(u).then(_ => {
                     this.data.push(info);
                     GM_setValue(this.key, this.data);
                 }).catch(error => {
                     alert('error' + error.message + '\nMã lỗi #0470');
                 });
-            });
+            }).catch(e => {GM_log('error', e.message)})
         }, 1000);
     },
     sync: async function(){
@@ -470,8 +470,8 @@ const PostCollector = {
             GoogleSheet.query(this.sheetName, 'B:F', 'SELECT *' ).then(json => {
                 this.data = json;
                 GM_setValue(this.key, this.data);
-                return resolve('Đồng bộ thành công ' + this.data.length + ' bài đăng');
-                //   confirm('Đồng bộ thành công ' + this.data.length + ' bài post \nBạn có muốn tải lại trang ko?') && window.location.reload();
+                GM_log('Đồng bộ thành công ' + this.data.length + ' bài đăng');
+                return resolve(true);
             });
         })
     },
@@ -479,15 +479,11 @@ const PostCollector = {
 PostCollector.start();
 
 GM_registerMenuCommand("Đồng bộ Google!", _ => {
-    PostCollector.sync().then(r => {
-        GM_log(r);
-    }).then(_ => PhoneBook.sync()).then(r => {
-        GM_log(r);
-    }).then(_ => OrdersStorage.sync()).then(r => {
-        GM_log(r);
-    }).then(_ => {
-        if(confirm('Đã đồng bộ xong, bạn có muốn tải lại trang?')) window.location.reload();
-    })
+    PostCollector.sync()
+        .then(_ => PhoneBook.sync())
+        .then(_ => OrdersStorage.sync())
+        .then(_ => (confirm('Đã đồng bộ xong, bạn có muốn tải lại trang?')) && window.location.reload())
+        .catch(e => {alert(e.message)});
 });
 
 /***
@@ -877,14 +873,21 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         }
     }
     window.document.addEventListener('mousemove',function(){
-        if(window.busy_xxag) return;
+        if(window.busy_xxag) return;window.busy_xxag = 1;
+        window.timeout = setTimeout(_ => { window.busy_xxag = 0 }, 1000);
+
         let ee = window.document.querySelectorAll(`div:not([hidden]) > div:is(.__fb-dark-mode, .__fb-light-mode) div[role="button"][aria-label="Cài đặt chat"] a[role="link"][href^="/"][aria-label]`);
-        if(window.location.origin == 'https://www.messenger.com') {
+        if(window.location.origin == 'https://www.messenger.com' || window.location.pathname.includes('/messages/')) {
             ee = window.document.querySelectorAll(`a[aria-label][href^="https://www.facebook.com/"][role="link"]:not([aria-label=""], [aria-label="Xem tất cả trong Messenger"], [aria-label="Tin nhắn mới"], [aria-label="Mở ảnh"], [aria-label="Thông báo"], [aria-label="Trang cá nhân"]):not(.checked)`);
+        }
+        if(window.location.href == 'https://www.facebook.com/messages'){
+            ee = window.document.querySelectorAll(`div[role="main"][aria-label*="Cuộc trò chuyện với"] a[role="link"][aria-label]:is([href^="/"]):not(.checked)`);
         }
         for(let i = 0; i < ee.length; i++){
             let e = ee[i];
             e.classList.add('checked');
+
+            console.log(e)
 
             let id = e.getAttribute('href').replaceAll('https://www.facebook.com/', '').replaceAll('/', '');
             if((/\D+/g).test(id)) continue;
@@ -900,10 +903,6 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
             let card = new InfoCard(info, p);
         }
-        window.busy_xxag = 1;
-        window.timeout = setTimeout(function(){
-            window.busy_xxag = 0;
-        }, 1000);
     });
 
 })();
