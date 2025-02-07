@@ -441,7 +441,8 @@ const PostCollector = {
 
             window.POST_ID = id;
             this.showPostInfo = GM_addElement(window.document.body, 'div', { style:'background-color: #363636; color: white; padding: 8px; border-radius: 5px; position: absolute; bottom: 5px; left: 5px; opacity: 1;'});
-            this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> <div>Khách hàng: ${OrdersStorage.get(id).map(o => `<a href="https://fb.com/${o.user_id}" target="_blank" style="color:#fff;">${o.user_name}</a>`).join(' / ')}</div>`;
+            this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> `
+         //   this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> <div>Khách hàng: ${OrdersStorage.get(id).map(o => `<a href="https://fb.com/${o.user_id}" target="_blank" style="color:#fff;">${o.user_name}</a>`).join(' / ')}</div>`;
 
             let match = this.data.filter(p => p.id == id);
             if(match.length) return;
@@ -697,7 +698,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             }
             let bg = GM_addElement(this.card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
-            copyright.innerHTML = '<a href="/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
+            copyright.innerHTML = '<a href="https://fb.com/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
         }
         async refreshInfo(){
             if(this.isBusy) return;
@@ -763,18 +764,21 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                     let topAvt = this.container.querySelector('div[aria-label="'+this.name+'"][role="img"]');
                     topAvt && this.phoneScanning();
 
-                    let rows = this.container.querySelectorAll('div:is(.__fb-dark-mode, .__fb-light-mode)[role="row"]:not(.scanned)');
+                    let rows = this.container.querySelectorAll('div:is(.__fb-dark-mode, .__fb-light-mode)[role="row"] div[role="presentation"] span:not(.scanned)');
 
                     for (let i = (rows.length - 1); i >= 0; i--) {
                         let row = rows[i];
-                    //    GM_log(row)
                         row.classList.add('scanned');
                         let text1 = row.innerText;
                         let text = text1.replaceAll(/(\.|\,|\-|\s)/g, '');
                         GM_log(text)
                         let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
                         if(match && !~match.indexOf(myPhone)){
+                            ///
                             this.phoneScanning();
+                            window.prompt('Tìm sdt của '+ this.name, text1);
+                            break;
+
                             row.style.border = '1px solid red';
                             row.style['border-radius'] = '5px';
                             row.style.overflow = 'hidden';
@@ -876,32 +880,24 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         if(window.busy_xxag) return;window.busy_xxag = 1;
         window.timeout = setTimeout(_ => { window.busy_xxag = 0 }, 1000);
 
-        let ee = window.document.querySelectorAll(`div:not([hidden]) > div:is(.__fb-dark-mode, .__fb-light-mode) div[role="button"][aria-label="Cài đặt chat"] a[role="link"][href^="/"][aria-label]`);
-        if(window.location.origin == 'https://www.messenger.com' || window.location.pathname.includes('/messages/')) {
-            ee = window.document.querySelectorAll(`a[aria-label][href^="https://www.facebook.com/"][role="link"]:not([aria-label=""], [aria-label="Xem tất cả trong Messenger"], [aria-label="Tin nhắn mới"], [aria-label="Mở ảnh"], [aria-label="Thông báo"], [aria-label="Trang cá nhân"]):not(.checked)`);
-        }
-        if(window.location.href == 'https://www.facebook.com/messages'){
-            ee = window.document.querySelectorAll(`div[role="main"][aria-label*="Cuộc trò chuyện với"] a[role="link"][aria-label]:is([href^="/"]):not(.checked)`);
-        }
-        for(let i = 0; i < ee.length; i++){
-            let e = ee[i];
+        let profiles = window.document.querySelectorAll(`
+          div[role="main"][aria-label^="Cuộc trò chuyện với "] > div > div > div > div:first-child a[role="link"][href]:not(.checked),
+          div:not([hidden]) div[role="button"][aria-label="Cài đặt chat"] a[role="link"][href^="/"][aria-label]:not(.checked)
+        `);
+
+        for(let i = 0; i < profiles.length; i++){
+            let e = profiles[i];
             e.classList.add('checked');
 
-            console.log(e)
-
-            let id = e.getAttribute('href').replaceAll('https://www.facebook.com/', '').replaceAll('/', '');
-            if((/\D+/g).test(id)) continue;
-            if(window.document.querySelector('div.infoCard[data-fbid="'+id+'"]')) continue;
-
-            let name = e.getAttribute('aria-label');
+            let id = e.getAttribute('href')?.match(/\d+/g)?.pop();
+            let name = e.getAttribute('aria-label') || e.querySelector('h2').innerText;
             let img = e.querySelector('img')?.getAttribute('src');
-            if(!img) continue;
+
+            if(!img || !name || !id) continue;
 
             let info = {id, name, img};
-            GM_log(info);
-
-            let p = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
-            let card = new InfoCard(info, p);
+            let container = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
+            new InfoCard(info, container);
         }
     });
 
