@@ -279,6 +279,33 @@ function makeid(length = 12) {
 const Imgbb = {
     key: 'd2c959c2bb733f020987806e60640feb',
     upload: function(src, name){
+        return new Promise((resolve, reject) => {
+            var data = new FormData();
+            data.append("image", src);
+            data.append("type", "url");
+            data.append("title", name);
+            data.append("description", name);
+
+            GM_xmlhttpRequest({
+                url:  'https://api.imgur.com/3/image',
+                method: "POST",
+                synchronous: true,
+                data: data,
+                headers:  {
+                    "Authorization": "Client-ID 46065c05c1005de"
+                },
+                onload: (response) => {
+                    let res = JSON.parse(response.responseText);
+                    return res.status == 200 ? resolve(res) : reject(res.message);
+                },
+                onerror: (e) => {
+                    return reject(e.message || 'Lỗi imgur');
+                }
+            });
+        });
+
+
+        /***
         let key = this.key;
         var formData = new FormData();
         formData.append('image', src);
@@ -298,6 +325,7 @@ const Imgbb = {
                 }
             });
         });
+        ***/
     }
 };
 
@@ -334,7 +362,7 @@ const PhoneBook = {
     set: function(info){
         let {id, phone, name, img} = info;
         Imgbb.upload(img, id).then(r => {
-            info.img = r.data.image.url;
+            info.img = r.data.link;
 
             let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
@@ -411,7 +439,7 @@ const PostCollector = {
     key: 'postList_1',
     data: [],
     ggFormId: '1FAIpQLSdfeoPmxxbEvUBdbcpPG4f2RabbslqpbrDCCvfX29WfijGJPA',
-    ggFormEntry:{id: 1370929995, url: 1270605326, txt: 1381764206, thumb: 1374708965, img: 1194118624,},
+    ggFormEntry:{id: 1370929995, url: 1270605326, txt: 1381764206, img: 1194118624,},
     sheetName: 'Posts',
     start: function(){
         this.data = GM_getValue(this.key, []);
@@ -432,8 +460,7 @@ const PostCollector = {
                 url = window.location.pathname.split('/').pop(),
                 txt = dialog?.querySelector('div[data-ad-rendering-role="story_message"]')?.innerText?.replaceAll('\n',' '),
                 id = txt && window.btoa(unescape(encodeURIComponent(txt))).replaceAll(/[^\d\w]/g, '').substr(0, 20),
-                img = dialog?.querySelector('a[role="link"] img[src*="scontent"]')?.getAttribute('src'),
-                thumb = '';
+                img = dialog?.querySelector('a[role="link"] img[src*="scontent"]')?.getAttribute('src');
 
             if(!txt || !img) return false;
 
@@ -447,12 +474,12 @@ const PostCollector = {
             let match = this.data.filter(p => p.id == id);
             if(match.length) return;
             Imgbb.upload(img, id).then(r => {
-                img = r.data.image.url;
-                thumb = r.data.thumb.url;
+                img = r.data.link;
+          //      thumb = r.data.link;
             }).catch(e => {
                 /** catch **/
             }).then(e => {
-                let info = {url, id, txt, img, thumb};
+                let info = {url, id, txt, img};
                 let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
                 let u = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
                 GoogleSheet.submitForm(u).then(_ => {
@@ -901,6 +928,15 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         }
     });
 
+    if(window.location.href.includes('/posts/')){
+        let interval = setInterval(_ => {
+            let btn = document.querySelector('div[role="dialog"] div[role="button"][aria-haspopup="menu"]:not([aria-label])');
+            if(!btn) return true;
+            clearInterval(interval);
+            btn.click();
+            btn.scrollIntoView(false);
+        }, 1000);
+    }
 })();
 
 (function(){
