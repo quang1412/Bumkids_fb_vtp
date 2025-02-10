@@ -4,14 +4,15 @@
 // @version      2025-02-04
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
+
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
 // @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
 // @match        https://viettelpost.vn/*
-// @match        https://api.viettelpost.vn/*
 // @match        https://www.facebook.com/*
 // @match        https://www.messenger.com/*
+// @match        https://api.viettelpost.vn/*
 // @require      https://code.jquery.com/jquery-3.6.0.min.js
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
 // @grant        GM_log
 // @grant        GM_setValue
@@ -131,16 +132,26 @@ const GoogleSheet = {
     },
 }
 const viettel = {
-    deviceId: GM_getValue('vtp_deviceId', null),
-    token: GM_getValue('vtp_tokenKey', null),
+    init: function(){
+        this.deviceId = GM_getValue('vtp_deviceId', null);
+        GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => {
+            if(remote) this.deviceId = newValue;
+        });
+
+        this.token = GM_getValue('vtp_tokenKey', null);
+        GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
+            if(remote) this.token = newValue;
+        });
+    },
     getReq: function(url){
-        let i = this.deviceId, t = this.token;
+       // let i = this.deviceId, t = this.token;
+        let token = this.token;
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 url: url,
                 method: "GET",
                 synchronous: true,
-                headers: { 'Authorization': 'Bearer ' + t },
+                headers: { 'Authorization': 'Bearer ' + token },
                 onload: function (response) {
                     return resolve(JSON.parse(response.responseText))
                 },
@@ -151,55 +162,25 @@ const viettel = {
         })
     },
     postReq: function(url, json){
-        let i = this.deviceId, t = this.token;
+        let deviceId = this.deviceId, token = this.token;
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 url:  url,
                 method: "POST",
                 synchronous: true,
-                headers: { "Token": t, "Content-Type": "application/json" },
-                data: JSON.stringify({...json, "deviceId": i}),
+                headers: { "Token": token, "Content-Type": "application/json" },
+                data: JSON.stringify({...json, "deviceId": deviceId}),
                 onload: (response) => {
                     let res = JSON.parse(response.responseText);
                     return res.status == 200 ? resolve(res) : reject(res.message);
                 },
                 onerror: (e) => {
+                    alert(e.message || 'Lỗi viettel \nMã lỗi: #178');
                     return reject(e.message || 'Lỗi viettelReqPost');
                 }
             })
         })
     },
-    updateToken: (async function(isForce){
-        this.deviceId = await GM_getValue('vtp_deviceId', null);
-        this.token = await GM_getValue('vtp_tokenKey', null);
-
-        if(!(isForce || !this.deviceId || !this.token)) return true;
-        this.deviceId = '';
-        this.token = '';
-
-        let updateUrl = 'https://viettelpost.vn/cau-hinh-tai-khoan';
-        if(window.location.origin == 'https://viettelpost.vn' && window.location.href == updateUrl){
-            await wait(2000);
-            let id = window.localStorage.deviceId, token = JSON.parse(window.localStorage['vtp-token'] || "{}").tokenKey;
-            id && token && window.opener.postMessage({ type:'updateToken', data:[id, token] }, '*')
-        } else if(window.location.origin == 'https://www.facebook.com'){
-            let popUp = window.open(updateUrl, "popup", "width=600,height=400");
-            window.onmessage = e => {
-                if (e.source != popUp || e.data.type !== 'updateToken' || !e.data.data) return true;
-                popUp && !popUp.closed && popUp.close();
-                this.deviceId = e.data.data[0];
-                this.token = e.data.data[1];
-                GM_setValue('vtp_deviceId', this.deviceId);
-                GM_setValue('vtp_tokenKey', this.token);
-            };
-
-            await wait(5000);
-            if(!this.deviceId || !this.token) {
-                popUp && !popUp.closed && popUp.close();
-                return alert('dang nhap lai viettel');
-            }
-        }
-    })(0),
     getListOrders: function(phone){
         return new Promise((resolve, reject) => {
             if(!phone) return reject(new Error('Chưa có sdt'));
@@ -217,10 +198,15 @@ const viettel = {
                 "REASON_RETURN": null,
                 "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570",
             };
-            this.postReq(url, json ).then(resolve).catch(e => reject(e.message));
+            this.postReq(url, json ).then(resolve).catch(e => {
+                alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
+                reject(e.message);
+            });
         })
     }
 };
+viettel.init();
+
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 function customEvent(n){
     if(n == 'mouseover'){
@@ -361,14 +347,26 @@ const PhoneBook = {
     },
     set: function(info){
         let {id, phone, name, img} = info;
-        Imgbb.upload(img, id).then(r => {
-            info.img = r.data.link;
+        let existUser = this.get(id);
+
+        new Promise(resolve => {
+            let existUser = this.get(id);
+            if(existUser){
+                img = existUser?.pop()?.img;
+                return resolve();
+            } else {
+                Imgbb.upload(img, id).then(r => {
+                    img = r.data.link;
+                    return resolve();
+                });
+            }
+        }).then(_ => {
 
             let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
             return GoogleSheet.submitForm(url);
         }).then(_ => {
-            this.data.push(info);
+            this.data.push({id, phone, name, img});
             GM_setValue(this.key, this.data);
             return true;
         }).catch(e => {
