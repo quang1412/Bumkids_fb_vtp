@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-02-10
+// @version      2025-02-11
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -346,27 +346,26 @@ const PhoneBook = {
         return matchs;
     },
     set: function(info){
-        let {id, phone, name, img} = info;
-        let existUser = this.get(id);
-
         new Promise(resolve => {
-            let existUser = this.get(id);
+            let matchs = this.get(info.id);
+            let existUser = matchs?.pop();
             if(existUser){
-                img = existUser?.pop()?.img;
+                info.img = existUser?.img;
                 return resolve();
             } else {
-                Imgbb.upload(img, id).then(r => {
-                    img = r.data.link;
+                Imgbb.upload(info.img, info.id).then(r => {
+                    info.img = r.data.link;
                     return resolve();
                 });
             }
+        }).catch(e => {
+            alert(e.message)
         }).then(_ => {
-
             let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
             return GoogleSheet.submitForm(url);
         }).then(_ => {
-            this.data.push({id, phone, name, img});
+            this.data.push(info);
             GM_setValue(this.key, this.data);
             return true;
         }).catch(e => {
@@ -1097,9 +1096,10 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             let ns = match[0].replace('(', '').replace(')', '');
             total_price = ns.split(/\s+/).reduce((partialSum, a) => partialSum + Number(a)*1000, 0);
             cod = fee + total_price;
-
-            //prompt( `Giá: ${match[0].replaceAll(' ',' + ')} \nPhí ship: ${fee/1000}k \nTổng COD:`, cod);
-            $('input#productPrice').val(cod);
+            let tax = cod / 100 * 1.5
+            prompt( `Giá: ${match[0]} \nPhí ship: ${fee/1000}k \nThuế 1,5%: ${tax/1000}k  \nTổng COD:`, Math.round(cod+tax));
+            //$('input#productPrice').val(cod);
+            //window.prompt(`COD:`, cod);
         }
     }
 
@@ -1291,18 +1291,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 (function($){
     $(window.document).ready(function(){
         if(!window.location.href.includes('viettelpost.vn')) return;
-        /**
-        let interval = setInterval(function(){
-            let select = window.document.querySelector('mat-select[role="listbox"][aria-label="Bản Ghi Mỗi Trang"]');
-            if(!select) return;
-            select.click();
-            let option = window.document.querySelector('mat-option#mat-option-3[role="option"]');
-            if(!option) return;
-            option.click();
-            clearInterval(interval);
-        }, 500);
-        **/
-
         // menu quản lý đơn
         var mouseX, mouseY;
         $(document).mousemove(function(e) { mouseX = e.pageX; mouseY = e.pageY; });
