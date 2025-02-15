@@ -181,9 +181,9 @@ const viettel = {
             })
         })
     },
-    getListOrders: function(phone){
+    getListOrders: function(key){
         return new Promise((resolve, reject) => {
-            if(!phone) return reject(new Error('Chưa có sdt'));
+            if(!key) return reject(new Error('Chưa có sdt'));
             let url = 'https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2';
             let json = {
                 "PAGE_INDEX": 1,
@@ -192,13 +192,34 @@ const viettel = {
                 "TYPE": 0,
                 "DATE_FROM": getFormatedDate(-30),
                 "DATE_TO": getFormatedDate(),
-                "ORDER_PROPERTIES": phone,
+                "ORDER_PROPERTIES": key,
                 "ORDER_PAYMENT": "",
                 "IS_FAST_DELIVERY": false,
                 "REASON_RETURN": null,
-                "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570",
+                "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,101,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570,516,517",
             };
             this.postReq(url, json ).then(resolve).catch(e => {
+                alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
+                reject(e.message);
+            });
+        })
+    },
+    getOrderPrint: function(id){
+        return new Promise((resolve, reject) => {
+            if(!id) return reject(new Error('Chưa có sdt'));
+            let url = 'https://api.viettelpost.vn/api/setting/encryptLinkPrintV2';
+            let json = {
+                "TYPE": 100,
+                "ORDER_NUMBER": id + "," + new Date().getTime() ,
+                "IS_SHOW_POSTAGE": 0,
+                "PRINT_COPY": 1,
+            };
+            this.postReq(url, json).then(res => {
+                if(res.error) return reject(res.message);
+                let link = res?.data?.enCryptUrl;
+                return resolve(link);
+
+            }).catch(e => {
                 alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
                 reject(e.message);
             });
@@ -228,29 +249,7 @@ function getFormatedDate(i = 0) {
     const formattedToday = dd + '/' + mm + '/' + yyyy;
     return formattedToday;
 }
-function getListOrdersVTP(phone = null) {
-    return new Promise((resolve, reject) => {
-        GM_log('getListOrdersVTP', phone)
-      if(!phone) return reject(new Error('Chưa có sdt'));
-        viettel.postReq("https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2", {
-            "PAGE_INDEX": 1,
-            "PAGE_SIZE": 10,
-            "INVENTORY": null,
-            "TYPE": 0,
-            "DATE_FROM": getFormatedDate(-30),
-            "DATE_TO": getFormatedDate(),
-            "ORDER_PROPERTIES": phone,
-            "ORDER_PAYMENT": "",
-            "IS_FAST_DELIVERY": false,
-            "REASON_RETURN": null,
-            "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570",
-        }).then(res => {
-            resolve(res);
-        }).catch(e => {
-            reject(e.message)
-        });
-    })
-}
+
 function makeid(length = 12) {
     let result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -852,11 +851,13 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                 let orderInfo = { fbid: this.id, phone: this.phone, name: this.name };
 
+                /**
                 if(this.preOrders.length){
                     let txt = this.preOrders.map((o, i) => (`[${i}] - ${o.cmt_txt}`)).join('\n');
                     let ro = prompt(title + '\n\nChọn đơn hàng liên quan: \n' + txt);
                     if(ro == null) return false;
                 }
+                **/
 
                 let prices_str = prompt(title + "\n\nB1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
@@ -905,7 +906,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         window.timeout = setTimeout(_ => { window.busy_xxag = 0 }, 1000);
 
         let profiles = window.document.querySelectorAll(`
-          div[role="main"][aria-label^="Cuộc trò chuyện với "] > div > div > div > div:first-child a[role="link"][href]:not(.checked),
+          div[role="main"][aria-label^="Cuộc trò chuyện với "] > div > div > div > div:first-child a[role="link"][href]:not(.checked, [aria-label]),
           div:not([hidden]) div[role="button"][aria-label="Cài đặt chat"] a[role="link"][href^="/"][aria-label]:not(.checked)
         `);
 
@@ -914,6 +915,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             e.classList.add('checked');
 
             let id = e.getAttribute('href')?.match(/\d+/g)?.pop();
+
             let name = e.getAttribute('aria-label') || e.querySelector('h2').innerText;
             let img = e.querySelector('img')?.getAttribute('src');
 
@@ -1107,6 +1109,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     $(document).on('change', '#productName', total_price_func)
 
     $(document).ready( async function(){
+
         await new Promise(resolve => { setTimeout(resolve, 1000)});
 
         if(window.location.pathname != '/order/tao-don-le') return !1;
@@ -1172,9 +1175,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             }
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
                 if(e.shiftKey){
-                    $('#confirmCreateOrder button.btn.btn-viettel.btn-sm').click();
+                    $('#confirmCreateOrder button.btn.btn-viettel').click();
                 } else {
-                    $('#confirmSaveDraft button.btn.btn-viettel.btn-sm').click();
+                    $('#confirmSaveDraft button.btn.btn-viettel').click();
                 }
 
                 // IN TEM
@@ -1185,40 +1188,23 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                 setTimeout(() => {
                     viettel.getListOrders(phone).then(data => {
-                        let lastest = data.data.data.LIST_ORDER[0];
-                        let lastest_date = new Date(Date.parse(lastest?.ORDER_SYSTEMDATE || 0)).getDate();
+                        let lastOrder = data.data.data.LIST_ORDER[0];
+                        let lastest_date = new Date(Date.parse(lastOrder?.ORDER_SYSTEMDATE || 0)).getDate();
                         let today_date = new Date().getDate();
-                        if( !lastest || lastest_date != today_date) throw new Error('Không tìm thấy đơn hàng mới!');
-                        return(lastest);
-                    }).then(async order => {
-                        let o = order.ORDER_NUMBER;
-                        let status = order.ORDER_STATUS;
-                        if(!~printableStatus.indexOf(status)){ /** throw new Error('new order not found!'); **/ }
+                        if( !lastOrder || lastest_date != today_date) throw new Error('Không tìm thấy đơn hàng mới!');
 
-                        let json = await viettel.postReq("https://api.viettelpost.vn/api/setting/encryptLinkPrintV2", {
-                            "TYPE": 100,
-                            "ORDER_NUMBER": o,
-                            "IS_SHOW_POSTAGE": 0,
-                            "PRINT_COPY": 1
-                        });
-                        if(!json.error && json?.data?.enCryptUrl){
-                            let link = json.data.enCryptUrl
-                           // alert(link);
-                            window.open(link+'&status='+status, '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=960"');
-                            setTimeout(window.close, 200);
-                        } else {
-                            throw new Error('getPrintLink not found!');
-                        }
-
-                        //window.location.href = link+'&status='+status;
-                        //return json.data.enCryptUrl+'&status='+status;
-                    }).then(link => {
-
+                        let o = lastOrder.ORDER_NUMBER;
+                        let status = lastOrder.ORDER_STATUS;
+                       // if(!~printableStatus.indexOf(status)){ /** throw new Error('new order not found!'); **/ }
+                        return viettel.getOrderPrint(o);
+                    }) .then(link => {
+                        window.open(link+'&status='+status, '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=960"');
+                        window.close();
                     }).catch(e => {
                         alert(e.message);
                         window.location.href = 'https://viettelpost.vn/quan-ly-van-don';
                     });
-                }, 1000)
+                }, 1500);
             }
         });
 
