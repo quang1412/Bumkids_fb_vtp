@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-02-11
+// @version      2025-02-17
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -216,7 +216,7 @@ const viettel = {
             let url = 'https://api.viettelpost.vn/api/setting/encryptLinkPrintV2';
             let json = {
                 "TYPE": 100,
-                "ORDER_NUMBER": id + "," + (new Date().getTime()+3600 * 100000),
+                "ORDER_NUMBER": id + "," + (new Date().getTime() + (360000000)),
                 "IS_SHOW_POSTAGE": 0,
                 "PRINT_COPY": 1,
             };
