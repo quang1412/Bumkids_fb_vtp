@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-02-15
+// @version      2025-02-11
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -131,6 +131,12 @@ const GoogleSheet = {
         })
     },
 }
+
+function randomInteger(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+
 const viettel = {
     init: function(){
         this.deviceId = GM_getValue('vtp_deviceId', null);
@@ -210,13 +216,14 @@ const viettel = {
             let url = 'https://api.viettelpost.vn/api/setting/encryptLinkPrintV2';
             let json = {
                 "TYPE": 100,
-                "ORDER_NUMBER": id + "," + new Date().getTime() ,
+                "ORDER_NUMBER": id + "," + (new Date().getTime()+3600 * 100000),
                 "IS_SHOW_POSTAGE": 0,
                 "PRINT_COPY": 1,
             };
             this.postReq(url, json).then(res => {
                 if(res.error) return reject(res.message);
                 let link = res?.data?.enCryptUrl;
+                console.log(json)
                 return resolve(link);
 
             }).catch(e => {
@@ -683,7 +690,6 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             this.img = info.img;
             this.user = PhoneBook.get(this.id)?.pop();
             this.phone = this.user?.phone;
-            this.penddingOrders = 0;
             this.preOrders = 0;
 
             this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.id });
@@ -709,16 +715,6 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             this.refreshInfo();
             this.eventsListener();
 
-            // Set phone by mouse selection
-            this.container.onmouseup = _ => {
-                if(!window.getSelection) return;
-                let phone = window.getSelection().toString().replaceAll(/\D/g,'');
-                if(!isVNPhone(phone) || phone == this.phone || phone == myPhone){
-                    return false;
-                } else if(!this.phone || confirm("Xác nhận đổi sdt cho " + this.name + " thành: " + phone + "?")){
-                    this.setPhone(phone);
-                }
-            }
             let bg = GM_addElement(this.card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
             copyright.innerHTML = '<a href="https://fb.com/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
@@ -732,7 +728,6 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             try{
                 //GM_log(this.phone);
                 this.preOrders = OrdersStorage.get(this.id);
-
 
                 let orderList = await viettel.getListOrders(this.phone);
                 if(orderList.error) throw new Error('Viettel: ' + orderList.message);
@@ -899,11 +894,23 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                     alert('hi.');
                 }
             });
+
+            // Set phone by mouse selection
+            this.container.onmouseup = _ => {
+                if(!window.getSelection) return;
+                let phone = window.getSelection().toString().replaceAll(/\D/g,'');
+                if(!isVNPhone(phone) || phone == this.phone || phone == myPhone){
+                    return false;
+                } else if(!this.phone || window.confirm(`Xác nhận đổi số đt cho ${this.name} thành ${phone}?`)){
+                    this.setPhone(phone);
+                }
+            }
         }
     }
+
     window.document.addEventListener('mousemove',function(){
-        if(window.busy_xxag) return;window.busy_xxag = 1;
-        window.timeout = setTimeout(_ => { window.busy_xxag = 0 }, 1000);
+        if(window.xx13e) return;
+        window.xx13e = setTimeout(_ => { clearTimeout(window.xx13e); window.xx13e = 0 }, 1000);
 
         let profiles = window.document.querySelectorAll(`
           div[role="main"][aria-label^="Cuộc trò chuyện với "] > div > div > div > div:first-child a[role="link"][href]:not(.checked, [aria-label]),
@@ -912,14 +919,14 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
         for(let i = 0; i < profiles.length; i++){
             let e = profiles[i];
-            e.classList.add('checked');
 
             let id = e.getAttribute('href')?.match(/\d+/g)?.pop();
-
             let name = e.getAttribute('aria-label') || e.querySelector('h2').innerText;
             let img = e.querySelector('img')?.getAttribute('src');
 
-            if(!img || !name || !id) continue;
+            if(!id || !name || !img) continue;
+
+            e.classList.add('checked');
 
             let info = {id, name, img};
             let container = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
@@ -947,6 +954,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         class PreOderBtn{
             constructor(article){
                 let cmt_text_elm = article.querySelector('span[lang]');
+
                 this.cmt_txt = cmt_text_elm?.innerText.replaceAll('\n', ' ');
                 this.cmt_id = article.querySelector('div:not([role="article"]) a[role="link"][href*="posts"][href*="comment_id"]')?.getAttribute('href').match(/((reply_comment_id)|(comment_id))\=\d+/g).pop().replace(/((reply_comment_id)|(comment_id))\=/g, '');
 
@@ -1025,11 +1033,15 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             window.busy_asdxa = true;
             setTimeout(_ => {window.busy_asdxa = false}, 1000);
 
-            let post_id = location.pathname.split('\/').pop();
+           // let post_id = location.pathname.split('\/').pop();
             let articles = document.querySelectorAll('div[role="article"][aria-label*="dưới tên '+myFbName+'"]');
             articles.forEach(article => {
-                Object.values(article.querySelectorAll('div[role="button"]')).forEach(b => b.innerText == 'Xem thêm' && b.click());
-                !article.querySelector('.fb-article-btn') && new PreOderBtn(article);
+                try{
+                    Object.values(article.querySelectorAll('div[role="button"]')).forEach(b => b.innerText == 'Xem thêm' && b.click());
+                } catch(e){ }
+
+                try{ !article.querySelector('span.fb-article-btn') && new PreOderBtn(article) } catch(e){ }
+
             });
         });
     });
@@ -1069,6 +1081,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 // VIETTEL MAIN //
 (function($) {
     if(window.location.origin != 'https://viettelpost.vn') return !1;
+
 
     GM_addStyle(`/* ViettelPost custom css */
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
@@ -1199,7 +1212,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                         return viettel.getOrderPrint(o);
                     }) .then(link => {
                         window.open(link+'&status='+status, '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=960"');
-                        window.close();
+                       window.close();
                     }).catch(e => {
                         alert(e.message);
                         window.location.href = 'https://viettelpost.vn/quan-ly-van-don';
