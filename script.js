@@ -451,8 +451,10 @@ const PostCollector = {
         setInterval(_ => this.lopping(), 1000);
     },
     lopping: function(href = window.location.href){
+        console.log(href)
 
         if(href == this.lastHref) return true;
+        this.lastHref = href;
 
         this.showPostInfo?.remove();
         window.POST_ID = null;
@@ -470,7 +472,7 @@ const PostCollector = {
         this.showPostInfo = GM_addElement(window.document.body, 'div', { style:'background-color: #363636; color: white; padding: 8px; border-radius: 5px; position: absolute; bottom: 5px; left: 5px; opacity: 1;'});
         this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> `;
 
-        this.lastHref = href;
+        
         window.POST_ID = id;
 
         let match = this.data.filter(p => p.id == id);
