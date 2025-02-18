@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-02-18
+// @version      2025-02-17
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -288,7 +288,7 @@ const Imgbb = {
                 },
                 onload: (response) => {
                     let res = JSON.parse(response.responseText);
-                    return res.status == 200 ? resolve(res) : reject(new Error(res.message));
+                    return res.status == 200 ? resolve(res) : reject(new Error(res.detail));
                 },
                 onerror: (e) => {
                     return reject(e);
