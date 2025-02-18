@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-02-17
+// @version      2025-02-18
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -457,8 +457,7 @@ const PostCollector = {
         this.showPostInfo?.remove();
         window.POST_ID = null;
 
-        if(!(/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(href)) return true;
-        if(!href.includes(myFbUserName)) return true;
+        if(!(/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(href) || !href.includes(myFbUserName)) return true;
 
         let dialog = Array.from(document.querySelectorAll('div[role="dialog"]')).pop(),
             url = window.location.pathname.split('/').pop(),
@@ -468,11 +467,11 @@ const PostCollector = {
 
         if(!txt || !img) return true;
 
-        this.lastHref = href;
-        window.POST_ID = id;
-
         this.showPostInfo = GM_addElement(window.document.body, 'div', { style:'background-color: #363636; color: white; padding: 8px; border-radius: 5px; position: absolute; bottom: 5px; left: 5px; opacity: 1;'});
         this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> `;
+
+        this.lastHref = href;
+        window.POST_ID = id;
 
         let match = this.data.filter(p => p.id == id);
         if(match && match.length) return;
@@ -1368,9 +1367,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     });
 
 })();
-
-
-
 
 /****
 function phone2Recievers(phone = null) {
