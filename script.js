@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-02-17
+// @version      2025-02-18
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -178,11 +178,11 @@ const viettel = {
                 data: JSON.stringify({...json, "deviceId": deviceId}),
                 onload: (response) => {
                     let res = JSON.parse(response.responseText);
-                    return res.status == 200 ? resolve(res) : reject(res.message);
+                    return res.status == 200 ? resolve(res) : reject(new Error(res.message));
                 },
                 onerror: (e) => {
                     alert(e.message || 'Lỗi viettel \nMã lỗi: #178');
-                    return reject(e.message || 'Lỗi viettelReqPost');
+                    return reject(e);
                 }
             })
         })
@@ -206,7 +206,7 @@ const viettel = {
             };
             this.postReq(url, json ).then(resolve).catch(e => {
                 alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
-                reject(e.message);
+                reject(e);
             });
         })
     },
@@ -223,12 +223,12 @@ const viettel = {
             this.postReq(url, json).then(res => {
                 if(res.error) return reject(res.message);
                 let link = res?.data?.enCryptUrl;
-                console.log(json)
+                GM_log(json)
                 return resolve(link);
 
             }).catch(e => {
-                alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
-                reject(e.message);
+                alert(e || 'Lỗi viettel \nMã lỗi: #202');
+                reject(e);
             });
         })
     }
@@ -288,10 +288,10 @@ const Imgbb = {
                 },
                 onload: (response) => {
                     let res = JSON.parse(response.responseText);
-                    return res.status == 200 ? resolve(res) : reject(res.message);
+                    return res.status == 200 ? resolve(res) : reject(new Error(res.message));
                 },
                 onerror: (e) => {
-                    return reject(e.message || 'Lỗi imgur');
+                    return reject(e);
                 }
             });
         });
@@ -379,6 +379,7 @@ const PhoneBook = {
         })
     },
 };
+PhoneBook.int();
 
 const OrdersStorage = {
     key:'storage_5',
@@ -447,52 +448,99 @@ const PostCollector = {
     start: function(){
         this.data = GM_getValue(this.key, []);
         this.lopping();
-        window.navigation.addEventListener("navigate", e => {
-            this.lopping(e.destination.url);
-        });
+        setInterval(_ => this.lopping(), 1000);
     },
-    lopping: function(url = window.location.href){
+    lopping: function(href = window.location.href){
+
+        if(href == this.lastHref) return true;
+
         this.showPostInfo?.remove();
         window.POST_ID = null;
+
+        if(!(/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(href)) return true;
+        if(!href.includes(myFbUserName)) return true;
+
+        let dialog = Array.from(document.querySelectorAll('div[role="dialog"]')).pop(),
+            url = window.location.pathname.split('/').pop(),
+            txt = dialog?.querySelector('div[data-ad-rendering-role="story_message"]')?.innerText?.replaceAll('\n',' '),
+            id = txt && window.btoa(unescape(encodeURIComponent(txt))).replaceAll(/[^\d\w]/g, '').substr(0, 20),
+            img = dialog?.querySelector('a[role="link"] img[src*="scontent"]')?.getAttribute('src');
+
+        if(!txt || !img) return true;
+
+        this.lastHref = href;
+        window.POST_ID = id;
+
+        this.showPostInfo = GM_addElement(window.document.body, 'div', { style:'background-color: #363636; color: white; padding: 8px; border-radius: 5px; position: absolute; bottom: 5px; left: 5px; opacity: 1;'});
+        this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> `;
+
+        let match = this.data.filter(p => p.id == id);
+        if(match && match.length) return;
+
+        Imgbb.upload(img, id).then(r => {
+            img = r.data.link;
+        }).catch(e => {
+            console.log(e);
+//            alert(e.message);
+        }).then(e => {
+            let values = {id, url, txt, img};
+            let entry = Object.keys(this.ggFormEntry).map(k => `entry.${this.ggFormEntry[k]}=${encodeURIComponent("\'"+values[k])}`).join('&')
+            let u = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
+            return GoogleSheet.submitForm(u);
+        }).then(_ => {
+            this.data.push({url, id, txt, img});
+            GM_setValue(this.key, this.data);
+        }).catch(e => {
+            GM_log('error', e.message)
+            alert('error' + e.message + '\nMã lỗi #0470');
+        })
+
+        /***
+        if(href == this.lastHref) return;
         if(!(/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(url)) return;
-        if(!url.includes(myFbUserName)) return;
+        if(!href.includes(myFbUserName)) return;
+
+        this.lastHref = href;
+
+        this.showPostInfo?.remove();
+        window.POST_ID = null;
 
         clearInterval(this.loop);
         this.loop = setInterval(_ => {
-            let dialog = Array.from(document.querySelectorAll('div[role="dialog"]')).pop(),
-                url = window.location.pathname.split('/').pop(),
-                txt = dialog?.querySelector('div[data-ad-rendering-role="story_message"]')?.innerText?.replaceAll('\n',' '),
-                id = txt && window.btoa(unescape(encodeURIComponent(txt))).replaceAll(/[^\d\w]/g, '').substr(0, 20),
-                img = dialog?.querySelector('a[role="link"] img[src*="scontent"]')?.getAttribute('src');
-
-            if(!txt || !img) return false;
-
-            clearInterval(this.loop);
-
-            window.POST_ID = id;
-            this.showPostInfo = GM_addElement(window.document.body, 'div', { style:'background-color: #363636; color: white; padding: 8px; border-radius: 5px; position: absolute; bottom: 5px; left: 5px; opacity: 1;'});
-            this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> `
-         //   this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> <div>Khách hàng: ${OrdersStorage.get(id).map(o => `<a href="https://fb.com/${o.user_id}" target="_blank" style="color:#fff;">${o.user_name}</a>`).join(' / ')}</div>`;
-
-            let match = this.data.filter(p => p.id == id);
-            if(match.length) return;
-            Imgbb.upload(img, id).then(r => {
-                img = r.data.link;
-          //      thumb = r.data.link;
-            }).catch(e => {
-                /** catch **/
-            }).then(e => {
-                let info = {url, id, txt, img};
-                let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
-                let u = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-                GoogleSheet.submitForm(u).then(_ => {
-                    this.data.push(info);
-                    GM_setValue(this.key, this.data);
-                }).catch(error => {
-                    alert('error' + error.message + '\nMã lỗi #0470');
-                });
-            }).catch(e => {GM_log('error', e.message)})
         }, 1000);
+
+        let dialog = Array.from(document.querySelectorAll('div[role="dialog"]')).pop(),
+            url = window.location.pathname.split('/').pop(),
+            txt = dialog?.querySelector('div[data-ad-rendering-role="story_message"]')?.innerText?.replaceAll('\n',' '),
+            id = txt && window.btoa(unescape(encodeURIComponent(txt))).replaceAll(/[^\d\w]/g, '').substr(0, 20),
+            img = dialog?.querySelector('a[role="link"] img[src*="scontent"]')?.getAttribute('src');
+
+        if(!txt || !img) return false;
+
+        clearInterval(this.loop);
+
+        window.POST_ID = id;
+        this.showPostInfo = GM_addElement(window.document.body, 'div', { style:'background-color: #363636; color: white; padding: 8px; border-radius: 5px; position: absolute; bottom: 5px; left: 5px; opacity: 1;'});
+        this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> `
+
+        let match = this.data.filter(p => p.id == id);
+        if(match.length) return;
+        Imgbb.upload(img, id).then(r => {
+            img = r.data.link;
+        }).catch(e => {
+            //catch
+        }).then(e => {
+            let info = {url, id, txt, img};
+            let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
+            let u = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
+            GoogleSheet.submitForm(u).then(_ => {
+                this.data.push(info);
+                GM_setValue(this.key, this.data);
+            }).catch(error => {
+                alert('error' + error.message + '\nMã lỗi #0470');
+            });
+        }).catch(e => {GM_log('error', e.message)})
+        **/
     },
     sync: async function(){
         return new Promise((resolve, reject) => {
@@ -679,8 +727,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 // FUNCTIONS
 (function() {
     if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
-    const $ = window.jQuery, myUserName = 'hien.trinh.5011', myDisplayName = 'Trịnh Hiền';
-    PhoneBook.int();
+    const $ = window.jQuery, myUserName = 'hien.trinh.5011', myDisplayName = 'Trịnh Hiền'
 
     class InfoCard{
         constructor(info, container){
@@ -760,6 +807,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
 
             } catch(e){
+                console.log(e)
                 this.infoList.innerHTML = `<tr style="color:orangered; text-align: center;"><td>${e.message}</td></tr>`;
             } finally{
                 this.isBusy = 0;
