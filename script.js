@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-02-18
+// @version      2025-02-20
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -451,7 +451,6 @@ const PostCollector = {
         setInterval(_ => this.lopping(), 1000);
     },
     lopping: function(href = window.location.href){
-        console.log(href)
 
         if(href == this.lastHref) return true;
         this.lastHref = href;
@@ -909,15 +908,17 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                 let itemNameList = GM_getValue('lastest_items_list', []);
                 let list = itemNameList.map((e, i) => `[${i}] ${e}`).join('\n');
-                let itn = prompt(title + '\n\nChọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + list, itemNameList[0] || '');
-                if (itn == null || itn == undefined) return false;
+                let input = prompt(title + '\n\nChọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + list, itemNameList[0] || '');
+                if (input == null || input == undefined) return false;
 
-                itn = itemNameList[itn] || itn
-                itemNameList.unshift(itn);
+                let itemName = itemNameList[input] || input
+                itemNameList.unshift(itemName);
+                //unique
                 itemNameList = itemNameList.filter((value, index, array) => array.indexOf(value) === index );
                 GM_setValue('lastest_items_list', itemNameList.slice(0, 10));
 
-                orderInfo.prdName = itn + ' - \(' + prices_str + '\)';
+                orderInfo.prdName = `${itemName} - (${prices_str.replaceAll(' ', ' + ')})`;
+                //orderInfo.prdName = itemName + ' - \(' + prices_str.replaceAll(' ', ' + ') + '\)';
                 orderInfo.price = (price*1000);
 
                 url += btoa(unescape(encodeURIComponent(JSON.stringify(orderInfo))));
@@ -1131,7 +1132,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 (function($) {
     if(window.location.origin != 'https://viettelpost.vn') return !1;
 
-
     GM_addStyle(`/* ViettelPost custom css */
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
     body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
@@ -1145,12 +1145,15 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
 
     /* ViettelPost custom css */`);
+
 //  .cdk-overlay-pane{position: fixed !important; left: var(--left-value) !important;}
     let i = window.localStorage.deviceId;
     let t = i && JSON.parse(window.localStorage['vtp-token']).tokenKey;
     GM_setValue('vtp_deviceId', i);
     GM_setValue('vtp_tokenKey', t);
 
+
+    /****
     function total_price_func(e){
         let value = e.target.value;
         let match = (value).match((/\((\d+\s*)+\)/));
@@ -1168,11 +1171,44 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     }
 
     //$(document).off('click', '#productName', total_price_func);
-    $(document).on('change', '#productName', total_price_func)
+    //$(document).on('change', '#productName', total_price_func)
+    *****/
+
+
 
     $(document).ready( async function(){
 
         await new Promise(resolve => { setTimeout(resolve, 1000)});
+
+        function updateCOD(callback){
+            try{
+                //let price = parseInt(window.document.querySelector('input#productPrice').value.replaceAll('.', '') || 0);
+                let price = (window.eval(window.document.querySelector('input#productName').value?.match(/\(.*\)/g)?.shift()?.replaceAll(/\D+/g, '+')) || 0) * 1000
+                let fee = parseInt(window.document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
+                if(!price || !fee) return false;
+
+                let input = window.document.querySelector('input#cod'),
+                    p = parseInt(price),
+                    f = parseInt(fee),
+                    tax = (p+f)/100*1.5;
+
+                input.value = p + f + tax;
+                input.dispatchEvent(customEvent('input'));
+                input.dispatchEvent(customEvent('change'));
+
+                let n = window.document.querySelector('.box-product-info + div .ng-star-inserted .custom-switch input#switch1');
+                n.checked = true;
+                n.dispatchEvent(customEvent('change'));
+
+                return callback();
+            } catch(e){
+                console.log(e)
+                return false;
+            }
+        }
+
+        $(document).on('change click', 'input#productName', updateCOD);
+        //$(document).on('change click', 'input#productPrice', updateCOD);
 
         if(window.location.pathname != '/order/tao-don-le') return !1;
         const urlParams = new URLSearchParams(window.location.search);
@@ -1206,30 +1242,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             }
         });
 
-        function updateCOD(callback){
-            try{
-                let price = parseInt(window.document.querySelector('input#productPrice').value.replaceAll('.', '') || 0);
-                let fee = parseInt(window.document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
-                if(!price || !fee) return false;
 
-                let input = window.document.querySelector('input#cod'),
-                    p = parseInt(price),
-                    f = parseInt(fee)
-                input.value = p + f;
-                input.dispatchEvent(customEvent('input'));
-                input.dispatchEvent(customEvent('change'));
-
-                let n = window.document.querySelector('.box-product-info + div .ng-star-inserted .custom-switch input#switch1');
-                n.checked = true;
-                n.dispatchEvent(customEvent('change'));
-
-                return callback();
-            } catch(e){
-                return false;
-            }
-        }
-
-        $(document).on('change click', 'input#productPrice', updateCOD);
 
         $(document).keyup(function(e) {
             if (e.key === "Escape") { // escape key maps to keycode `27`
