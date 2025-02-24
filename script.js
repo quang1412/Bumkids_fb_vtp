@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-02-21
+// @version      2025-02-24
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -1095,6 +1095,8 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
             });
         });
+
+
     });
 })();
 
@@ -1416,27 +1418,29 @@ function phone2Recievers(phone = null) {
 ***/
 
 
-/**
-(function(){
-	 
+/** BOOKMARK LET
+(function() {
+    if (window.intervvv) {
+        clearInterval(window.intervvv);
+        window.intervvv = null;
+        return false;
+    };
 
-	if(window.intervvv){
-    clearInterval(window.intervvv);
-		window.intervvv = null;
-    return false;
-	};
-
-  window.intervvv = setInterval(_ => {
-		let objDiv = document.querySelector('div[aria-label="Messenger"] div[aria-label="Đoạn chat"] div.__fb-dark-mode');
-		if(window.intervvv){
-			if(!objDiv) {
-				let messbtn = document.querySelector('div[aria-label="Messenger"]');
-				messbtn?.click();	
-//				return clearInterval(window.intervvv);
-			}
-			objDiv.scrollTop = objDiv.scrollHeight;
-		} else {
-			objDiv.scrollTop = 0;
-		}
-	}, 1000)	
+    window.intervvv = setInterval(_ => {
+        let objDiv = document.querySelector('div[aria-label="Messenger"] div[aria-label="Đoạn chat"] div.__fb-dark-mode');
+        if (!objDiv) document.querySelector('div[aria-label^="Messenger"][role="button"]')?.click();
+        else {
+            Array.from(objDiv.querySelectorAll('a[href^="/messages"][role="link"]:not(.checked)')).map(e => {
+                e.classList.add('checked');
+                //abbr
+                let name = e.querySelector('span')?.innerText;
+                let href = e.getAttribute('href');
+                let time = e.querySelector('abbr')?.innerText;
+                console.log(name, ' - ', time, 'https://fb.com'+href);
+            })
+            objDiv.scrollTop = objDiv.scrollHeight;
+        }
+    }, 1000)
 })()
+
+**/
