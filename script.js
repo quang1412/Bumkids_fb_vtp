@@ -1186,7 +1186,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         function updateCOD(){
             try{
                 let price = Number(window.document.querySelector('input#productPrice').value || 0);
-                let fee = Number(window.document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
+                //let fee = Number(window.document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ ₫ \s]/g,'') || 0);
+                let fee = Number(window.document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').innerText.replaceAll(/\D/g,'') || 0);
 
                 if(!fee) return false; //throw new Error('chưa có phí ship, thử cập nhật địa chỉ nhận hàng!');
 
@@ -1211,7 +1212,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         }
 
         $(document).on('change', 'input#productName', function(){
-            let price = (window.eval(this.value?.match(/\(.*\)/g)?.shift().replaceAll(/[\(\)]/g,'').trim().replaceAll(/\s+/g, " + ")) || 0) * 1000;
+            let price = (window.eval(this.value?.match(/\(.*\)/g)?.shift()?.replaceAll(/[\(\)]/g, '').trim().replaceAll(/\s+/g, " + ")) || 0) * 1000;
             let productPrice_input = window.document.querySelector('input#productPrice');
 
             productPrice_input.value = price;
@@ -1344,7 +1345,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         let iv = setInterval(function(){
             //return
-            updateCOD(function(){ clearInterval(iv) });
+            updateCOD();
         }, 500);
     });
 
