@@ -1185,8 +1185,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         function updateCOD(){
             try{
-                let price = (window.document.querySelector('input#productPrice').value || 0);
-                let fee = parseInt(window.document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
+                let price = Number(window.document.querySelector('input#productPrice').value || 0);
+                let fee = Number(window.document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ \s]/g,'') || 0);
 
                 if(!fee) return false; //throw new Error('chưa có phí ship, thử cập nhật địa chỉ nhận hàng!');
 
@@ -1195,13 +1195,11 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                 let cod_input = window.document.querySelector('input#cod'),
                     cod_checkbox = window.document.querySelector('#mat-checkbox-4-input'),
-                    p = Number(price),
-                    f = Number(fee),
-                    tax = Number((p+f)/100*1.5);
+                    tax = Number((price+fee)/100*1.5);
 
                 cod_checkbox?.checked && cod_checkbox?.click();
 
-                cod_input.value = Math.round(p + f + tax);
+                cod_input.value = Math.round(price + fee + tax);
                 cod_input.dispatchEvent(customEvent('input'));
                 cod_input.dispatchEvent(customEvent('change'));
 
@@ -1213,7 +1211,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         }
 
         $(document).on('change', 'input#productName', function(){
-            let price = (window.eval(this.value?.match(/\(.*\)/g)?.shift().replaceAll(/\s+/g, " + ")) || 0) * 1000;
+            let price = (window.eval(this.value?.match(/\(.*\)/g)?.shift().replaceAll(/[\(\)]/g,'').trim().replaceAll(/\s+/g, " + ")) || 0) * 1000;
             let productPrice_input = window.document.querySelector('input#productPrice');
 
             productPrice_input.value = price;
