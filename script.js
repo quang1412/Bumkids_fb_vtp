@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-02-25
+// @version      2025-02-26
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -964,7 +964,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
         let profiles = window.document.querySelectorAll(`
           div[role="main"][aria-label^="Cuộc trò chuyện với "] > div > div > div > div:first-child a[role="link"][href]:not(.checked, [aria-label]),
-          div:not([hidden]) > div[style*="chat-composer"] a[role="link"][href^="/"][aria-label]:not(.checked)
+          div:not([hidden]) > div[style*="chat-composer"] a[role="link"][href^="/"][aria-label]:not(.checked, [aria-label="Mở ảnh"])
         `);
 
         for(let i = 0; i < profiles.length; i++){
@@ -1295,7 +1295,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         });
 
          window.onbeforeunload = function(e) {
-            //e.preventDefault();
             window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
         };
 
@@ -1343,8 +1342,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         phoneNoInput.click();
         phoneNoInput.focus();
 
-        let iv = setInterval(function(){
-            //return
+        setInterval(function(){
             updateCOD();
         }, 500);
     });
