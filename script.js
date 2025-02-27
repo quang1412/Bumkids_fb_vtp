@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-02-26
+// @version      2025-02-27
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -1186,7 +1186,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         function updateCOD(){
             try{
                 let price = Number(window.document.querySelector('input#productPrice').value || 0);
-                //let fee = Number(window.document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').textContent.replaceAll(/[\. đ ₫ \s]/g,'') || 0);
                 let fee = Number(window.document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').innerText.replaceAll(/\D/g,'') || 0);
 
                 if(!fee) return false; //throw new Error('chưa có phí ship, thử cập nhật địa chỉ nhận hàng!');
