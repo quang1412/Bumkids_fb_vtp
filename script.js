@@ -851,9 +851,15 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                         this.phoneScanning();
                         window.prompt('Tìm sdt của '+ this.name, text1);
 
+                        /**
                         row.style.border = '1px solid red';
                         row.style['border-radius'] = '5px';
                         row.style.overflow = 'hidden';
+                         **/
+
+                        row.style['font-weight'] = 600;
+                        row.style['text-decoration'] = 'underline';
+                        row.style['color'] = 'lawngreen';
 
                         let iiiiii = setInterval(_ => row.scrollIntoView( {block: "center", inline: "nearest"}) , 200);
                         document.body.addEventListener("click", _ => clearInterval(iiiiii), {once : true});
