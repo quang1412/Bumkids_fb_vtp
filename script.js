@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-03-04
+// @version      2025-03-05
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -769,7 +769,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         async refreshInfo(){
             if(this.isBusy) return;
             this.isBusy = 1;
-            let i = {rate: 'Chưa có', total: 0, pending: 0, draft: 0, preOrder: 0, totalCOD: 0};
+            let i = {total: 0, pending: 0, draft: 0, preOrder: 0, totalCOD: 0};
             this.infoList.innerHTML = '</tr><tr><td style=" ">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
             this.card.classList.add('refreshing');
             try{
@@ -791,18 +791,18 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 <tr>
                   <td>SĐT: </td> <td>${this.phone}</td>
                 </tr>
-                <tr style="display:none;">
-                  <td>Uy tín: </td> <td>${i.rate}</td>
+                <tr>
+                  <td>Địa chỉ: </td> <td>${'---'}</td>
                 </tr>
                 <tr>
-                  <td>Đơn giữ: </td>
-                  <td><a href="${vtlink}" target="_blank" style="color: ${this.holdedOrders?'red':'inherit'}">${i.pending} chờ • ${i.draft} nháp</a></td>
-                </tr>
-                <tr>
-                  <td>Tổng COD: </td> <td>${i.total} đơn • ${i.totalCOD}</td>
+                  <td>Đơn hàng: </td>
+                  <td><a href="${vtlink}" target="_blank" style="color: ${this.holdedOrders?'red':'inherit'}">${i.total} đơn (${i.pending} chờ • ${i.draft} nháp)</a></td>
                 </tr>
                 <tr>
                   <td>Đặt trước: </td> <td>${this.preOrders.length}</td>
+                </tr>
+                <tr>
+                  <td>Tags: </td> <td>${'---'}</td>
                 </tr>`;
 
 
@@ -1091,6 +1091,13 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
     });
 })();
 
+
+(function($){
+    window.jQuery(window).on('hashchange', function(e){
+        alert(e);
+    });
+
+})($ || window.jQuery);
 /***
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
