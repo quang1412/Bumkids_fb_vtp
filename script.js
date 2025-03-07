@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-03-05
+// @version      2025-03-07
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -471,7 +471,7 @@ const PostCollector = {
         this.showPostInfo = GM_addElement(window.document.body, 'div', { style:'background-color: #363636; color: white; padding: 8px; border-radius: 5px; position: absolute; bottom: 5px; left: 5px; opacity: 1;'});
         this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> `;
 
-        
+
         window.POST_ID = id;
 
         let match = this.data.filter(p => p.id == id);
@@ -555,14 +555,17 @@ const PostCollector = {
         })
     },
 };
-PostCollector.start();
+//PostCollector.start();
 
-GM_registerMenuCommand("Đồng bộ Google!", _ => {
-    PostCollector.sync()
-        .then(_ => PhoneBook.sync())
-        .then(_ => OrdersStorage.sync())
-        .then(_ => (confirm('Đã đồng bộ xong, bạn có muốn tải lại trang?')) && window.location.reload())
-        .catch(e => {alert(e.message)});
+GM_registerMenuCommand("Đồng bộ Google!", async _ => {
+   try{
+      await PostCollector.sync();
+       await OrdersStorage.sync();
+       await PhoneBook.sync();
+       confirm('Đã đồng bộ xong, bạn có muốn tải lại trang?') && window.location.reload();
+   } catch(e){
+       alert('Lỗi đồng bộ:/n' + e?.message);
+   }
 });
 
 /***
@@ -854,7 +857,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                         row.style['border-radius'] = '5px';
                         row.style.overflow = 'hidden';
 
-                        window.prompt('Tìm sdt của '+ this.name, text1);
+                        //window.prompt('Tìm sdt của '+ this.name, text1);
 
                         let iiiiii = setInterval(_ => row.scrollIntoView( {block: "center", inline: "nearest"}) , 200);
                         document.body.addEventListener("click", _ => clearInterval(iiiiii), {once : true});
@@ -1093,11 +1096,9 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
 
 (function($){
-    window.jQuery(window).on('hashchange', function(e){
-        alert(e);
-    });
 
-})($ || window.jQuery);
+
+})();
 /***
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
