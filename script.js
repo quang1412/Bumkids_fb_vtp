@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-03-07
+// @version      2025-03-08
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -1095,7 +1095,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 })();
 
 
-(function($){
+(function(){
 
 
 })();
