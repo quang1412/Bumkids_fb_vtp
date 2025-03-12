@@ -820,50 +820,45 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             }
         }
         async phoneScanning(){
-            let txt = ["Tìm sđt", "Dừng"];
-
-            if(this.scanLoop){
-                clearInterval(this.scanLoop);
-                this.scanLoop = null;
-                this.searchBtn.innerText = txt[0];
+            if(this.looping_1){
+                clearInterval(this.looping_1);
+                this.looping_1 = null;
+                this.searchBtn.innerText = "Tìm sđt";
                 return;
             }
-            this.searchBtn.innerText = txt[1];
+            this.searchBtn.innerText = "Dừng";
 
-            let scanTimeout;
-            this.scanLoop = setInterval(() => {
-                this.container.querySelectorAll('div').forEach(d => { d.scrollTop = 0 });
-                let rows = this.container.querySelectorAll('div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"] div[role="presentation"] span[dir="auto"]:not(:empty, .scanned)');
-                //let rows = this.container.querySelectorAll('div:is(.__fb-dark-mode, .__fb-light-mode)[role="row"] div[role="presentation"] span:not(.scanned)');
+            let count = 0;
+            this.looping_1 = setInterval(() => {
+                this.container.querySelector('div[role="grid"] > div > div').scroll({ top: 0, behavior: 'smooth' });
+                let rows = this.container.querySelectorAll('div[role="gridcell"] div[role="presentation"] span[dir="auto"] > div:not(.scanned)');
 
-                if(rows.length){
-                    scanTimeout && clearTimeout(scanTimeout);
-                    scanTimeout = null
-                } else if(!rows.length && !scanTimeout){
-                    scanTimeout = setTimeout(_ => this.phoneScanning(), 5000);
-                }
+                count = rows.length ? 0 : count + 1;
+                count == 10 && this.phoneScanning();
 
-                for (let i = (rows.length - 1); i >= 0; i--) {
+                for (let i = (rows.length - 1); i >= 0; i --) {
                     let row = rows[i];
-                    let text1 = row.innerText;
-                    let text = text1.replaceAll(/(\.|\,|\-|\s)/g, '');
-                    //GM_log(text1)
-                    let match = text.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
-
                     row.classList.add('scanned');
+
+                    let text = row.innerText;
+                    let t = text.replaceAll(/[\D\W]/g, '');
+                    let match = t.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
+
 
                     if(match && !~match.indexOf(myPhone)){
                         this.phoneScanning();
 
-                        row.style.border = '2px dashed red';
-                        row.style['border-radius'] = '5px';
-                        row.style.overflow = 'hidden';
+                        let d = row.closest('div[role="presentation"]');
+                        d.style.border = '1.5px dashed';
+                        //d.style['border-radius'] = '5px';
 
-                        //window.prompt('Tìm sdt của '+ this.name, text1);
+                        //window.prompt('Tìm sdt của '+ this.name, text);
 
-                        let iiiiii = setInterval(_ => row.scrollIntoView( {block: "center", inline: "nearest"}) , 200);
-                        document.body.addEventListener("click", _ => clearInterval(iiiiii), {once : true});
-                        setTimeout(_ => clearInterval(iiiiii), 10000);
+                        let view = _ => row.scrollIntoView({block: "center", inline: "nearest", behavior: 'smooth'});
+                        view();
+                        let stuck = setInterval(view , 500);
+                        document.body.addEventListener("click", _ => clearInterval(stuck), {once : true});
+                        setTimeout(_ => clearInterval(stuck), 10000);
 
                         break;
                     }
