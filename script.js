@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-03-08
+// @version      2025-03-12
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -732,6 +732,9 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
     if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
     const $ = window.jQuery, myUserName = 'hien.trinh.5011', myDisplayName = 'Trịnh Hiền'
 
+    GM_addStyle(`div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}`);
+    GM_addStyle(`div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}`);
+
     class InfoCard{
         constructor(info, container){
             this.container = container;
@@ -747,7 +750,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 this.card.classList.add('bottom');
             }
 
-            this.infoList = GM_addElement(this.card, 'table', { style: 'padding-bottom: 5px;' });
+            this.infoList = GM_addElement(this.card, 'table', { style: 'padding-bottom: 5px; color:white;' });
             let toolBar = GM_addElement(this.card, 'div', { class: 'toolBar' });
 
             this.searchBtn = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
@@ -795,11 +798,10 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                   <td>SĐT: </td> <td>${this.phone}</td>
                 </tr>
                 <tr>
-                  <td>Địa chỉ: </td> <td>${'---'}</td>
-                </tr>
-                <tr>
                   <td>Đơn hàng: </td>
-                  <td><a href="${vtlink}" target="_blank" style="color: ${this.holdedOrders?'red':'inherit'}">${i.total} đơn (${i.pending} chờ • ${i.draft} nháp)</a></td>
+                  <td><a href="${vtlink}" target="_blank" style="color:inherit; text-decoration: underline;">${i.total} đơn&nbsp
+                     ${i.pending ? `<span style="color:coral"> • có đơn chờ giao</span>` : i.draft ? `<span style="color:yellow"> • có đơn nháp</span>` : ''}
+                  </a></td>
                 </tr>
                 <tr>
                   <td>Đặt trước: </td> <td>${this.preOrders.length}</td>
