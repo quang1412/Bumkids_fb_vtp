@@ -481,7 +481,6 @@ const PostCollector = {
             img = r.data.link;
         }).catch(e => {
             console.log(e);
-//            alert(e.message);
         }).then(e => {
             let values = {id, url, txt, img};
             let entry = Object.keys(this.ggFormEntry).map(k => `entry.${this.ggFormEntry[k]}=${encodeURIComponent("\'"+values[k])}`).join('&')
@@ -493,54 +492,7 @@ const PostCollector = {
         }).catch(e => {
             GM_log('error', e.message)
             alert('error' + e.message + '\nMã lỗi #0470');
-        })
-
-        /***
-        if(href == this.lastHref) return;
-        if(!(/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(url)) return;
-        if(!href.includes(myFbUserName)) return;
-
-        this.lastHref = href;
-
-        this.showPostInfo?.remove();
-        window.POST_ID = null;
-
-        clearInterval(this.loop);
-        this.loop = setInterval(_ => {
-        }, 1000);
-
-        let dialog = Array.from(document.querySelectorAll('div[role="dialog"]')).pop(),
-            url = window.location.pathname.split('/').pop(),
-            txt = dialog?.querySelector('div[data-ad-rendering-role="story_message"]')?.innerText?.replaceAll('\n',' '),
-            id = txt && window.btoa(unescape(encodeURIComponent(txt))).replaceAll(/[^\d\w]/g, '').substr(0, 20),
-            img = dialog?.querySelector('a[role="link"] img[src*="scontent"]')?.getAttribute('src');
-
-        if(!txt || !img) return false;
-
-        clearInterval(this.loop);
-
-        window.POST_ID = id;
-        this.showPostInfo = GM_addElement(window.document.body, 'div', { style:'background-color: #363636; color: white; padding: 8px; border-radius: 5px; position: absolute; bottom: 5px; left: 5px; opacity: 1;'});
-        this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> `
-
-        let match = this.data.filter(p => p.id == id);
-        if(match.length) return;
-        Imgbb.upload(img, id).then(r => {
-            img = r.data.link;
-        }).catch(e => {
-            //catch
-        }).then(e => {
-            let info = {url, id, txt, img};
-            let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
-            let u = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-            GoogleSheet.submitForm(u).then(_ => {
-                this.data.push(info);
-                GM_setValue(this.key, this.data);
-            }).catch(error => {
-                alert('error' + error.message + '\nMã lỗi #0470');
-            });
-        }).catch(e => {GM_log('error', e.message)})
-        **/
+        });
     },
     sync: async function(){
         return new Promise((resolve, reject) => {
@@ -558,14 +510,14 @@ const PostCollector = {
 //PostCollector.start();
 
 GM_registerMenuCommand("Đồng bộ Google!", async _ => {
-   try{
-      await PostCollector.sync();
-       await OrdersStorage.sync();
-       await PhoneBook.sync();
-       confirm('Đã đồng bộ xong, bạn có muốn tải lại trang?') && window.location.reload();
-   } catch(e){
-       alert('Lỗi đồng bộ:/n' + e?.message);
-   }
+    try{
+        //await PostCollector.sync();
+        await OrdersStorage.sync();
+        await PhoneBook.sync();
+        confirm('Đã đồng bộ xong, bạn có muốn tải lại trang?') && window.location.reload();
+    } catch(e){
+        alert('Lỗi đồng bộ:/n' + e?.message);
+    }
 });
 
 /***
