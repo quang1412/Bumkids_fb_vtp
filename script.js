@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-03-12
+// @version      2025-03-13
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -843,7 +843,6 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                     let text = row.innerText;
                     let t = text.replaceAll(/[\D\W]/g, '');
                     let match = t.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
-
 
                     if(match && !~match.indexOf(myPhone)){
                         this.phoneScanning();
