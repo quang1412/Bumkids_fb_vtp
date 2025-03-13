@@ -794,14 +794,13 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                     let text = row.innerText;
                     let t = text.replaceAll(/[\D\W]/g, '');
-                    let match = t.match(/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})/g);
+                    let match = t.match(/(03|05|07|08|09)+([0-9]{8})/g);
 
                     if(match && !~match.indexOf(myPhone)){
                         this.phoneScanning();
 
                         let d = row.closest('div[role="presentation"]');
-                        d.style.border = '1.5px dashed';
-                        //d.style['border-radius'] = '5px';
+                        d.style.border = '2px dashed red';
 
                         //window.prompt('Tìm sdt của '+ this.name, text);
 
