@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-03-13.1
+// @version      2025-03-14
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -806,7 +806,10 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                         //window.prompt('Tìm sdt của '+ this.name, text);
 
-                        let view = _ => row.scrollIntoView({block: "center", inline: "nearest", behavior: 'smooth'});
+                        let view = _ => {
+                            row.scrollIntoView({block: "center", inline: "nearest", behavior: 'smooth'});
+                            row.closest('div[role="gridcell"]')?.focus();
+                        };
                         view();
                         let stuck = setInterval(view , 500);
                         document.body.addEventListener("click", _ => clearInterval(stuck), {once : true});
