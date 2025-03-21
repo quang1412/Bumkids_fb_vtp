@@ -776,7 +776,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 clearInterval(this.looping_1);
                 this.looping_1 = null;
                 this.searchBtn.innerText = "Tìm sđt";
-                return;
+                return false;
             }
             this.searchBtn.innerText = "Dừng";
 
@@ -809,6 +809,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                         let view = _ => {
                             row.scrollIntoView({block: "center", inline: "nearest", behavior: 'smooth'});
                             row.closest('div[role="gridcell"]')?.focus();
+
                         };
                         view();
                         let stuck = setInterval(view , 500);
@@ -940,6 +941,8 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             btn.scrollIntoView(false);
         }, 1000);
     }
+
+    GM_addStyle(`div[aria-label="Đoạn chat"] a[href*="/messages/"]::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 5px;  color: initial;  opacity: 0.5; }`);
 })();
 
 (function(){
