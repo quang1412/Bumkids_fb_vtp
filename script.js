@@ -798,7 +798,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                     let p = match?.pop();
                     if(p && p != myPhone){
                         this.phoneScanning();
-
+                        row.click();
                         let d = row.closest('div[role="presentation"]');
                         d.style.border = '2px dashed red';
                         d.style['border-color'] = (p == this.phone ? 'cyan' : 'red');
@@ -808,8 +808,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                         let view = _ => {
                             row.scrollIntoView({block: "center", inline: "nearest", behavior: 'smooth'});
-                            row.closest('div[role="gridcell"]')?.focus();
-
+                            row.closest('div[role="gridcell"]')?.focus()
                         };
                         view();
                         let stuck = setInterval(view , 500);
