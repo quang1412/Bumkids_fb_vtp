@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-03-14
+// @version      2025-03-21
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -776,7 +776,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 clearInterval(this.looping_1);
                 this.looping_1 = null;
                 this.searchBtn.innerText = "Tìm sđt";
-                return;
+                return false;
             }
             this.searchBtn.innerText = "Dừng";
 
@@ -786,7 +786,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 let rows = this.container.querySelectorAll('div[role="gridcell"] div[role="presentation"] span[dir="auto"] > div:not(.scanned)');
 
                 count = rows.length ? 0 : count + 1;
-                count == 10 && this.phoneScanning();
+                if(count == 10) return this.phoneScanning();
 
                 for (let i = (rows.length - 1); i >= 0; i --) {
                     let row = rows[i];
@@ -809,6 +809,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                         let view = _ => {
                             row.scrollIntoView({block: "center", inline: "nearest", behavior: 'smooth'});
                             row.closest('div[role="gridcell"]')?.focus();
+
                         };
                         view();
                         let stuck = setInterval(view , 500);
@@ -940,6 +941,8 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             btn.scrollIntoView(false);
         }, 1000);
     }
+
+    GM_addStyle(`div[aria-label="Đoạn chat"] a[href*="/messages/"]::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 5px;  color: initial;  opacity: 0.5; }`);
 })();
 
 (function(){
