@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-03-21
+// @version      2025-03-22
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -806,14 +806,16 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                         //window.prompt('Tìm sdt của '+ this.name, text);
 
-                        let view = _ => {
+
+                        let func1 = function(){
                             row.scrollIntoView({block: "center", inline: "nearest", behavior: 'smooth'});
                             row.closest('div[role="gridcell"]')?.focus()
                         };
-                        view();
-                        let stuck = setInterval(view , 500);
-                        document.body.addEventListener("click", _ => clearInterval(stuck), {once : true});
-                        setTimeout(_ => clearInterval(stuck), 10000);
+                        func1();
+                        let interv = setInterval(func1 , 200);
+                        document.body.addEventListener("click", _ => clearInterval(interv), {once : true});
+                        //row.addEventListener("click", _ => window.prompt('Thông tin của '+ this.name, text), {once : true});
+                        setTimeout(_ => clearInterval(interv), 5000);
 
                         break;
                     }
@@ -941,7 +943,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         }, 1000);
     }
 
-    GM_addStyle(`div[aria-label="Đoạn chat"] a[href*="/messages/"]::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 5px;  color: initial;  opacity: 0.5; }`);
+    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a:is([href*="/t/"], [href*="/messages/"])::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 10px;  color: initial;  opacity: 0.5; }`);
 })();
 
 (function(){
@@ -1278,7 +1280,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         pr.value = price;
 
         let pw = window.document.querySelector('input#productWeight');
-        pw.value = 500;
+        pw.value = 1000;
 
         let odn = window.document.querySelector('input#orderNo');
         let d = new Date();
