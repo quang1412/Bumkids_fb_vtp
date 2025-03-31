@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-03-22
+// @version      2025-03-31
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -696,6 +696,9 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             this.user = PhoneBook.get(this.id)?.pop();
             this.phone = this.user?.phone;
             this.preOrders = 0;
+            this.e2ee = null;
+
+            this.e2ee = window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : null;
 
             this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.id });
             if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') {
@@ -756,7 +759,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                   </a></td>
                 </tr>
                 <tr>
-                  <td>Đặt trước: </td> <td>${this.preOrders.length}</td>
+                  <td>e2ee: </td> <td>${this.e2ee}</td>
                 </tr>
                 <tr>
                   <td>Tags: </td> <td>${'---'}</td>
@@ -944,6 +947,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
     }
 
     GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a:is([href*="/t/"], [href*="/messages/"])::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 10px;  color: initial;  opacity: 0.5; }`);
+    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a[href*="/e2ee/"]::before {color:red;}`);
 })();
 
 (function(){
@@ -1052,6 +1056,19 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
 
 (function(){
+    // keyboard shortcuts
+
+    window.addEventListener("keydown",function (e) {
+        if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70 && e.shiftKey)){
+//        if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)){
+            let messSearchFields = document.querySelectorAll('input[type="search"][aria-label="Tìm kiếm trên Messenger"][placeholder="Tìm kiếm trên Messenger"], div[style*="translateX(0%)"] input[type="text"][aria-label="Tìm kiếm"][placeholder="Tìm kiếm"]');
+            let messSearchField = [...messSearchFields].pop();
+            if(!messSearchField) return true;
+            e.preventDefault();
+            messSearchField.focus();
+            messSearchField.select();
+        }
+    })
 
 
 })();
