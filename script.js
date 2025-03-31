@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-03-31
+// @version      2025-03-31.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -256,7 +256,6 @@ function getFormatedDate(i = 0) {
     const formattedToday = dd + '/' + mm + '/' + yyyy;
     return formattedToday;
 }
-
 function makeid(length = 12) {
     let result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -690,17 +689,12 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
     class InfoCard{
         constructor(info, container){
             this.container = container;
-            this.id = info.id;
-            this.name = info.name;
-            this.img = info.img;
-            this.user = PhoneBook.get(this.id)?.pop();
-            this.phone = this.user?.phone;
+            this.data = {...PhoneBook.get(info.id)?.pop(), ...info};
+
             this.preOrders = 0;
-            this.e2ee = null;
+            this.data.e2ee = window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : null;
 
-            this.e2ee = window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : null;
-
-            this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.id });
+            this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.data.id });
             if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') {
                 this.card.classList.add('bottom');
             }
@@ -734,10 +728,8 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             this.infoList.innerHTML = '</tr><tr><td style=" ">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
             this.card.classList.add('refreshing');
             try{
-                //GM_log(this.phone);
-                this.preOrders = OrdersStorage.get(this.id);
-
-                let orderList = await viettel.getListOrders(this.phone);
+                this.preOrders = OrdersStorage.get(this.data.id);
+                let orderList = await viettel.getListOrders(this.data.phone);
                 if(orderList.error) throw new Error('Viettel: ' + orderList.message);
                 let list = orderList.data.data.LIST_ORDER;
                 i.total = orderList.data.data.TOTAL;
@@ -746,11 +738,11 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 i.draft = list.filter(function(o){ return (o.ORDER_STATUS == -100) }).length;
                 this.holdedOrders = (i.draft + i.pending);
 
-                let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.phone);
+                let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.data.phone);
                 this.infoList.innerHTML = `
-                <tr style="display:none;"><td>ID:</td> <td>${this.id}</td></tr>
+                <tr style="display:none;"><td>ID:</td> <td>${this.data.id}</td></tr>
                 <tr>
-                  <td>SĐT: </td> <td>${this.phone}</td>
+                  <td>SĐT: </td> <td>${this.data.phone}</td>
                 </tr>
                 <tr>
                   <td>Đơn hàng: </td>
@@ -759,7 +751,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                   </a></td>
                 </tr>
                 <tr>
-                  <td>e2ee: </td> <td>${this.e2ee}</td>
+                  <td>e2ee: </td> <td>${this.data.e2ee}</td>
                 </tr>
                 <tr>
                   <td>Tags: </td> <td>${'---'}</td>
@@ -804,10 +796,10 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                         //row.click();
                         let d = row.closest('div[role="presentation"]');
                         d.style.border = '2px dashed red';
-                        d.style['border-color'] = (p == this.phone ? 'cyan' : 'red');
+                        d.style['border-color'] = (p == this.data.phone ? 'cyan' : 'red');
                         console.log(t, p);
 
-                        //window.prompt('Tìm sdt của '+ this.name, text);
+                        //window.prompt('Tìm sdt của '+ this.data.name, text);
 
 
                         let func1 = function(){
@@ -817,7 +809,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                         func1();
                         let interv = setInterval(func1 , 200);
                         document.body.addEventListener("click", _ => clearInterval(interv), {once : true});
-                        //row.addEventListener("click", _ => window.prompt('Thông tin của '+ this.name, text), {once : true});
+                        //row.addEventListener("click", _ => window.prompt('Thông tin của '+ this.data.name, text), {once : true});
                         setTimeout(_ => clearInterval(interv), 5000);
 
                         break;
@@ -826,24 +818,22 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
             }, 500);
         }
-        async setPhone(phone = window.prompt("Nhập sđt cho " + this.name, this.phone)){
-            if(phone == null || phone == '' || !isVNPhone(phone)) return;
-            this.phone = phone;
-            let info = {id: this.id, phone: this.phone.toString(), name:this.name, img:this.img}
+        async setPhone(phone = window.prompt("Nhập sđt cho " + this.data.name, this.data.phone)){
+            if(phone == null || phone == '' || !isVNPhone(phone) || phone == this.data.phone) return;
+            this.data.phone = phone;
+            let info = {id: this.data.id, phone: this.data.phone.toString(), name:this.data.name, img:this.data.img};
             PhoneBook.set(info);
-            //let data = {uid: this.id, phone:phone, name:this.name, tag:'tags'}
-            //Customers.set(data)
             this.refreshInfo();
         }
         createOrder(){
             try{
-                if(!this.phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
+                if(!this.data.phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
                 if(this.holdedOrders) throw new Error('❌ Có đơn chờ giao');
 
-                let title = 'Tạo đơn hàng cho ' + this.name;
+                let title = 'Tạo đơn hàng cho ' + this.data.name;
                 let url = 'https://viettelpost.vn/order/tao-don-le?i=';
 
-                let orderInfo = { fbid: this.id, phone: this.phone, name: this.name };
+                let orderInfo = { fbid: this.data.id, phone: this.data.phone, name: this.data.name };
 
                 /**
                 if(this.preOrders.length){
@@ -876,7 +866,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                 window.popupWindow?.focus();
                 window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
-                window.addEventListener('message', (ev) => { ev.data.fbid === this.id && this.refreshInfo() });
+                window.addEventListener('message', (ev) => { ev.data.fbid === this.data.id && this.refreshInfo() });
 
                 GM_setValue('lastest_prices', prices_str);
                 //GM_setValue('lastest_order_name', itn);
@@ -900,9 +890,9 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             this.container.onmouseup = _ => {
                 if(!window.getSelection) return;
                 let phone = window.getSelection().toString().replaceAll(/\D/g,'');
-                if(!isVNPhone(phone) || phone == this.phone || phone == myPhone){
+                if(!isVNPhone(phone) || phone == this.data.phone || phone == myPhone){
                     return false;
-                } else if(!this.phone || window.confirm(`Xác nhận đổi số đt cho ${this.name} thành ${phone}?`)){
+                } else if(!this.data.phone || window.confirm(`Xác nhận đổi số đt cho ${this.data.name} thành ${phone}?`)){
                     this.setPhone(phone);
                 }
             }
