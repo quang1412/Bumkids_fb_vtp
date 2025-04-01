@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-03-31.1
+// @version      2025-04-01
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -831,17 +831,10 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 if(this.holdedOrders) throw new Error('❌ Có đơn chờ giao');
 
                 let title = 'Tạo đơn hàng cho ' + this.data.name;
-                let url = 'https://viettelpost.vn/order/tao-don-le?i=';
+                let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
                 let orderInfo = { fbid: this.data.id, phone: this.data.phone, name: this.data.name };
 
-                /**
-                if(this.preOrders.length){
-                    let txt = this.preOrders.map((o, i) => (`[${i}] - ${o.cmt_txt}`)).join('\n');
-                    let ro = prompt(title + '\n\nChọn đơn hàng liên quan: \n' + txt);
-                    if(ro == null) return false;
-                }
-                **/
 
                 let prices_str = prompt(title + "\n\nB1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
@@ -1111,38 +1104,12 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
     /* ViettelPost custom css */`);
 
-//  .cdk-overlay-pane{position: fixed !important; left: var(--left-value) !important;}
     let i = window.localStorage.deviceId;
     let t = i && JSON.parse(window.localStorage['vtp-token']).tokenKey;
     GM_setValue('vtp_deviceId', i);
     GM_setValue('vtp_tokenKey', t);
 
-
-    /****
-    function total_price_func(e){
-        let value = e.target.value;
-        let match = (value).match((/\((\d+\s*)+\)/));
-        let total_price = 0, fee = 0, cod = 0;
-        fee = parseInt(($('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span')?.text() || 0 ).replaceAll(/\D/g,''));
-        if(fee && match && match[0]){
-            let ns = match[0].replace('(', '').replace(')', '');
-            total_price = ns.split(/\s+/).reduce((partialSum, a) => partialSum + Number(a)*1000, 0);
-            cod = fee + total_price;
-            let tax = cod / 100 * 1.5
-            prompt( `Giá: ${match[0]} \nPhí ship: ${fee/1000}k \nThuế 1,5%: ${tax/1000}k  \nTổng COD:`, Math.round(cod+tax));
-            //$('input#productPrice').val(cod);
-            //window.prompt(`COD:`, cod);
-        }
-    }
-
-    //$(document).off('click', '#productName', total_price_func);
-    //$(document).on('change', '#productName', total_price_func)
-    *****/
-
-
-
     $(document).ready( async function(){
-
         await new Promise(resolve => { setTimeout(resolve, 1000)});
 
         function updateCOD(){
@@ -1156,10 +1123,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 window.lastPrice = price;
 
                 let cod_input = window.document.querySelector('input#cod'),
-                    cod_checkbox = window.document.querySelector('#mat-checkbox-4-input'),
                     tax = Number((price+fee)/100*1.5);
 
-                cod_checkbox?.checked && cod_checkbox?.click();
+                //([...document.querySelectorAll('label.mat-checkbox-layout')]).filter(label => label.innerText == 'Thu hộ bằng tiền hàng')[0]?.querySelector('input[type="checkbox"][aria-checked="true"]')?.click();
 
                 cod_input.value = Math.round(price + fee + tax);
                 cod_input.dispatchEvent(customEvent('input'));
@@ -1183,8 +1149,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         $(document).on('change click', 'input#productPrice', updateCOD);
 
         if(window.location.pathname != '/order/tao-don-le') return !1;
+
         const urlParams = new URLSearchParams(window.location.search);
-        let info_encode = urlParams.get('i');
+        let info_encode = urlParams.get('query');
         let info = JSON.parse(decodeURIComponent(escape(window.atob(info_encode.replaceAll(' ','+')))));
         const fbid = info.fbid;
         let phoneNoInput = window.document.querySelector('input#phoneNo');
@@ -1213,8 +1180,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 alert('Lỗi check trùng đơn! ❌❌❌');
             }
         });
-
-
 
         $(document).keyup(function(e) {
             if (e.key === "Escape") { // escape key maps to keycode `27`
@@ -1267,11 +1232,12 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             price = info.price,
             prdName = info.prdName;
 
-        let s = $('div.box-receiver'),
-            p = s.parent();
+        let col1 = $('div.box-receiver, div.box-sender').parent();
+        $('div.box-sender').appendTo(col1);
+        $('div.box-receiver').prependTo(col1);
 
         window.document.body.classList.add('custom');
-        s.prependTo(p);
+        //s.prependTo(p);
 
         let fn = window.document.querySelector('input#fullName');
         $(window.document.body).on('click keyup keydown', function(){
@@ -1327,53 +1293,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         });
     })
 })($);
-
-(async function(){
-    return
-    GM_notification({
-        text: "This is the notification message.",
-        title: "Notification Title",
-        url: 'https:/example.com/',
-        onclick: (event) => {
-            // The userscript is still running, so don't open example.com
-            event.preventDefault();
-            // Display an alert message instead
-            alert('I was clicked!')
-        }
-    });
-
-})();
-
-/****
-function phone2Recievers(phone = null) {
-    return new Promise((resolve, reject) => {
-        if(!phone) return reject(new Error('Chưa có sdt'));
-
-        let token = GM_getValue('vtp_tokenKey');
-        if (!token) return reject('Lỗi 0012');
-
-        GM_xmlhttpRequest({
-            method: "GET",
-            headers: {
-                'Authorization': 'Bearer ' + token
-            },
-            url:  "https://io.okd.viettelpost.vn/order/v1.0/receiver/_suggest?q=" + phone,
-            onload: function (response) {
-                GM_log (
-                    "GM_xmlhttpRequest() response is:\n",
-                    response.responseText.substring (0, 80) + '...'
-                );
-                return resolve(JSON.parse(response.responseText));
-            },
-            onerror: function(reponse) {
-                GM_log("error: ", reponse);
-                return reject(reponse)
-            }
-
-        })
-    })
-}
-***/
 
 
 /** BOOKMARK LET
