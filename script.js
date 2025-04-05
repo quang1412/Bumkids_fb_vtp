@@ -1,17 +1,19 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-04-01
+// @version      2025-04-05
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
 // @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
+
 // @match        https://viettelpost.vn/*
 // @match        https://www.facebook.com/*
 // @match        https://www.messenger.com/*
 // @match        https://api.viettelpost.vn/*
+
 // @require      https://code.jquery.com/jquery-3.6.0.min.js
 
 // @grant        GM_log
@@ -526,6 +528,26 @@ Facebook Facebook Facebook
 Facebook Facebook Facebook
 Facebook Facebook Facebook
 Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
+Facebook Facebook Facebook
 ***/
 
 // CSS STYLE
@@ -685,6 +707,9 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
     GM_addStyle(`div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}`);
     GM_addStyle(`div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}`);
+    GM_addStyle(`div:is(.__fb-dark-mode, .__fb-light-mode):not(:hover) div.infoCard {  opacity: 0.5; }`);
+    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a:is([href*="/t/"], [href*="/messages/"])::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 10px;  color: initial;  opacity: 0.5; }`);
+    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a[href*="/e2ee/"]::before {color:red;}`);
 
     class InfoCard{
         constructor(info, container){
@@ -929,8 +954,14 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         }, 1000);
     }
 
-    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a:is([href*="/t/"], [href*="/messages/"])::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 10px;  color: initial;  opacity: 0.5; }`);
-    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a[href*="/e2ee/"]::before {color:red;}`);
+    document.addEventListener("keydown", e => {
+        if(e.key === "F1") {
+            // Suppress default behaviour
+            // e.g. F1 in Microsoft Edge on Windows usually opens Windows help
+            e.preventDefault();
+            alert('F1');
+        }
+    })
 })();
 
 (function(){
@@ -938,8 +969,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
     $(document).ready(function(){
         GM_addStyle(`.fb-article-btn{font-size: 90%; font-weight: 700; width: fit-content; color: white; display: block; margin-top: 10px; cursor: pointer; background-color: #000000db; border-radius: 5px; padding: 2px 6px; }`);
-
-        class PreOderBtn{
+        /*** class PreOderBtn{
             constructor(article){
                 let cmt_text_elm = article.querySelector('span[lang]');
 
@@ -1031,16 +1061,13 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 try{ !article.querySelector('span.fb-article-btn') && new PreOderBtn(article) } catch(e){ }
 
             });
-        });
-
-
+        }); ***/
     });
 })();
 
 
 (function(){
     // keyboard shortcuts
-
     window.addEventListener("keydown",function (e) {
         if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70 && e.shiftKey)){
 //        if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)){
@@ -1114,24 +1141,22 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         function updateCOD(){
             try{
-                let price = Number(window.document.querySelector('input#productPrice').value || 0);
-                let fee = Number(window.document.querySelector('.mt-3.vt-order-footer .resp-border-money .txt-color-viettel span').innerText.replaceAll(/\D/g,'') || 0);
+                let price = Number($('input#productPrice')?.val().replaceAll(/\D/g, '') || 0);
+                let fee = Number($('div.text-price-right')?.text()?.replaceAll(/\D/g, '') || 0);
 
-                if(!fee) return false; //throw new Error('chưa có phí ship, thử cập nhật địa chỉ nhận hàng!');
+                if(!fee) return 0;
 
-                if(window.lastPrice == price) return false;
+                if(window.lastPrice == price) return 0;
                 window.lastPrice = price;
 
-                let cod_input = window.document.querySelector('input#cod'),
-                    tax = Number((price+fee)/100*1.5);
+                let tax = Number((price + fee) / 100 * 1.5);
 
-                //([...document.querySelectorAll('label.mat-checkbox-layout')]).filter(label => label.innerText == 'Thu hộ bằng tiền hàng')[0]?.querySelector('input[type="checkbox"][aria-checked="true"]')?.click();
+                let cod = window.document.querySelector('input#cod');
+                cod.value = Math.round(price + fee + tax);
+                cod.dispatchEvent(customEvent('input'));
+                cod.dispatchEvent(customEvent('change'));
 
-                cod_input.value = Math.round(price + fee + tax);
-                cod_input.dispatchEvent(customEvent('input'));
-                cod_input.dispatchEvent(customEvent('change'));
-
-                return true;
+                return 1;
             } catch(e){
                 alert('Lỗi cập nhật COD \n' + e.message + 'Mã lỗi: #1213');
                 return false;
@@ -1140,13 +1165,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         $(document).on('change', 'input#productName', function(){
             let price = (window.eval(this.value?.match(/\(.*\)/g)?.shift()?.replaceAll(/[\(\)]/g, '').trim().replaceAll(/\s+/g, " + ")) || 0) * 1000;
-            let productPrice_input = window.document.querySelector('input#productPrice');
-
-            productPrice_input.value = price;
-            productPrice_input.dispatchEvent(customEvent('input'));
-            productPrice_input.dispatchEvent(customEvent('change'));
+            $('input#productPrice')?.val(price).trigger('input').trigger('change');
         });
-        $(document).on('change click', 'input#productPrice', updateCOD);
+        $(document).on('change', 'input#productPrice', updateCOD);
 
         if(window.location.pathname != '/order/tao-don-le') return !1;
 
@@ -1274,7 +1295,14 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         }, 500);
     });
 
-})($);
+})(window.$ || window.jQuery);
+
+
+
+(function($){
+    if(!window.location.href.includes('viettelpost.vn')) return;
+
+})(window.$ || window.jQuery)
 
 (function($){
     $(window.document).ready(function(){
@@ -1292,7 +1320,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             $('body').css('--left-value', mouseX+'px');
         });
     })
-})($);
+})(window.$ || window.jQuery);
 
 
 /** BOOKMARK LET
