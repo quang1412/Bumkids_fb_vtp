@@ -707,7 +707,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
     GM_addStyle(`div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}`);
     GM_addStyle(`div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}`);
-    GM_addStyle(`div:is(.__fb-dark-mode, .__fb-light-mode):not(:hover) div.infoCard {  opacity: 0.5; }`);
+    //GM_addStyle(`div:is(.__fb-dark-mode, .__fb-light-mode):not(:hover) div.infoCard {  opacity: 0.5; }`);
     GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a:is([href*="/t/"], [href*="/messages/"])::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 10px;  color: initial;  opacity: 0.5; }`);
     GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a[href*="/e2ee/"]::before {color:red;}`);
 
@@ -814,31 +814,27 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                     let text = row.innerText;
                     let t = text.replaceAll(/[^\w\d]/g, '');
-                    let match = t.match(/(03|05|07|08|09)+([0-9]{8})/g);
-                    let p = match?.pop();
-                    if(p && p != myPhone){
-                        this.phoneScanning();
-                        //row.click();
-                        let d = row.closest('div[role="presentation"]');
-                        d.style.border = '2px dashed red';
-                        d.style['border-color'] = (p == this.data.phone ? 'cyan' : 'red');
-                        console.log(t, p);
+                    let arr = t.match(/(03|05|07|08|09)+([0-9]{8})/g);
+                    let phone = arr?.pop();
+                    if(!phone || phone == myPhone) continue;
 
-                        //window.prompt('Tìm sdt của '+ this.data.name, text);
+                    this.phoneScanning();
+                    let d = row.closest('div[role="presentation"]');
+                    d.style.border = '2px dashed red';
+                    d.style['border-color'] = (phone == this.data.phone ? 'cyan' : 'red');
 
+                    //window.prompt('Tìm sdt của '+ this.data.name, text);
 
-                        let func1 = function(){
-                            row.scrollIntoView({block: "center", inline: "nearest", behavior: 'smooth'});
-                            row.closest('div[role="gridcell"]')?.focus()
-                        };
-                        func1();
-                        let interv = setInterval(func1 , 200);
-                        document.body.addEventListener("click", _ => clearInterval(interv), {once : true});
-                        //row.addEventListener("click", _ => window.prompt('Thông tin của '+ this.data.name, text), {once : true});
-                        setTimeout(_ => clearInterval(interv), 5000);
+                    let func1 = function(){
+                        row.scrollIntoView({block: "center", inline: "nearest", behavior: 'smooth'});
+                        row.closest('div[role="gridcell"]')?.focus();
+                    };
+                    func1();
+                    let interv = setInterval(func1 , 200);
+                    setTimeout(_ => clearInterval(interv), 5000);
+                    document.body.addEventListener("click", _ => clearInterval(interv), {once : true});
 
-                        break;
-                    }
+                    break;
                 }
 
             }, 500);
