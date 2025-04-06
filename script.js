@@ -814,14 +814,12 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                     let text = row.innerText;
                     let t = text.replaceAll(/[^\w\d]/g, '');
-                    let arr = t.match(/(03|05|07|08|09)+([0-9]{8})/g);
-                    let phone = arr?.pop();
+                    let phone = t.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
                     if(!phone || phone == myPhone) continue;
 
                     this.phoneScanning();
                     let d = row.closest('div[role="presentation"]');
-                    d.style.border = '2px dashed red';
-                    d.style['border-color'] = (phone == this.data.phone ? 'cyan' : 'red');
+                    d.style.border = '2px dashed ' + (phone == this.data.phone ? 'cyan' : 'red');
 
                     //window.prompt('Tìm sdt của '+ this.data.name, text);
 
