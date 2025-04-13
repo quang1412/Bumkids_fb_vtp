@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-04-06 
+// @version      2025-04-13
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -739,8 +739,8 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             btn_3.innerText = 'Tạo đơn';
             btn_3.onclick = _ => this.createOrder();
 
-            this.refreshInfo();
             this.eventsListener();
+            this.refreshInfo();
 
             let bg = GM_addElement(this.card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
             let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
@@ -887,14 +887,21 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         }
         eventsListener(){
             this.container.addEventListener("click", function(e){
-                const target = e.target.closest('div[aria-label="Trả lời"][role="button"]'); // Or any other selector.
+                let target = e.target.closest('div[aria-label="Trả lời"][role="button"]'); // Or any other selector.
                 target && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
             });
 
             this.container.addEventListener("keypress", function(e) {
-                GM_log(e);
-                if (e.keyCode == 113 && e.ctrlKey == true) {
-                    alert('hi.');
+                //alert('onkeypress')
+                console.log(e);
+                if (e.charCode == 1111111) {
+                    alert('option3');
+                }
+                if (e.keyCode == 87 && e.ctrlKey == true) {
+                    alert('option2');
+                }
+                if (e.charCode == 339) {
+                    alert('option1');
                 }
             });
 
