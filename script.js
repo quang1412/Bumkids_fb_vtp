@@ -1086,6 +1086,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
     var interval = null;
     let json = [];
+    let popupWin = null;
 
     let btnScroll = GM_addElement(document.body, 'div', {
         id:'btnScrollToBottom',
@@ -1094,38 +1095,52 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
     btnScroll.innerHTML = '<span>Load<span>';
     btnScroll.onclick = function(){
-        if(interval){
-            clearInterval(interval);
-            interval = null;
-            this.innerHTML = '<span>Load<span>';
-
-            let w = window.open('about:blank', '_blank', 'height=600,width=800');
-            w.document.write(`<table>
-            <thread><th>time</th><th>text</th><th>link</th></thread>
-            <tbody>${json.map(row => `<tr><td>${row.time}</td><td>${row.text}</td><td><a href="https://www.messenger.com${row.link}" target="blank">mess</a></td></tr>`).join('')}</tbody>
-            </table>`);
-
-        } else {
+        if(!interval){
+            popupWin?.close();
             interval = setInterval(_ => {
                 try{
                     let list = Array.from($('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode)')).shift();
-                    $(list).animate({scrollTop: list.scrollHeight}, "fast");
+                    $(list).animate({scrollTop: list.scrollHeight}, "slow");
 
                     $.each($(list).find('div[role="row"]:not(.checked)'), (i, r) => {
-                        let text = (r.innerText.replaceAll(/[\r\n]+/g, ' '));
-                        console.log(text);
                         let time = $(r).find('abbr')[0]?.innerText;
-                        console.log(time);
+
+                        let text = (r.innerText.replaceAll(/[\r\n]+/g, ' '))
+                        .replace('Tin nhắn và cuộc gọi được bảo mật bằng tính năng mã hóa đầu cuối.', '---')
+                        .replace('Đang hoạt động', '').replaceAll('·', '').replace(time, '').trim();
+
+                        let img = $(r).find('img')[0]?.getAttribute('src');
+
                         let link = $(r).find('a[href]')[0]?.getAttribute('href');
-                        console.log(link);
 
-                        json.push({time, text, link});
+                        if(time && text && img && link){
+                            json.push({time, text, img, link});
+                            $(r).addClass('checked');
 
-                        $(r).addClass('checked');
+                            window.document.title = time + ' - ' + text;
+                        }
                     })
                 }catch(e){}
             }, 500);
             this.innerHTML = '<span>Stop<span>';
+
+        } else {
+            clearInterval(interval);
+            interval = null;
+            this.innerHTML = '<span>Load<span>';
+            popupWin = window.open('', '_blank', 'width=400, height=' + window.innerHeight );
+            popupWin.document.write(`<style>
+              tr:nth-child(even) { background-color: #f2f2f2;} tr:hover{background-color: #e3e3e3; }
+              tr td { overflow: hidden;  max-width: 100vw;  text-wrap: nowrap; }
+              img { object-fit:cover; }
+              span.content { font-weight: 600; }
+              p.time { margin:0; }
+            </style>
+            <table cellpadding="5">
+              <caption>Danh sách đoạn chat.</caption>
+              <thread><th>img</th><th>text</th></thread>
+              <tbody>${json.map(row => `<tr> <td><a href="${row.link}" target="_blank"><img src="${row.img}" width=32 height=32></a></td> <td><span class="content">${row.text}</span><p class="time"><small>${row.time}</small></p></td></tr>`).join('')}</tbody>
+            </table>`);
         }
     };
 })(window.$ || window.jQuery);
