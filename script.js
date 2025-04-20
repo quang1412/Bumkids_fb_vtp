@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-04-13
+// @version      2025-04-20
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -714,12 +714,12 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
     class InfoCard{
         constructor(info, container){
             this.container = container;
-            this.data = {...PhoneBook.get(info.id)?.pop(), ...info};
+            this.userData = {...PhoneBook.get(info.id)?.pop(), ...info};
 
             this.preOrders = 0;
-            this.data.e2ee = window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : null;
+            this.userData.e2ee = window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : null;
 
-            this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.data.id });
+            this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.userData.id });
             if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') {
                 this.card.classList.add('bottom');
             }
@@ -753,30 +753,31 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             this.infoList.innerHTML = '</tr><tr><td style=" ">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
             this.card.classList.add('refreshing');
             try{
-                this.preOrders = OrdersStorage.get(this.data.id);
-                let orderList = await viettel.getListOrders(this.data.phone);
-                if(orderList.error) throw new Error('Viettel: ' + orderList.message);
-                let list = orderList.data.data.LIST_ORDER;
-                i.total = orderList.data.data.TOTAL;
-                i.totalCOD = orderList.data.data.TOTAL_COLLECTION.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
-                i.pending = list.filter(function(o){ return !!~([-108,100,102,103,104]).indexOf(o.ORDER_STATUS) }).length;
-                i.draft = list.filter(function(o){ return (o.ORDER_STATUS == -100) }).length;
-                this.holdedOrders = (i.draft + i.pending);
+                //this.preOrders = OrdersStorage.get(this.userData.id);
+                let data = await viettel.getListOrders(this.userData.phone);
+                if(data.error) throw new Error('Viettel: ' + data.message);
+                let orderList = data.data.data.LIST_ORDER;
+                let totalOrders = data.data.data.TOTAL,
+                    pendingOrders = orderList.filter(o => !!~([-108,100,102,103,104]).indexOf(o.ORDER_STATUS)).length,
+                    draftOrders = orderList.filter(o => o.ORDER_STATUS == -100).length;
 
-                let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.data.phone);
+                this.waitingOrders = (draftOrders + pendingOrders);
+                //let totalCOD = data.data.data.TOTAL_COLLECTION.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+
+                let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.userData.phone);
                 this.infoList.innerHTML = `
-                <tr style="display:none;"><td>ID:</td> <td>${this.data.id}</td></tr>
+                <tr style="display:none;"><td>ID:</td> <td>${this.userData.id}</td></tr>
                 <tr>
-                  <td>SĐT: </td> <td>${this.data.phone}</td>
+                  <td>SĐT: </td> <td>${this.userData.phone}</td>
                 </tr>
                 <tr>
                   <td>Đơn hàng: </td>
-                  <td><a href="${vtlink}" target="_blank" style="color:inherit; text-decoration: underline;">${i.total} đơn&nbsp
-                     ${i.pending ? `<span style="color:coral"> • có đơn chờ giao</span>` : i.draft ? `<span style="color:yellow"> • có đơn nháp</span>` : ''}
+                  <td><a href="${vtlink}" target="_blank" style="color:inherit; text-decoration: underline;">${totalOrders} đơn&nbsp
+                     ${pendingOrders ? `<span style="color:coral"> • có đơn chờ giao</span>` : draftOrders ? `<span style="color:yellow"> • có đơn nháp</span>` : ''}
                   </a></td>
                 </tr>
                 <tr>
-                  <td>e2ee: </td> <td>${this.data.e2ee}</td>
+                  <td>e2ee: </td> <td>${this.userData.e2ee}</td>
                 </tr>
                 <tr>
                   <td>Tags: </td> <td>${'---'}</td>
@@ -819,9 +820,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                     this.phoneScanning();
                     let d = row.closest('div[role="presentation"]');
-                    d.style.border = '2px dashed ' + (phone == this.data.phone ? 'cyan' : 'red');
-
-                    //window.prompt('Tìm sdt của '+ this.data.name, text);
+                    d.style.border = '2px dashed ' + (phone == this.userData.phone ? 'cyan' : 'red');
 
                     let func1 = function(){
                         row.scrollIntoView({block: "center", inline: "nearest", behavior: 'smooth'});
@@ -837,22 +836,22 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
             }, 500);
         }
-        async setPhone(phone = window.prompt("Nhập sđt cho " + this.data.name, this.data.phone)){
-            if(phone == null || phone == '' || !isVNPhone(phone) || phone == this.data.phone) return;
-            this.data.phone = phone;
-            let info = {id: this.data.id, phone: this.data.phone.toString(), name:this.data.name, img:this.data.img};
+        async setPhone(phone = window.prompt("Nhập sđt cho " + this.userData.name, this.userData.phone)){
+            if(phone == null || phone == '' || !isVNPhone(phone) || phone == this.userData.phone) return;
+            this.userData.phone = phone;
+            let info = {id: this.userData.id, phone: this.userData.phone.toString(), name:this.userData.name, img:this.userData.img};
             PhoneBook.set(info);
             this.refreshInfo();
         }
         createOrder(){
             try{
-                if(!this.data.phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
-                if(this.holdedOrders) throw new Error('❌ Có đơn chờ giao');
+                if(!this.userData.phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
+                if(this.waitingOrders && !window.confirm('❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?')) return false
 
-                let title = 'Tạo đơn hàng cho ' + this.data.name;
+                let title = 'Tạo đơn hàng cho ' + this.userData.name;
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
-                let orderInfo = { fbid: this.data.id, phone: this.data.phone, name: this.data.name };
+                let orderInfo = { fbid: this.userData.id, phone: this.userData.phone, name: this.userData.name };
 
 
                 let prices_str = prompt(title + "\n\nB1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
@@ -878,7 +877,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                 window.popupWindow?.focus();
                 window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
-                window.addEventListener('message', (ev) => { ev.data.fbid === this.data.id && this.refreshInfo() });
+                window.addEventListener('message', (ev) => { ev.data.fbid === this.userData.id && this.refreshInfo() });
 
                 GM_setValue('lastest_prices', prices_str);
                 //GM_setValue('lastest_order_name', itn);
@@ -909,9 +908,9 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             this.container.onmouseup = _ => {
                 if(!window.getSelection) return;
                 let phone = window.getSelection().toString().replaceAll(/\D/g,'');
-                if(!isVNPhone(phone) || phone == this.data.phone || phone == myPhone){
+                if(!isVNPhone(phone) || phone == this.userData.phone || phone == myPhone){
                     return false;
-                } else if(!this.data.phone || window.confirm(`Xác nhận đổi số đt cho ${this.data.name} thành ${phone}?`)){
+                } else if(!this.userData.phone || window.confirm(`Xác nhận đổi số đt cho ${this.userData.name} thành ${phone}?`)){
                     this.setPhone(phone);
                 }
             }
@@ -1142,117 +1141,94 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         function updateCOD(){
             try{
-                let price = Number($('input#productPrice')?.val().replaceAll(/\D/g, '') || 0);
-                let fee = Number($('div.text-price-right')?.text()?.replaceAll(/\D/g, '') || 0);
+                let price = Number($('input#productPrice')?.val().replaceAll(/\D/g, '') || 0),
+                    fee = Number($('div.text-price-right')?.text()?.replaceAll(/\D/g, '') || 0);
 
-                if(!fee) return 0;
+                if(!fee || window.lastPrice == price) return 0;
 
-                if(window.lastPrice == price) return 0;
-                window.lastPrice = price;
+                let tax = Number((price + fee) / 100 * 1.5),
+                    cod = window.document.querySelector('input#cod');
 
-                let tax = Number((price + fee) / 100 * 1.5);
-
-                let cod = window.document.querySelector('input#cod');
                 cod.value = Math.round(price + fee + tax);
                 cod.dispatchEvent(customEvent('input'));
                 cod.dispatchEvent(customEvent('change'));
 
-                return 1;
+                window.lastPrice = price;
+
+                return true;
             } catch(e){
                 alert('Lỗi cập nhật COD \n' + e.message + 'Mã lỗi: #1213');
                 return false;
             }
         }
 
-        $(document).on('change', 'input#productName', function(){
+        $(document).on('change', 'form.create-order input#productName', function(){
             let price = (window.eval(this.value?.match(/\(.*\)/g)?.shift()?.replaceAll(/[\(\)]/g, '').trim().replaceAll(/\s+/g, " + ")) || 0) * 1000;
             $('input#productPrice')?.val(price).trigger('input').trigger('change');
         });
-        $(document).on('change', 'input#productPrice', updateCOD);
-
-        if(window.location.pathname != '/order/tao-don-le') return !1;
-
-        const urlParams = new URLSearchParams(window.location.search);
-        let info_encode = urlParams.get('query');
-        let info = JSON.parse(decodeURIComponent(escape(window.atob(info_encode.replaceAll(' ','+')))));
-        const fbid = info.fbid;
-        let phoneNoInput = window.document.querySelector('input#phoneNo');
-        let status = GM_getValue('vtp_duplicateCheckStatus') || 200;
-        $(phoneNoInput).attr('placeholder', `Nhập số điện thoại để tự điền thông tin người nhận \| check trùng ${status == 200 ? '🟢' : '🔴'}`);
-        $(phoneNoInput).on('change', async function(){
+        $(document).on('change', 'form.create-order input#productPrice', updateCOD);
+        $(document).on('change', 'form.create-order input#phoneNo', async function(){
             try{
                 this.value = this.value.replaceAll(/\D/g, '');
                 this.dispatchEvent(customEvent('input'));
                 if(!isVNPhone(this.value)) return;
 
                 let res = await viettel.getListOrders(this.value).catch(e => {throw new Error()});
-                GM_setValue('vtp_duplicateCheckStatus', res?.status);
 
                 if(res?.status != 200) throw new Error();
 
-                let list = res.data.data.LIST_ORDER;
-                let holdOrders = list.filter(function(o){return !!~([-100,-108,100,102,103,104]).indexOf(o.ORDER_STATUS)});
+                let orders = res.data.data.LIST_ORDER.filter(o => !!~([-100, -108,100,102,103,104]).indexOf(o.ORDER_STATUS));
 
-                if(holdOrders.length){
-                    alert('Sđt đang có đơn giữ/chờ lấy! ❌❌❌');
-                    let lastestOrder = holdOrders[0].ORDER_NUMBER;
-                    window.location.href = 'https://viettelpost.vn/thong-tin-don-hang?peopleTracking=sender&orderNumber=' + lastestOrder;
+                if(orders.length && !window.confirm('❌ SDT có đơn chưa gửi!!! bạn vẫn tiếp tục tạo đơn?')){
+                    let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.value);
+                    window.location.href = vtlink
+
                 }
             } catch(e){
                 alert('Lỗi check trùng đơn! ❌❌❌');
             }
         });
 
+        let urlParams = new URLSearchParams(window.location.search);
+        let info_encode = urlParams.get('query');
+
+        if(!info_encode) return false;
+
+        let info = JSON.parse(decodeURIComponent(escape(window.atob(info_encode.replaceAll(' ','+')))));
+        let {fbid, phone, addr, name, price, prdName} = info;
+
+        if(!fbid) return true;
+
+         window.onbeforeunload = e => window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
         $(document).keyup(function(e) {
             if (e.key === "Escape") { // escape key maps to keycode `27`
                 $('button.close').click();
             }
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
-                if(e.shiftKey){
-                    $('#confirmCreateOrder button.btn.btn-viettel').click();
-                } else {
-                    $('#confirmSaveDraft button.btn.btn-viettel').click();
-                }
+                e.shiftKey ? $('#confirmCreateOrder button.btn.btn-viettel').click() : $('#confirmSaveDraft button.btn.btn-viettel').click();
 
                 // IN TEM
-                let printableStatus = [-108,100,102,103,104];
-                let phone = info.phone;
-                if(!phone) return;
-
+                if(!phone) return false;
 
                 setTimeout(() => {
                     viettel.getListOrders(phone).then(data => {
-                        let lastOrder = data.data.data.LIST_ORDER[0];
-                        let lastest_date = new Date(Date.parse(lastOrder?.ORDER_SYSTEMDATE || 0)).getDate();
+                        let last_order = data.data.data.LIST_ORDER[0];
+                        let order_date = new Date(Date.parse(last_order?.ORDER_SYSTEMDATE || 0)).getDate();
                         let today_date = new Date().getDate();
-                        if( !lastOrder || lastest_date != today_date) throw new Error('Không tìm thấy đơn hàng mới!');
+                        if( !last_order || order_date != today_date) throw new Error('Không tìm thấy đơn hàng mới!');
 
-                        let o = lastOrder.ORDER_NUMBER;
-                        let status = lastOrder.ORDER_STATUS;
-                       // if(!~printableStatus.indexOf(status)){ /** throw new Error('new order not found!'); **/ }
-                        return viettel.getOrderPrint(o);
-                    }) .then(link => {
-                        window.open(link+'&status='+status, '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=960"');
-                       window.close();
+                        let o = last_order.ORDER_NUMBER;
+                        let link = viettel.getOrderPrint(o);
+                        window.open(link+'&status=0', '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=960"');
+                        return window.close();
                     }).catch(e => {
                         alert(e.message);
-                        window.location.href = 'https://viettelpost.vn/quan-ly-van-don';
+                        window.location.href = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(phone);
                     });
                 }, 1500);
             }
         });
 
-         window.onbeforeunload = function(e) {
-            window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
-        };
-
-        if(!fbid) return true;
-
-        let phone = info.phone,
-            addr = info.addr,
-            name = info.name,
-            price = info.price,
-            prdName = info.prdName;
 
         let col1 = $('div.box-receiver, div.box-sender').parent();
         $('div.box-sender').appendTo(col1);
