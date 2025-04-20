@@ -1104,20 +1104,19 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                     $.each($(list).find('div[role="row"]:not(.checked)'), (i, r) => {
                         let time = $(r).find('abbr')[0]?.innerText;
+                        let img = $(r).find('img')[0]?.getAttribute('src');
 
-                        let text = (r.innerText.replaceAll(/[\r\n]+/g, ' '))
+                        let text = r.innerText.replaceAll(/[\r\n]+/g, ' ')
                         .replace('Tin nhắn và cuộc gọi được bảo mật bằng tính năng mã hóa đầu cuối.', '---')
                         .replace('Đang hoạt động', '').replaceAll('·', '').replace(time, '').trim();
-
-                        let img = $(r).find('img')[0]?.getAttribute('src');
 
                         let link = $(r).find('a[href]')[0]?.getAttribute('href');
 
                         if(time && text && img && link){
                             json.push({time, text, img, link});
-                            $(r).addClass('checked');
+                            $(r).addClass('checked').remove();
 
-                            window.document.title = time + ' - ' + text;
+                            window.document.title = json.length + ' - ' + time + ' - ' + text;
                         }
                     })
                 }catch(e){}
