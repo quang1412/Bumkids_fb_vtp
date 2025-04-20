@@ -14,7 +14,7 @@
 // @match        https://www.messenger.com/*
 // @match        https://api.viettelpost.vn/*
 
-// @require      https://code.jquery.com/jquery-3.6.0.min.js
+// @require      https://code.jquery.com/jquery-3.7.1.js
 
 // @grant        GM_log
 // @grant        GM_setValue
@@ -845,22 +845,24 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         }
         createOrder(){
             try{
-                if(!this.userData.phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
-                if(this.waitingOrders && !window.confirm('❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?')) return false
+                let title = 'Tạo đơn hàng cho ' + this.userData.name + '\n\n';
 
-                let title = 'Tạo đơn hàng cho ' + this.userData.name;
+                if(!this.userData.phone) throw new Error(title + '❌ Vui lòng cập nhật sđt trước!');
+
+                if(this.waitingOrders && !window.confirm(title + '❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?')) return false
+
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
                 let orderInfo = { fbid: this.userData.id, phone: this.userData.phone, name: this.userData.name };
 
 
-                let prices_str = prompt(title + "\n\nB1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
+                let prices_str = prompt(title + "B1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
                 let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
 
                 let itemNameList = GM_getValue('lastest_items_list', []);
                 let list = itemNameList.map((e, i) => `[${i}] ${e}`).join('\n');
-                let input = prompt(title + '\n\nChọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + list, itemNameList[0] || '');
+                let input = prompt(title + 'Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + list, itemNameList[0] || '');
                 if (input == null || input == undefined) return false;
 
                 let itemName = itemNameList[input] || input
@@ -1065,12 +1067,10 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
     });
 })();
 
-
 (function(){
     // keyboard shortcuts
     window.addEventListener("keydown",function (e) {
         if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70 && e.shiftKey)){
-//        if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)){
             let messSearchFields = document.querySelectorAll('input[type="search"][aria-label="Tìm kiếm trên Messenger"][placeholder="Tìm kiếm trên Messenger"], div[style*="translateX(0%)"] input[type="text"][aria-label="Tìm kiếm"][placeholder="Tìm kiếm"]');
             let messSearchField = [...messSearchFields].pop();
             if(!messSearchField) return true;
@@ -1079,9 +1079,57 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             messSearchField.select();
         }
     })
-
-
 })();
+
+(function($){
+    if(window.location.origin != 'https://www.messenger.com') return 0;
+
+    var interval = null;
+    let json = [];
+
+    let btnScroll = GM_addElement(document.body, 'div', {
+        id:'btnScrollToBottom',
+        style:'position: absolute;  top: 20px;  left: 209px;  background: #fafafa;  padding: 5px 15px;  border-radius: 5px;  cursor: pointer; ',
+    });
+
+    btnScroll.innerHTML = '<span>Load<span>';
+    btnScroll.onclick = function(){
+        if(interval){
+            clearInterval(interval);
+            interval = null;
+            this.innerHTML = '<span>Load<span>';
+
+            let w = window.open('about:blank', '_blank', 'height=600,width=800');
+            w.document.write(`<table>
+            <thread><th>time</th><th>text</th><th>link</th></thread>
+            <tbody>${json.map(row => `<tr><td>${row.time}</td><td>${row.text}</td><td><a href="https://www.messenger.com${row.link}" target="blank">mess</a></td></tr>`).join('')}</tbody>
+            </table>`);
+
+        } else {
+            interval = setInterval(_ => {
+                try{
+                    let list = Array.from($('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode)')).shift();
+                    $(list).animate({scrollTop: list.scrollHeight}, "fast");
+
+                    $.each($(list).find('div[role="row"]:not(.checked)'), (i, r) => {
+                        let text = (r.innerText.replaceAll(/[\r\n]+/g, ' '));
+                        console.log(text);
+                        let time = $(r).find('abbr')[0]?.innerText;
+                        console.log(time);
+                        let link = $(r).find('a[href]')[0]?.getAttribute('href');
+                        console.log(link);
+
+                        json.push({time, text, link});
+
+                        $(r).addClass('checked');
+                    })
+                }catch(e){}
+            }, 500);
+            this.innerHTML = '<span>Stop<span>';
+        }
+    };
+})(window.$ || window.jQuery);
+
 /***
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
@@ -1146,12 +1194,12 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                 if(!fee || window.lastPrice == price) return 0;
 
-                let tax = Number((price + fee) / 100 * 1.5),
-                    cod = window.document.querySelector('input#cod');
+                let tax = Number((price + fee) / 100 * 1.5);
 
-                cod.value = Math.round(price + fee + tax);
-                cod.dispatchEvent(customEvent('input'));
-                cod.dispatchEvent(customEvent('change'));
+                let input_cod = window.document.querySelector('input#cod');
+                input_cod.value = Math.round(price + fee + tax);
+                input_cod.dispatchEvent(customEvent('input'));
+                input_cod.dispatchEvent(customEvent('change'));
 
                 window.lastPrice = price;
 
@@ -1199,7 +1247,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         if(!fbid) return true;
 
-         window.onbeforeunload = e => window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
+        window.onbeforeunload = e => window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
         $(document).keyup(function(e) {
             if (e.key === "Escape") { // escape key maps to keycode `27`
                 $('button.close').click();
@@ -1229,7 +1277,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             }
         });
 
-
         let col1 = $('div.box-receiver, div.box-sender').parent();
         $('div.box-sender').appendTo(col1);
         $('div.box-receiver').prependTo(col1);
@@ -1237,49 +1284,43 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.document.body.classList.add('custom');
         //s.prependTo(p);
 
-        let fn = window.document.querySelector('input#fullName');
+        let fullName = window.document.querySelector('input#fullName');
         $(window.document.body).on('click keyup keydown', function(){
-            fn.value = name;
-            fn.dispatchEvent(customEvent('input'));
-            fn.dispatchEvent(customEvent('change'));
+            fullName.value = name;
+            fullName.dispatchEvent(customEvent('input'));
+            fullName.dispatchEvent(customEvent('change'));
         })
 
-        let pn = window.document.querySelector('input#productName');
-        pn.value = prdName
+        let productName = window.document.querySelector('input#productName');
+        productName.value = prdName
 
-        let pr = window.document.querySelector('input#productPrice');
-        pr.value = price;
+        let productPrice = window.document.querySelector('input#productPrice');
+        productPrice.value = price;
 
-        let pw = window.document.querySelector('input#productWeight');
-        pw.value = 1000;
+        let productWeight = window.document.querySelector('input#productWeight');
+        productWeight.value = 1000;
 
-        let odn = window.document.querySelector('input#orderNo');
+        let orderNo = window.document.querySelector('input#orderNo');
         let d = new Date();
-        odn.value = fbid + '-' + d.getFullYear() + d.getMonth() + d.getDay();
+        orderNo.value = fbid + '-' + d.getFullYear() + d.getMonth() + d.getDay();
 
-        phoneNoInput.value = phone;
+        let phoneNo = window.document.querySelector('input#phoneNo');
+        phoneNo.value = phone;
 
-        [pr, pn, pw, odn, phoneNoInput].forEach(i => {
+        [productPrice, productName, productWeight, orderNo, phoneNo].forEach(i => {
+            i.dispatchEvent(customEvent('click'));
             i.dispatchEvent(customEvent('input'));
             i.dispatchEvent(customEvent('change'))
         });
 
-        phoneNoInput.click();
-        phoneNoInput.focus();
+        phoneNo.click();
+        phoneNo.focus();
 
-        setInterval(function(){
-            updateCOD();
-        }, 500);
+        setInterval(updateCOD, 500);
     });
 
 })(window.$ || window.jQuery);
 
-
-
-(function($){
-    if(!window.location.href.includes('viettelpost.vn')) return;
-
-})(window.$ || window.jQuery)
 
 (function($){
     $(window.document).ready(function(){
