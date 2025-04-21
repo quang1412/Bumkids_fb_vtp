@@ -1116,13 +1116,12 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                             json.push({time, text, img, link});
                             $(r).addClass('checked').remove();
 
-                            window.document.title = time + ' - ' + json.length + ' - ' + text;
+                            window.document.title = time + ' - ' + json.length + ' tn - ' + text;
                         }
                     })
                 }catch(e){}
             }, 1000);
             this.innerHTML = '<span>Stop<span>';
-
         } else {
             clearInterval(interval);
             interval = null;
