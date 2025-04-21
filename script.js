@@ -1100,7 +1100,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             interval = setInterval(_ => {
                 try{
                     let list = Array.from($('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode)')).shift();
-                    //$(list).animate({scrollTop: list.scrollHeight}, "slow");
+                    $(list).animate({scrollTop: list.scrollHeight}, "slow");
 
                     $.each($(list).find('div[role="row"]:not(.checked)'), (i, r) => {
                         let time = $(r).find('abbr')[0]?.innerText;
@@ -1113,8 +1113,8 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                         let link = $(r).find('a[href]')[0]?.getAttribute('href');
 
                         if(time && text && img && link){
-                            json.push({time, text, img, link});
-                            $(r).addClass('checked').remove();
+                            //json.push({time, text, img, link});
+                            $(r).addClass('checked')
 
                             window.document.title = time + ' - ' + json.length + ' tn - ' + text;
                         }
@@ -1127,6 +1127,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             interval = null;
             this.innerHTML = '<span>Load<span>';
 
+            return;
             popupWin = window.open('', '_blank', 'width=400, height=' + window.innerHeight );
             popupWin.document.write(`<style>
               tr:nth-child(even) { background-color: #f2f2f2;} tr:hover{background-color: #e3e3e3; }
