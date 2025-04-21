@@ -1285,6 +1285,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                         let o = last_order.ORDER_NUMBER;
                         let link = viettel.getOrderPrint(o);
+                        return link;
+                    }).then(link => {
                         window.open(link+'&status=0', '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=960"');
                         return window.close();
                     }).catch(e => {
