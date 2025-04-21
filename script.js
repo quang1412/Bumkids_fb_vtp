@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-04-20
+// @version      2025-04-21
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -1139,7 +1139,11 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
               <caption>Danh sách đoạn chat.</caption>
               <thread><th>img</th><th>text</th></thread>
               <tbody>${json.map(row => `<tr> <td><a href="${row.link}" target="_blank"><img src="${row.img}" width=32 height=32></a></td> <td><span class="content">${row.text}</span><p class="time"><small>${row.time}</small></p></td></tr>`).join('')}</tbody>
-            </table>`);
+            </table>
+            <script>
+              function beforeUnload(event){ event.preventDefault(); event.returnValue = 'a value'; }
+              window.onbeforeunload = beforeUnload;
+            </script>`);
         }
     };
 })(window.$ || window.jQuery);
