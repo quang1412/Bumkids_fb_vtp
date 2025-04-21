@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-04-22
+// @version      2025-04-21
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -1084,8 +1084,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 (function($){
     if(window.location.origin != 'https://www.messenger.com') return 0;
 
-    var interval = null;
-    let popupWin = null;
+    let interval = null;
 
     let btnScroll = GM_addElement(document.body, 'div', {
         id:'btnScrollToBottom',
@@ -1094,35 +1093,35 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
     btnScroll.innerHTML = '<span>Load<span>';
     btnScroll.onclick = function(){
-        if(!interval){
-            interval = setInterval(_ => {
-                try{
-                    let list = Array.from($('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode)')).shift();
-                    $(list).animate({scrollTop: list.scrollHeight}, "fast");
-
-                    $.each($(list).find('div[role="row"]:not(.checked)'), (i, r) => {
-                        let time = $(r).find('abbr')[0]?.innerText;
-                        let img = $(r).find('img')[0]?.getAttribute('src');
-
-                        let text = r.innerText.replaceAll(/[\r\n]+/g, ' ')
-                        .replace('Tin nhắn và cuộc gọi được bảo mật bằng tính năng mã hóa đầu cuối.', '')
-                        .replace('Đang hoạt động', '').replaceAll('·', '').replace(time, '').trim();
-
-                        let link = $(r).find('a[href]')[0]?.getAttribute('href');
-
-                        if(time && text && img && link){
-                            $(r).addClass('checked')
-                            window.document.title = time + ' - ' + text;
-                        }
-                    })
-                }catch(e){}
-            }, 200);
-            this.innerHTML = '<span>Stop<span>';
-        } else {
+        if(interval){
             clearInterval(interval);
             interval = null;
             this.innerHTML = '<span>Load<span>';
+            return false;
         }
+        interval = setInterval(_ => {
+            try{
+                let list = Array.from($('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode)')).shift();
+                $(list).animate({scrollTop: list.scrollHeight}, "fast");
+
+                $.each($(list).find('div[role="row"]:not(.checked)'), (i, r) => {
+                    let time = $(r).find('abbr')[0]?.innerText;
+                    let img = $(r).find('img')[0]?.getAttribute('src');
+
+                    let text = r.innerText.replaceAll(/[\r\n]+/g, ' ')
+                    .replace('Tin nhắn và cuộc gọi được bảo mật bằng tính năng mã hóa đầu cuối.', '')
+                    .replace('Đang hoạt động', '').replaceAll('·', '').replace(time, '').trim();
+
+                    let link = $(r).find('a[href]')[0]?.getAttribute('href');
+
+                    if(time && text && img && link){
+                        $(r).addClass('checked')
+                        window.document.title = time + ' - ' + text;
+                    }
+                })
+            }catch(e){}
+        }, 200);
+        this.innerHTML = '<span>Stop<span>';
     };
 })(window.$ || window.jQuery);
 
