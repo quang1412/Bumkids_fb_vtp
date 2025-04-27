@@ -1088,18 +1088,20 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
     let btnScroll = GM_addElement(document.body, 'div', {
         id:'btnScrollToBottom',
-        style:'position: absolute;  top: 20px;  left: 209px;  background: #fafafa;  padding: 5px 15px;  border-radius: 5px;  cursor: pointer; ',
+        style:'position: absolute;  top: 20px;  left: 209px;  background: crimson; color: white;  padding: 5px 15px;  border-radius: 5px;  cursor: pointer; ',
     });
 
-    btnScroll.innerHTML = '<span>Load All ✨<span>';
-    btnScroll.onclick = function(){
+    btnScroll.innerHTML = '<span>Load all ✨<span>';
+    btnScroll.onclick = function(ev){
+        console.log(ev);
+
         if(interval){
             clearInterval(interval);
             interval = null;
-            this.innerHTML = '<span>Load All ✨<span>';
+            this.innerHTML = '<span>Load all ✨<span>';
             return false;
         }
-        this.innerHTML = '<span>Stop ✋<span>';
+        this.innerHTML = '<span>Stop ✋🤚<span>';
         interval = setInterval(_ => {
             try{
                 let list = document.querySelector('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode, .__fb-light-mode)');
@@ -1107,6 +1109,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 let rows = $(list).find('div[role="row"]:not(.checked)');
 
                 rows.length && $(list).animate({scrollTop: list.scrollHeight}, 'fast');
+                //rows.length && $(list).animate({scrollTop: list.scrollHeight}, 5000);
 
                 $.each(rows , (i, r) => {
                     let time = $(r).find('abbr')[0]?.innerText;
