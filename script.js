@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-04-21
+// @version      2025-04-27
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -1091,20 +1091,24 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         style:'position: absolute;  top: 20px;  left: 209px;  background: #fafafa;  padding: 5px 15px;  border-radius: 5px;  cursor: pointer; ',
     });
 
-    btnScroll.innerHTML = '<span>Load<span>';
+    btnScroll.innerHTML = '<span>Load All ✨<span>';
     btnScroll.onclick = function(){
         if(interval){
             clearInterval(interval);
             interval = null;
-            this.innerHTML = '<span>Load<span>';
+            this.innerHTML = '<span>Load All ✨<span>';
             return false;
         }
+        this.innerHTML = '<span>Stop ✋<span>';
         interval = setInterval(_ => {
             try{
-                let list = Array.from($('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode)')).shift();
-                $(list).animate({scrollTop: list.scrollHeight}, "fast");
+                let list = document.querySelector('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode, .__fb-light-mode)');
 
-                $.each($(list).find('div[role="row"]:not(.checked)'), (i, r) => {
+                let rows = $(list).find('div[role="row"]:not(.checked)');
+
+                rows.length && $(list).animate({scrollTop: list.scrollHeight}, 'fast');
+
+                $.each(rows , (i, r) => {
                     let time = $(r).find('abbr')[0]?.innerText;
                     let img = $(r).find('img')[0]?.getAttribute('src');
 
@@ -1119,9 +1123,10 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                         window.document.title = time + ' - ' + text;
                     }
                 })
-            }catch(e){}
+            }catch(e){
+                alert(e.message)
+            }
         }, 200);
-        this.innerHTML = '<span>Stop<span>';
     };
 })(window.$ || window.jQuery);
 
