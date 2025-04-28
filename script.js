@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-04-27
+// @version      2025-04-28
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -843,10 +843,10 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             PhoneBook.set(info);
             this.refreshInfo();
         }
-        createOrder(){
-            try{
-                let title = 'Tạo đơn hàng cho ' + this.userData.name + '\n\n';
+        async createOrder(){
+            let title = 'Đang tạo đơn hàng cho: ' + this.userData.name + '\n\n';
 
+            try{
                 if(!this.userData.phone) throw new Error(title + '❌ Vui lòng cập nhật sđt trước!');
 
                 if(this.waitingOrders && !window.confirm(title + '❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?')) return false
@@ -855,9 +855,10 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                 let orderInfo = { fbid: this.userData.id, phone: this.userData.phone, name: this.userData.name };
 
-
                 let prices_str = prompt(title + "B1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
+                if(!(/^[\d\s]*$/g).test(prices_str)) throw new Error('❌ Giá sản phẩm không hợp lệ!');
+
                 let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
 
                 let itemNameList = GM_getValue('lastest_items_list', []);
@@ -867,8 +868,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
                 let itemName = itemNameList[input] || input
                 itemNameList.unshift(itemName);
-                //unique
-                itemNameList = itemNameList.filter((value, index, array) => array.indexOf(value) === index );
+                itemNameList = itemNameList.filter((value, index, array) => array.indexOf(value) === index ); //unique
                 GM_setValue('lastest_items_list', itemNameList.slice(0, 10));
 
                 orderInfo.prdName = `${itemName} - (${prices_str})`;
@@ -882,11 +882,10 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 window.addEventListener('message', (ev) => { ev.data.fbid === this.userData.id && this.refreshInfo() });
 
                 GM_setValue('lastest_prices', prices_str);
-                //GM_setValue('lastest_order_name', itn);
             }
-            catch(e){ alert(e.message) }
+            catch(e){ alert(title + e.message) }
         }
-        eventsListener(){
+        async eventsListener(){
             this.container.addEventListener("click", function(e){
                 let target = e.target.closest('div[aria-label="Trả lời"][role="button"]'); // Or any other selector.
                 target && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
@@ -1088,30 +1087,23 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 
     let btnScroll = GM_addElement(document.body, 'div', {
         id:'btnScrollToBottom',
-        style:'position: absolute;  top: 20px;  left: 209px;  background: crimson; color: white;  padding: 5px 15px;  border-radius: 5px;  cursor: pointer; ',
+        style:'position: absolute;  top: 20px;  left: 209px;  background: #fafafa;  padding: 5px 15px;  border-radius: 5px;  cursor: pointer; ',
     });
 
-    btnScroll.innerHTML = '<span>Load all ✨<span>';
-    btnScroll.onclick = function(ev){
-        console.log(ev);
-
+    btnScroll.innerHTML = '<span>Load<span>';
+    btnScroll.onclick = function(){
         if(interval){
             clearInterval(interval);
             interval = null;
-            this.innerHTML = '<span>Load all ✨<span>';
+            this.innerHTML = '<span>Load<span>';
             return false;
         }
-        this.innerHTML = '<span>Stop ✋🤚<span>';
         interval = setInterval(_ => {
             try{
-                let list = document.querySelector('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode, .__fb-light-mode)');
+                let list = Array.from($('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode)')).shift();
+                $(list).animate({scrollTop: list.scrollHeight}, "fast");
 
-                let rows = $(list).find('div[role="row"]:not(.checked)');
-
-                rows.length && $(list).animate({scrollTop: list.scrollHeight}, 'fast');
-                //rows.length && $(list).animate({scrollTop: list.scrollHeight}, 5000);
-
-                $.each(rows , (i, r) => {
+                $.each($(list).find('div[role="row"]:not(.checked)'), (i, r) => {
                     let time = $(r).find('abbr')[0]?.innerText;
                     let img = $(r).find('img')[0]?.getAttribute('src');
 
@@ -1126,10 +1118,9 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                         window.document.title = time + ' - ' + text;
                     }
                 })
-            }catch(e){
-                alert(e.message)
-            }
+            }catch(e){}
         }, 200);
+        this.innerHTML = '<span>Stop<span>';
     };
 })(window.$ || window.jQuery);
 
