@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-04-28
+// @version      2025-06-05
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -1122,6 +1122,7 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 })
             }catch(e){}
         }, 200);
+        
     };
 })(window.$ || window.jQuery);
 
@@ -1191,8 +1192,12 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                 let tax = Number((price + fee) / 100 * 1.5);
 
+                let total = (price + fee + tax);
+                if(price == 0) total = 0;
+                else if(price == 1000) total = fee;
+
                 let input_cod = window.document.querySelector('input#cod');
-                input_cod.value = Math.round(price + fee + tax);
+                input_cod.value = Math.round(total);
                 input_cod.dispatchEvent(customEvent('input'));
                 input_cod.dispatchEvent(customEvent('change'));
 
@@ -1204,6 +1209,20 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 return false;
             }
         }
+
+        $(document).one('click', 'div.vtp-bill-table td.mat-column-select', function(){
+            $('a').css({cursor:'not-allowed', 'pointer-events': 'none !important'});
+            window.onbeforeunload = function (e) {
+                e = e || window.event;
+                // For IE and Firefox prior to version 4
+                if (e) {
+                    e.returnValue = 'Sure?';
+                }
+                // For Safari
+                return 'Sure?';
+            };
+
+        });
 
         $(document).on('change', 'form.create-order input#productName', function(){
             let price = (window.eval(this.value?.match(/\(.*\)/g)?.shift()?.replaceAll(/[\(\)]/g, '').trim().replaceAll(/\s+/g, " + ")) || 0) * 1000;
