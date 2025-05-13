@@ -1279,23 +1279,23 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         let input = GM_addElement(gridItem, 'input', {class:'form-control', id:'orderIdCheckField', placeholder:'Quét mã - by QuangPlus', style:'width:200px'});
 
         $(input).keyup(function(event) {
-            if (event.keyCode === 13) {
-                let id = this.value.trim();
-                if(!id) return;
-                let link = $('a[href*="thong-tin-don-hang"][href*="orderNumber='+id+'"]:not(.checked)');
+            if (event.keyCode !== 13) return;
+            let id = this.value.trim();
+            if(!id) return;
+            let link = $('a[href*="thong-tin-don-hang"][href*="orderNumber='+id+'"]:not(.checked)');
 
-                if(link.length){
-                    link.addClass('checked');
-                    let row = link.closest('tr.mat-row[role="row"]');
-                    let checkbox = row.find('label.mat-checkbox-layout');
-                    checkbox.click();
-                    snd_success.play();
-                } else {
-                    snd_fail.play();
-                }
-                input.value = null;
-                input.focus()
+            if(link.length){
+                link.addClass('checked');
+                let row = link.closest('tr.mat-row[role="row"]');
+                let checkbox = row.find('label.mat-checkbox-layout');
+                checkbox.click();
+                snd_success.play();
+            } else {
+                snd_fail.play();
             }
+
+            input.value = null;
+            input.focus()
         });
 
     });
