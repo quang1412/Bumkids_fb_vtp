@@ -1102,8 +1102,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 let tax = Number((price + fee) / 100 * 1.5);
 
                 let total = (price + fee + tax);
-                if(price == 0) total = 0;
-                else if(price == 1000) total = fee;
+               // if(price == 0) total = 0;
+               // else if(price == 1000) total = fee;
 
                 let input_cod = window.document.querySelector('input#cod');
                 input_cod.value = Math.round(total);
