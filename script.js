@@ -1280,7 +1280,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         $(input).keyup(function(event) {
             if (event.keyCode !== 13) return;
-            let id = this.value.trim();
+            let id = this.value?.trim();
             if(!id) return;
             let link = $('a[href*="thong-tin-don-hang"][href*="orderNumber='+id+'"]:not(.checked)');
             if(link.length){
@@ -1292,7 +1292,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             } else {
                 snd_fail.play();
             }
-            setTimeout(_ => $(input).val(null).focus(), 200);
+            $(input).val(null).focus();
         });
 
     });
@@ -1322,6 +1322,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         }
     }, 1000)
 })()
-
 **/
+
 // C6FAE97E8F83FBFDE0D949B3F0D29CE7
