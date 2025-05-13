@@ -1265,7 +1265,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     })
 })(window.$ || window.jQuery);
 
-
 (function($){
     if(window.location.href != 'https://viettelpost.vn/quan-ly-van-don') return;
 
@@ -1275,15 +1274,15 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     snd_fail.volume = 0.7;
 
     $(window.document).ready(function(){
-        let gridItem = GM_addElement(document.querySelector('div.grid-action'), 'div', {class:'grid-item'});
-        let input = GM_addElement(gridItem, 'input', {class:'form-control', id:'orderIdCheckField', placeholder:'Quét mã - by QuangPlus', style:'width:200px'});
+        let gridItem = GM_addElement(document.querySelector('div.grid-action'), 'div', {class:'grid-item', style: 'justify-self: end; position: absolute;'});
+        let input = GM_addElement(gridItem, 'input', {class:'form-control', id:'orderIdCheckField', placeholder:'Quét mã - by QuangPlus', title:'Quét mã - by QuangPlus'});
+        input.focus();
 
         $(input).keyup(function(event) {
             if (event.keyCode !== 13) return;
             let id = this.value.trim();
             if(!id) return;
             let link = $('a[href*="thong-tin-don-hang"][href*="orderNumber='+id+'"]:not(.checked)');
-
             if(link.length){
                 link.addClass('checked');
                 let row = link.closest('tr.mat-row[role="row"]');
@@ -1293,9 +1292,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             } else {
                 snd_fail.play();
             }
-
-            input.value = null;
-            input.focus()
+            setTimeout(_ => $(input).val(null).focus(), 200);
         });
 
     });
