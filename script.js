@@ -1280,6 +1280,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         $(input).keyup(function(event) {
             if (event.keyCode !== 13) return;
+            
             let id = this.value?.trim();
             if(!id) return;
             let link = $('a[href*="thong-tin-don-hang"][href*="orderNumber='+id+'"]:not(.checked)');
@@ -1292,7 +1293,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             } else {
                 snd_fail.play();
             }
-            $(input).val(null).focus();
+            $(input).focus().select();
         });
 
     });
