@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Print Style - Viettel
 // @namespace    http://tampermonkey.net/
-// @version      2024-03-31
+// @version      2025-05-14
 // @description  try to take over the world!
 // @author       You
 // @match        https://digitalize.viettelpost.vn/DigitalizePrint/report.do*
@@ -119,6 +119,12 @@
     document.querySelectorAll('div.mainPrints > div.line-clamp-1:is(:nth-child(10), :nth-child(11))[style*="top:153px"]').forEach(customerName => {
         customerName.classList.add('customer-name');
     });
+
+    document.querySelectorAll('div.mainPrints > div[style*="top: 9px; left: 65px"]').forEach(addressProvince => {
+        addressProvince.style['font-size'] = '20px';
+        addressProvince.style.background = 'white';
+        addressProvince.style.left = '10px';
+    })
 
     //customerName.innerText = customerName.innerText.replaceAll(/\/.*/g,'');
    //  customerName.innerText = itemsName.innerText.replace('(1) 1 x ','');
