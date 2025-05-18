@@ -1030,8 +1030,8 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
         [...cmt_lang].forEach(elm => {
             [...elm.querySelectorAll('div[role="button"]')].forEach(b => b.innerText == 'Xem thêm' && b.click());
 
-            let btn = GM_addElement(elm, 'button', {style:'position:absolute;bottom:0;right:-5px; cursor:pointer;'});
-            btn.innerHTML = '<span>Link</span>';
+            let btn = GM_addElement(elm, 'button', {style:'position: absolute;  bottom: 3px;  left: calc(100% - 8px);  cursor: pointer;  text-wrap: nowrap;'});
+            btn.innerHTML = '<span>Link khách</span>';
             btn.onclick = function(){
                 let article = elm.closest('div[role="article"]');
                 let cmt_id = article.querySelector('li a[href*="comment_id"]')?.getAttribute('href').match(/comment_id\=\d+/g)?.pop()?.replace('comment_id=', '');
