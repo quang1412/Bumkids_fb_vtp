@@ -133,11 +133,7 @@ const GoogleSheet = {
         })
     },
 }
-
-function randomInteger(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
+const randomInteger = (min, max) => (Math.floor(Math.random() * (max - min + 1)) + min);
 
 const viettel = {
     init: function(){
@@ -471,7 +467,6 @@ const PostCollector = {
 
         this.showPostInfo = GM_addElement(window.document.body, 'div', { style:'background-color: #363636; color: white; padding: 8px; border-radius: 5px; position: absolute; bottom: 5px; left: 5px; opacity: 1;'});
         this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> `;
-
 
         window.POST_ID = id;
 
@@ -1022,7 +1017,12 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
     };
 })(window.$ || window.jQuery);
 
-// PRE ORDER //
+// PREORDER
+// PREORDER
+// PREORDER FACEBOOK
+// PREORDER
+// PREORDER
+
 (function($){
     if(window.location.host != 'www.facebook.com') return !1
     function scan(){
@@ -1031,13 +1031,13 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
             [...elm.querySelectorAll('div[role="button"]')].forEach(b => b.innerText == 'Xem thêm' && b.click());
 
             let btn = GM_addElement(elm, 'button', {style:'position: absolute;  bottom: 3px;  left: calc(100% - 8px);  cursor: pointer;  text-wrap: nowrap;'});
-            btn.innerHTML = '<span>Link khách</span>';
+            btn.innerHTML = '<span>link</span>';
             btn.onclick = function(){
                 let article = elm.closest('div[role="article"]');
                 let cmt_id = article.querySelector('li a[href*="comment_id"]')?.getAttribute('href').match(/comment_id\=\d+/g)?.pop()?.replace('comment_id=', '');
                 alert(cmt_id);
             }
-            elm?.classList.add('checked');
+            elm.classList.add('checked');
         });
     }
     window.document.addEventListener('mouseover', scan);
