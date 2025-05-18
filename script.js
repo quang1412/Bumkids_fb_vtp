@@ -1025,16 +1025,26 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
 // PRE ORDER //
 (function($){
     if(window.location.host != 'www.facebook.com') return !1
+    function scan(){
+        let cmt_lang = document.querySelectorAll('div[role="article"][aria-label^="Bình luận"] span[lang]:not(.checked)');
+        [...cmt_lang].forEach(elm => {
+            [...elm.querySelectorAll('div[role="button"]')].forEach(b => b.innerText == 'Xem thêm' && b.click());
 
-
-    let storageKey = 'preOrders';
-    let button = GM_addElement(window.document.body, 'div', {style:'padding:5px; background:white; position:absolute; top:10px; left:10px'});
-    button.innerText = 'click';
-    button.onclick = function(){
-        alert('ok');
+            let btn = GM_addElement(elm, 'button', {style:'position:absolute;bottom:0;right:-5px; cursor:pointer;'});
+            btn.innerHTML = '<span>Link</span>';
+            btn.onclick = function(){
+                let article = elm.closest('div[role="article"]');
+                let cmt_id = article.querySelector('li a[href*="comment_id"]')?.getAttribute('href').match(/comment_id\=\d+/g)?.pop()?.replace('comment_id=', '');
+                alert(cmt_id);
+            }
+            elm?.classList.add('checked');
+        });
     }
-})(window.$ || window.jQuery);
+    window.document.addEventListener('mouseover', scan);
+    window.document.addEventListener('scroll', scan);
 
+
+})(window.$ || window.jQuery);
 /***
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
