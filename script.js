@@ -1309,6 +1309,21 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     });
 })(window.$ || window.jQuery);;
 
+
+
+
+(function($){
+    GM_addStyle('td.mat-column-ORDER_REFERENCE{cursor:pointer;}')
+    if(window.location.origin != "https://viettelpost.vn") return;
+    $(document.body).on('click', 'td.mat-column-ORDER_REFERENCE', function(){
+        let fbid = this.innerText.match(/(\d)+/g)?.shift();
+        let url = 'https://fb.com/'+fbid;
+        window.open(url, '_blank');
+    })
+
+})(window.$ || window.jQuery);
+
+
 /** BOOKMARK LET
 (function() {
     if (window.intervvv) {
