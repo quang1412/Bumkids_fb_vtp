@@ -352,13 +352,14 @@ const PhoneBook = {
         new Promise(resolve => {
             let matchs = this.get(info.id);
             let existUser = matchs?.pop();
+            resolve();
             if(existUser){
                 info.img = existUser?.img;
-                return resolve();
+                resolve();
             } else {
                 Imgbb.upload(info.img, info.id).then(r => {
                     info.img = r.data.link;
-                    return resolve();
+                    resolve();
                 });
             }
         }).catch(e => {
@@ -1091,6 +1092,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     div.dieukhoan {display:none;}
     .mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray;}
 
+    *:is(.mat-column-SENDER_FULLNAME, .mat-column-PARTNER):is(th, td) {display:none;}
 
     /* ViettelPost custom css */`);
 
@@ -1112,8 +1114,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 let tax = Number((price + fee) / 100 * 1.5);
 
                 let total = (price + fee + tax);
-               // if(price == 0) total = 0;
-               // else if(price == 1000) total = fee;
+                if(price == 0) total = 0;
+                else if(price == 1000) total = fee;
 
                 let input_cod = window.document.querySelector('input#cod');
                 input_cod.value = Math.round(total);
@@ -1160,11 +1162,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                 let orders = res.data.data.LIST_ORDER.filter(o => !!~([-100, -108,100,102,103,104]).indexOf(o.ORDER_STATUS));
 
-                if(orders.length && !window.confirm('❌ SDT có đơn chưa gửi!!! bạn vẫn tiếp tục tạo đơn?')){
-                    let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.value);
-                    window.location.href = vtlink
-
-                }
+                orders.length && alert('❌ CẢNH BÁO: \n\n SDT có đơn chưa gửi!!!?');
             } catch(e){
                 alert('Lỗi check trùng đơn! ❌❌❌');
             }
@@ -1290,7 +1288,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         $(input).keyup(function(event) {
             if (event.keyCode !== 13) return;
-            
+
             let id = this.value?.trim();
             if(!id) return;
             let link = $('a[href*="thong-tin-don-hang"][href*="orderNumber='+id+'"]:not(.checked)');
@@ -1313,7 +1311,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
 
 (function($){
-    GM_addStyle('td.mat-column-ORDER_REFERENCE{cursor:pointer;}')
+    GM_addStyle('td.mat-column-ORDER_REFERENCE{cursor:pointer;} td.mat-column-ORDER_REFERENCE:hover{font-weight: 700; text-decoration: underline; color: blue !important;}')
     if(window.location.origin != "https://viettelpost.vn") return;
     $(document.body).on('click', 'td.mat-column-ORDER_REFERENCE', function(){
         let fbid = this.innerText.match(/(\d)+/g)?.shift();
