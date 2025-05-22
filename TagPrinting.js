@@ -130,12 +130,20 @@ const debug = urlParams.get('debug');
     [...document.querySelectorAll('div.mainPrints')].forEach(mainPrint => {
         let namePhone = mainPrint.querySelector('div.line-clamp-1:is(:nth-child(10), :nth-child(11))[style*="top:153px"]');
         let phone = namePhone.innerText.match(/\d+/g)?.pop();
-//        alert(phone);
         namePhone.innerText = namePhone.innerText.replace(phone, '').replace('/','');
-        let phoneCode = GM_addElement(mainPrint, 'img', {src: 'https://barcodeapi.org/api/128/'+phone+'?&dpi=90&height=10&text=none', style:'bottom: 0;  left: 0;  position: absolute;'});
-
-
-    })
+        let barCodeUrl = 'https://barcodeapi.org/api/128/'+phone+'?&dpi=90&text=none';
+        fetch(barCodeUrl)
+            .then( response => response.blob() )
+            .then( blob =>{
+            var reader = new FileReader() ;
+            reader.onload = function(){
+                console.log(this.result)
+                let container = GM_addElement(mainPrint, 'div', {style:'width:100%; height: 10px; bottom: 0; left: 0; position: absolute;'});
+                GM_addElement(container, 'img', {src:this.result, class:"phoneBarCode", style:''});
+            } ; // <--- `this.result` contains a base64 data URI2549303031227
+            reader.readAsDataURL(blob) ;
+        });
+    });
 
     document.querySelectorAll('div.mainPrints > div[style*="top: 9px; left: 65px"]').forEach(addressProvince => {
         addressProvince.style['font-size'] = '20px';
