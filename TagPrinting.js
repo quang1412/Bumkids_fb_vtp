@@ -1,19 +1,25 @@
 // ==UserScript==
 // @name         Print Style - Viettel
 // @namespace    http://tampermonkey.net/
-// @version      2025-05-14
+// @version      2025-05-22-1
 // @description  try to take over the world!
 // @author       You
 // @match        https://digitalize.viettelpost.vn/DigitalizePrint/report.do*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
+
+// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/TagPrinting.js
+// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/TagPrinting.js
+
 // @grant        GM_addElement
 // @grant        GM_addStyle
 // ==/UserScript==
 
 
+const urlParams = new URLSearchParams(window.location.search);
+const debug = urlParams.get('debug');
+
 (function() {
     'use strict';
-    const urlParams = new URLSearchParams(window.location.search);
     const showPostage = urlParams.get('showPostage');
 
     if(showPostage == 0){
@@ -95,17 +101,17 @@
         //alert('onafterprint');
     }
 
-    setTimeout(function () { window.print(); }, 100);
+    setTimeout(function () { !debug && window.print(); }, 100);
 
     let interval = window.setInterval(function(){
         if(!isPrinted){ return false }
         clearInterval(interval);
         return setTimeout(function(){
-            !isClick && window.close();
+            (!isClick && !debug) && window.close();
         }, 1000);
     }, 500);
 
-    document.querySelectorAll('div.mainPrints > div[style*="top: 218px; left:62px"]').forEach(itemsPrice => {
+    document.querySelectorAll('div.mainPrints > div[style*="top: 218px;"]').forEach(itemsPrice => {
         itemsPrice.innerText = "xem App";
     })
 
@@ -118,7 +124,18 @@
     GM_addStyle('div.customer-name {  background: white; white-space: nowrap; z-index: 100; font-weight: 900; font-size: 26px; height: 28px !important; width: 100%; line-height: 1em; }');
     document.querySelectorAll('div.mainPrints > div.line-clamp-1:is(:nth-child(10), :nth-child(11))[style*="top:153px"]').forEach(customerName => {
         customerName.classList.add('customer-name');
+        let phone = customerName.innerText.match(/\d+/g)?.pop();
     });
+
+    [...document.querySelectorAll('div.mainPrints')].forEach(mainPrint => {
+        let namePhone = mainPrint.querySelector('div.line-clamp-1:is(:nth-child(10), :nth-child(11))[style*="top:153px"]');
+        let phone = namePhone.innerText.match(/\d+/g)?.pop();
+//        alert(phone);
+        namePhone.innerText = namePhone.innerText.replace(phone, '').replace('/','');
+        let phoneCode = GM_addElement(mainPrint, 'img', {src: 'https://barcodeapi.org/api/128/'+phone+'?&dpi=90&height=10&text=none', style:'bottom: 0;  left: 0;  position: absolute;'});
+
+
+    })
 
     document.querySelectorAll('div.mainPrints > div[style*="top: 9px; left: 65px"]').forEach(addressProvince => {
         addressProvince.style['font-size'] = '20px';
