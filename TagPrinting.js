@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Print Style - Viettel
 // @namespace    http://tampermonkey.net/
-// @version      2025-05-22-1
+// @version      2025-05-23-1
 // @description  try to take over the world!
 // @author       You
 // @match        https://digitalize.viettelpost.vn/DigitalizePrint/report.do*
@@ -131,6 +131,7 @@ const debug = urlParams.get('debug');
         let namePhone = mainPrint.querySelector('div.line-clamp-1:is(:nth-child(10), :nth-child(11))[style*="top:153px"]');
         let phone = namePhone.innerText.match(/\d+/g)?.pop();
         namePhone.innerText = namePhone.innerText.replace(phone, '').replace('/','');
+//        let barCodeUrl = 'https://barcodeapi.org/api/qr/'+phone+'?&dpi=90&height=20';
         let barCodeUrl = 'https://barcodeapi.org/api/128/'+phone+'?&dpi=90&text=none';
         fetch(barCodeUrl)
             .then( response => response.blob() )
@@ -138,7 +139,7 @@ const debug = urlParams.get('debug');
             var reader = new FileReader() ;
             reader.onload = function(){
                 console.log(this.result)
-                let container = GM_addElement(mainPrint, 'div', {style:'width:100%; height: 10px; bottom: 0; left: 0; position: absolute;'});
+                let container = GM_addElement(mainPrint, 'div', {style:'width:100%; height: 15px; bottom: 0; left: 0; position: absolute;'});
                 GM_addElement(container, 'img', {src:this.result, class:"phoneBarCode", style:''});
             } ; // <--- `this.result` contains a base64 data URI2549303031227
             reader.readAsDataURL(blob) ;
