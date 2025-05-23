@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Print Style - Viettel
 // @namespace    http://tampermonkey.net/
-// @version      2025-05-23-1
+// @version      2025-05-23-3
 // @description  try to take over the world!
 // @author       You
 // @match        https://digitalize.viettelpost.vn/DigitalizePrint/report.do*
@@ -101,7 +101,7 @@ const debug = urlParams.get('debug');
         //alert('onafterprint');
     }
 
-    setTimeout(function () { !debug && window.print(); }, 100);
+    
 
     let interval = window.setInterval(function(){
         if(!isPrinted){ return false }
@@ -131,14 +131,14 @@ const debug = urlParams.get('debug');
         let namePhone = mainPrint.querySelector('div.line-clamp-1:is(:nth-child(10), :nth-child(11))[style*="top:153px"]');
         let phone = namePhone.innerText.match(/\d+/g)?.pop();
         namePhone.innerText = namePhone.innerText.replace(phone, '').replace('/','');
-//        let barCodeUrl = 'https://barcodeapi.org/api/qr/'+phone+'?&dpi=90&height=20';
-        let barCodeUrl = 'https://barcodeapi.org/api/128/'+phone+'?&dpi=90&text=none';
+        let barCodeUrl = 'https://barcodeapi.org/api/128/'+phone+'?&dpi=100&text=none';
         fetch(barCodeUrl)
             .then( response => response.blob() )
             .then( blob =>{
             var reader = new FileReader() ;
             reader.onload = function(){
                 console.log(this.result)
+                mainPrint.classList.add('phoneBarCode_ok');
                 let container = GM_addElement(mainPrint, 'div', {style:'width:100%; height: 15px; bottom: 0; left: 0; position: absolute;'});
                 GM_addElement(container, 'img', {src:this.result, class:"phoneBarCode", style:''});
             } ; // <--- `this.result` contains a base64 data URI2549303031227
@@ -152,6 +152,16 @@ const debug = urlParams.get('debug');
         addressProvince.style.left = '10px';
     })
 
+    setTimeout(function () {
+        if(debug) return false;
+        let mainPrint = document.querySelectorAll('div.mainPrints');
+        let phoneBarcode = document.querySelectorAll('img.phoneBarCode');
+        if(mainPrint.length == phoneBarcode.length){
+            window.print();
+        } else {
+
+        }
+    }, 200);
     //customerName.innerText = customerName.innerText.replaceAll(/\/.*/g,'');
    //  customerName.innerText = itemsName.innerText.replace('(1) 1 x ','');
     // Your code here...
