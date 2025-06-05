@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Bum | FB - VTP
+// @name         Bum | FB - VTP (2)
 // @author       QuangPlus
 // @version      2025.6.5.1
 // @description  try to take over the world!
@@ -771,6 +771,7 @@ const PreOrder_Mng = {
         let oldCid = $('div#lastClickCmt')?.removeAttr('id')?.attr('data-cid');
 
         if(!cid || oldCid == cid) return;
+        if(!keyState.ControlLeft) return;
         if(!$(a).is('[aria-label*="dưới tên Trịnh Hiền"]')) return;
 
         if($(a).attr('data-uid')) return;
