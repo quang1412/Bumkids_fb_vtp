@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025-05-18-1
+// @version      2025.6.5.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
-// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
-// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
+// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main0506/script.js
+// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main0506/script.js
 
 // @match        https://viettelpost.vn/*
 // @match        https://www.facebook.com/*
@@ -33,16 +33,17 @@
 // ==/UserScript==
 
 
-const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.trinh.5011';
+const myPhone = '0966628989',
+      myFbName = 'Trịnh Hiền',
+      _myFbUsername = 'hien.trinh.5011',
+      URLPARAMS = new URLSearchParams(window.location.search),
+      $ = (window.$ || window.jQuery);
 
-function wait(ms = 1000){
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+function isFBpage(){ return (window.location.host === 'www.facebook.com') }
+function Delay(ms = 1000) { return new Promise(resolve => setTimeout(resolve, ms)) }
 //var csv is the CSV file with headers
-function csvJSON(csv){
-
-  var lines=csv.split("\n");
-
+function csvJSON(csv = '{}'){
+  var lines = csv.split("\n");
   var result = [];
 
   // NOTE: If your columns contain commas in their values, you'll need
@@ -54,7 +55,7 @@ function csvJSON(csv){
   for(var i=1;i<lines.length;i++){
 
       var obj = {};
-      var currentline=lines[i].split(",");
+      var currentline=lines[i].split("\",\"");
 
       for(var j=0;j<headers.length;j++){
           let label = headers[j].replaceAll('\"','');
@@ -62,80 +63,407 @@ function csvJSON(csv){
           obj[label] = value;
       }
       result.push(obj);
-
   }
-
   //return result; //JavaScript object
   return JSON.stringify(result); //JSON
 }
-const GoogleSheet = {
-    query: function( sheet = 'log', range = 'A:A', queryStr = 'SELECT *'){
-        return new Promise((resolve, reject) => {
-            let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
-            let tq = encodeURIComponent(queryStr);
-            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:csv&sheet=${sheet}&range=${range}&tq=${tq}`;
-            GM_xmlhttpRequest({
-                url: url,
-                method: "GET",
-                synchronous: true,
-                headers: {"Content-Type": "text/html; charset=utf-8"},
-                onload: function (res) {
-                    let json = csvJSON(res.response);
-                    return resolve(JSON.parse(json));
+function randomInteger(min, max) {return Math.floor(Math.random() * (max - min + 1)) + min};
+function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
+function customEvent(n){
+    if(n == 'mouseover'){
+        let event = new MouseEvent('mouseover', { 'bubbles': true, 'cancelable': true});
+        return event;
+    } else {
+        let event = document.createEvent('Event');
+        event.initEvent(n, true, false);
+        return event;
+    }
+}
+function getFormatedDate(i = 0) {
+    const today = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
+    const yyyy = today.getFullYear();
+    let mm = today.getMonth() + 1; // Months start at 0!
+    let dd = today.getDate();
+    if (dd < 10) dd = '0' + dd;
+    if (mm < 10) mm = '0' + mm;
+    const formattedToday = dd + '/' + mm + '/' + yyyy;
+    return formattedToday;
+}
+function makeid(length = 12) {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const charactersLength = characters.length;
+    let counter = 0;
+    while (counter < length) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+      counter += 1;
+    }
+    return result;
+}
 
-                  //  return GM_log(JSON.parse(json));
-                },
-                onerror: function(res) {
-                    GM_log("error: ", res.message);
-                    return reject(res.message);
+
+GM_registerMenuCommand("refresh post", async _ => {
+    FbPost_Mng.getCurrentPostInfo(true)
+});
+
+var keyState = {};
+function keyHandler(e){ keyState[e.code] = e.type === "keydown" }
+document.addEventListener("keydown",keyHandler);
+document.addEventListener("keyup",keyHandler);
+
+/***********************************************************************************************************************************
+Facebook
+************************************************************************************************************************************/
+
+// ADD CSS STYLE
+(function(){
+    if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
+
+    GM_addStyle('div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}');
+
+    GM_addStyle(`/* CSS START */
+    div.infoCard {--border-color: lightgray;--bg-brightness: 1.5;--bg-toolBar: rgb(231 231 231 / 60%);--text-color: #000;min-height: 115px;display: flex;flex-direction: column;justify-content: space-between;color: var(--text-color);backdrop-filter: brightness(var(--bg-brightness)) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 8px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid var(--border-color);border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}
+
+    html.__fb-dark-mode div.infoCard { --border-color: gray; --bg-brightness: 0.5; --bg-toolBar: rgb(79 79 79 / 60%); --text-color: whitesmoke; }
+    div.infoCard ::selection { color: red; background: yellow;}
+    div.infoCard.bottom { left: 10px; top: 64px; right: unset; bottom: unset;}
+    div.infoCard div.toolBar { text-align: center; background-color: var(--bg-toolBar); border-radius: 6px; display: flex; justify-content: space-around; }
+    div.infoCard div.toolBar a { padding: 5px; flex: 1; opacity: 1; transition: all 0.5s ease-in-out; }
+    div.infoCard div.card-bg { background: #bdc3c7; background: -webkit-linear-gradient(to right, #2c3e50, #bdc3c7); background: linear-gradient(to right, #2c3e50, #bdc3c7); z-index: -1; opacity: 0.5; }
+
+    div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }
+    div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }
+
+    /*** Đánh dấu cmt của người đăng ***/
+    div[aria-label*="Bình luận dưới tên Trịnh Hiền"] svg[role="none"] { border: 2px solid red; border-radius: 50%; padding: 0px; }
+    `);
+
+    GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
+                'div[role="article"]#lastClickCmt span[lang] * { animation:blinker 1s linear infinite !important; color:cyan !important; }' +
+                'div[role="article"][data-uid] span[lang] * { color:yellow; }' +
+
+                'body:not(.setPreOrderAllow) a.setPreOrderBtn{ display:none; }');
+})();
+
+//FB CUSTOMER MANAGER
+const Customer_Mng = {
+    ggFormId: '1FAIpQLScdh4nIuwIG7wvbarsXyystgnSkTcIzgIBBlcA9ya8DDZvwXA',
+    ggFormEntry:{ id: 736845047, name: 64482577, phone: 1863958217, addr: 143609329, img: 1145058745, attr0: 1693043917, attr1: 1173103552, attr2: 398324750, attr3: 696385383, attr4: 2084291905, attr5: 1174020264, attr6: 1243517720, attr7: 1831851967, attr9: 1146378854 },
+    sheetName: 'customers',
+    int: async function(){
+
+    },
+    sync: async function(){
+
+    },
+    get: async function(id){
+        if (!id) return false;
+        let matchs = await GGSHEET.query(this.sheetName, 'A:Z', `SELECT * WHERE B = "${id}" OR C = "${id}" OR D = "${id}" `);
+        return matchs;
+    },
+    set: async function(info){
+        try{
+            //let img = await uploadimage(info.img);
+            let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
+            let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
+            let res = await GGSHEET.formSubmit(url);
+            return res;
+        } catch(err){
+            alert(err.message);
+        };
+    },
+};
+//Customer_Mng.int();
+
+// FB INFO CARD
+(function() {
+    if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
+    const $ = window.jQuery, myUserName = 'hien.trinh.5011', myDisplayName = 'Trịnh Hiền'
+
+    GM_addStyle(`div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}`);
+    GM_addStyle(`div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}`)
+    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a:is([href*="/t/"], [href*="/messages/"])::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 10px;  color: initial;  opacity: 0.5; }`);
+    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a[href*="/e2ee/"]::before {color:red;}`);
+
+    class InfoCard{
+        constructor(info, container){
+            this.container = container;
+
+            this.customer = {
+                id: null,
+                e2ee: (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : null),
+                ...info,
+            };
+
+            let card = GM_addElement(container, 'div', { class: 'infoCard', 'data-fbid': this.customer.id });
+            if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') card.classList.add('bottom');
+
+            this.table = GM_addElement(card, 'table', { style: 'padding-bottom: 5px; color:white;' });
+            //this.table.innerText = 'Loading...';
+
+            let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
+
+            this.btn_1 = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
+            this.btn_1.innerText = 'Tìm sđt'; this.btn_1.onclick = _ => this.phoneFinder();
+
+            let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
+            btn_2.innerText = 'Sửa sđt'; btn_2.onclick = _ => this.setPhone();
+
+            let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
+            btn_3.innerText = 'Tạo đơn'; btn_3.onclick = _ => this.createOrder();
+
+            let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:whitesmoke;', class: 'setPreOrderBtn'});
+            btn_4.innerText = 'Pre-od'; btn_4.onclick = _ => this.preOrder();
+
+            GM_addElement(card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
+            let quangplus = GM_addElement(card, 'small', {style: 'opacity: .5; position: absolute; top: 5px; right: 5px;'});
+            quangplus.innerHTML = '<a href="https://fb.com/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>';
+
+            this.eventsListener();
+
+            // get info from Google sheet
+            this.table.innerText = 'Loading google data...';
+            Customer_Mng.get(this.customer.id).then(data => {
+                if(!data || !data.length) throw new Error('chưa có sdt!');
+                this.customer = {...this.customer, ...data.pop()};
+            }).catch(err => {
+                this.table.innerText = '⚠️ ' + err.message;
+            }).then(_ => {
+                this.refreshInfo();
+            });
+        }
+
+        async refreshInfo(){
+            if(this.isBusy) return; this.isBusy = 1;
+
+            try{
+                this.table.innerText = 'Loading viettel data...';
+
+                let {id, phone, e2ee} = this.customer;
+                if(!phone) throw new Error('chưa có số đt!');
+
+                // get info from Viettel Post
+                let vt = await VIETTEL.getListOrders(phone);
+                if(vt.error) throw new Error('Viettel: ' + vt.message);
+
+                let list = vt.data.data.LIST_ORDER;
+                let total = vt.data.data.TOTAL;
+                this.viettelPending = list.filter(od => !!~([-108,100,102,103,104]).indexOf(od.ORDER_STATUS)).length;
+                this.viettelDraft = list.filter(od => od.ORDER_STATUS == -100).length;
+
+                await Delay();
+                this.preOd = await PreOrder_Mng.get(id);
+
+                this.table.innerHTML = `
+                <tr style="display:none;"><td>ID:</td> <td>${id}</td></tr>
+                <tr> <td>Số điện thoại: </td> <td>${phone}</td> </tr>
+                <tr>
+                  <td>Đơn viettel 30ng: </td>
+                  <td>
+                    <a href="https://viettelpost.vn/quan-ly-van-don?q=1&p=${btoa(phone)}" target="_blank" style="color:inherit; text-decoration: underline;">
+                    ${total} đơn
+                    ${this.viettelDraft ? `&nbsp<span style="color:yellow"> • có đơn nháp</span>` : ''}
+                    ${this.viettelPending ? `&nbsp<span style="color:coral"> • có đơn chờ giao</span>` : ''}
+                    </a>
+                  </td>
+                  <tr> <td>Đơn pre-order: </td> <td>${(this.preorders?.length || 0)}</td> </tr>
+                </tr>
+                <tr style='display:none;'> <td>e2ee: </td> <td>${e2ee || '---'}</td> </tr>
+                <tr> <td>Tags: </td> <td>---</td> </tr>`;
+            } catch(e){
+                this.table.innerText = '⚠️ ' + e.message;
+            } finally{
+                this.isBusy = 0;
+                console.log(this.customer);
+            }
+        }
+
+        async phoneFinder(){
+            if(this.finder){
+                clearInterval(this.finder);
+                delete this.finder;
+                this.btn_1.innerText = "Tìm sđt";
+                return false;
+            }
+            this.btn_1.innerText = "Dừng";
+            //let count = 0;
+            this.finder = setInterval(async _ => {
+                let rows = this.container.querySelectorAll('div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"]:is(.__fb-dark-mode, __fb-light-mode):not(.scanned)');
+                let row = rows[rows.length - 1];
+                if(!row) return false;
+
+                row.classList.add('scanned');
+                row.scrollIntoView({ behavior: "smooth", block: "end", inline: "end" });
+
+                let span = row.querySelector('[role="presentation"] span[dir="auto"]:not(:has(span)):not([style])');
+                if(!span) return false;
+
+                let phone = await new Promise(resolve => {
+                    let txt = span.innerText.replaceAll(/[^\w\d]/g, '');
+                    let num = txt && txt.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
+                    return resolve( !num ? false : num == myPhone ? false : num );
+                });
+
+                if(!phone) {
+                    return false; //continue
+                }
+
+                this.phoneFinder(); //break
+                //span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+
+                let p = span.closest('div[role="presentation"]');
+                p.style.border = '2px dashed ' + (phone == this.customer.phone ? 'cyan' : 'red');
+            }, 100);
+        }
+
+        async setPhone(phone = window.prompt("Nhập sđt cho " + this.customer.name, this.customer.phone)){
+            if(phone == null || phone == '' || !isVNPhone(phone) || phone == this.customer.phone) return;
+            try{
+                this.table.innerText = 'Đang cập nhật cloud!';
+
+                let newInfo = {...this.customer, phone: phone};
+                let res = await Customer_Mng.set(newInfo);
+                this.customer = newInfo;
+                this.refreshInfo();
+            } catch(err){
+                alert(err.message);
+            }
+        }
+
+        async preOrder(){
+            let title = `Tạo đơn Pre-order \n\n`;
+            let elm = $('div#lastClickCmt:not([data-uid])');
+            if(!elm || !elm.length) return alert('⚠️ Chọn comment note đơn trước!');
+
+            let text = elm.attr('data-ctext');
+            let cid = elm.attr('data-cid');
+            let uid = this.customer.id;
+            let pid = FbPost_Mng.current?.id;
+
+            title += `Tên FB: ${this.customer.name} \n`;
+            title += `Nội dung: ${text} \n`;
+
+            if(!window.confirm(title)) return;
+
+            PreOrder_Mng.set({cid, uid, pid, text}).then(_ => {
+                elm.attr({id: '', 'data-uid': uid});
+                this.refreshInfo();
+            }).catch(err => {
+
+            }).finally()
+        }
+
+        async createOrder(){
+            //if(keyState.MetaLeft) { return this.preOrder() }
+
+            let title = 'Đang tạo đơn hàng cho: ' + this.customer.name + '\n\n';
+
+            try{
+                if(!this.customer.phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
+
+                if((this.viettelDraft || this.viettelPending) && !window.confirm(title + '❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?')) return false
+
+                let url = 'https://viettelpost.vn/order/tao-don-le?query=';
+
+                let orderInfo = { fbid: this.customer.id, phone: this.customer.phone, name: this.customer.name };
+
+                let prices_str = prompt(title + "B1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
+                if (prices_str == undefined || prices_str == null) { return false }
+                if(!(/^[\d\s]*$/g).test(prices_str)) throw new Error('❌ Giá sản phẩm không hợp lệ!');
+
+                let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
+
+                let itemNameList = GM_getValue('lastest_items_list', []);
+                let list = itemNameList.map((e, i) => `[${i}] ${e}`).join('\n');
+                let input = prompt(title + 'Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + list, itemNameList[0] || '');
+                if (input == null || input == undefined) return false;
+
+                let itemName = itemNameList[input] || input
+                itemNameList.unshift(itemName);
+                itemNameList = itemNameList.filter((value, index, array) => array.indexOf(value) === index ); //unique
+                GM_setValue('lastest_items_list', itemNameList.slice(0, 10));
+
+                orderInfo.prdName = `${itemName} - (${prices_str})`;
+                orderInfo.price = (price*1000);
+
+                url += btoa(unescape(encodeURIComponent(JSON.stringify(orderInfo))));
+
+                window.popupWindow?.focus();
+                window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
+                window.addEventListener('message', (ev) => { ev.data.fbid === this.customer.id && this.refreshInfo() });
+
+                GM_setValue('lastest_prices', prices_str);
+            }
+            catch(e){ alert(title + e.message) }
+        }
+
+        async eventsListener(){
+            this.container.addEventListener("click", function(e){
+                let target = e.target.closest('div[aria-label="Trả lời"][role="button"]'); // Or any other selector.
+                target && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
+            });
+
+            this.container.addEventListener("keypress", function(e) {
+                //alert('onkeypress')
+                console.log(e);
+                if (e.charCode == 122331) {
+                    alert('option3');
+                }
+                if (e.keyCode == 87 && e.ctrlKey == true) {
+                    alert('option2');
+                }
+                if (e.charCode == 339) {
+                    alert('option1');
                 }
             });
-        });
-    },
-    submitForm: function(url){
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                url: url,
-                method: "GET",
-                synchronous: false,
-                headers: {"Content-Type": "text/html; charset=utf-8"},
-                onload: function (res) {
-                    if(res.readyState == 4 && res.status == 200) resolve(res);
-                },
-                onerror: function(res) {
-                    GM_log("error: ", res.message);
-                    return reject('GG Log error: ' + res.message);
-                }
-            })
-        })
-    },
-    log: function(type = 'test', data = []){
-        let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ';
-        let fields = [689021464,354401759,1477078849,2101594477,204892124,1251442348,94653935,814190568,733397838,718607793,570486205];
-        return new Promise((resolve, reject) => {
-            if(!type || !data) { return reject('input is invalid!') };
-            let url = `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${fields[0]}=${type}&${data.map((d, i) => (`entry.${fields[i+1]}=${encodeURIComponent(d)}`)).join('&')}`;
-            //GM_log(url);
-            GM_xmlhttpRequest({
-                url: url,
-                method: "GET",
-                synchronous: false,
-                headers: {"Content-Type": "text/html; charset=utf-8"},
-                onload: function (res) {
-//                    resolve(res);
-                    if(res.readyState == 4 && res.status == 200) resolve(res);
-                },
-                onerror: function(res) {
-                    GM_log("error: ", res.message);
-                    return reject('GG Log error: ' + res.message);
-                }
-            })
-        })
-    },
-}
-const randomInteger = (min, max) => (Math.floor(Math.random() * (max - min + 1)) + min);
 
-const viettel = {
+            // Set phone by mouse selection
+            this.container.onmouseup = _ => {
+                if(!window.getSelection) return;
+                let phone = window.getSelection().toString().replaceAll(/\D/g,'');
+                if(!isVNPhone(phone) || phone == this.customer.phone || phone == myPhone){
+                    return false;
+                } else if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
+                    this.setPhone(phone);
+                }
+            }
+        }
+    }
+
+    window.document.addEventListener('mousemove', _ => {
+        if(this.delay) return;
+        this.delay = 1; setTimeout(_ => {this.delay = 0}, 1000);
+
+        let links = window.document.querySelectorAll(`
+          div[role="main"][aria-label^="Cuộc trò chuyện với "] > div > div > div > div:first-child a[role="link"][href]:not(.checked, [aria-label]),
+          div:not([hidden]) > div[style*="chat-composer"] a[role="link"][href^="/"][aria-label]:not(.checked, [aria-label="Mở ảnh"])
+        `);
+        for(let i = 0; i < links.length; i++){
+            let e = links[i];
+            let id = e.getAttribute('href')?.match(/\d+/g)?.pop();
+            let name = e.getAttribute('aria-label') || e.querySelector('h2').innerText;
+            let img = e.querySelector('img')?.getAttribute('src');
+
+            if(!id || !name || !img) continue;
+
+            e.classList.add('checked');
+            let contain = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
+            new InfoCard({id, name, img}, contain);
+        }
+    });
+
+    document.addEventListener("keydown", e => {
+        if(e.key === "F1") {
+            // Suppress default behaviour
+            // e.g. F1 in Microsoft Edge on Windows usually opens Windows help
+            e.preventDefault();
+            alert('F1');
+        }
+    })
+})();
+
+// VIETTEL
+const VIETTEL = {
     init: function(){
         this.deviceId = GM_getValue('vtp_deviceId', null);
         GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => {
@@ -231,821 +559,298 @@ const viettel = {
         })
     }
 };
-viettel.init();
+VIETTEL.init();
 
-function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
-function customEvent(n){
-    if(n == 'mouseover'){
-        let event = new MouseEvent('mouseover', { 'bubbles': true, 'cancelable': true});
-        return event;
-    } else {
-        let event = document.createEvent('Event');
-        event.initEvent(n, true, false);
-        return event;
-    }
-}
-function getFormatedDate(i = 0) {
-    const today = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
-    const yyyy = today.getFullYear();
-    let mm = today.getMonth() + 1; // Months start at 0!
-    let dd = today.getDate();
-    if (dd < 10) dd = '0' + dd;
-    if (mm < 10) mm = '0' + mm;
-    const formattedToday = dd + '/' + mm + '/' + yyyy;
-    return formattedToday;
-}
-function makeid(length = 12) {
-    let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const charactersLength = characters.length;
-    let counter = 0;
-    while (counter < length) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
-      counter += 1;
-    }
-    return result;
-}
-const Imgbb = {
-    key: 'd2c959c2bb733f020987806e60640feb',
-    upload: function(src, name){
+// GOOGLE SHEET
+const GGSHEET = {
+    query: function( sheet = 'log', range = 'A:A', queryStr = 'SELECT *'){
         return new Promise((resolve, reject) => {
-            var data = new FormData();
-            data.append("image", src);
-            data.append("type", "url");
-            data.append("title", name);
-            data.append("description", name);
+            let ggsid = '1KAhQCGOIInG3Et77PfY03V_Nn4fWvi0z1ITh1BKFkmk';
+            let tq = encodeURIComponent(queryStr);
+            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:csv&sheet=${sheet}&range=${range}&tq=${tq}&time=${new Date().getTime()}`;
 
+            console.log(url)
             GM_xmlhttpRequest({
-                url:  'https://api.imgur.com/3/image',
-                method: "POST",
+                url: url,
+                method: "GET",
                 synchronous: true,
-                data: data,
-                headers:  {
-                    "Authorization": "Client-ID 46065c05c1005de"
+                headers: {"Content-Type": "text/html; charset=utf-8"},
+                onload: function (res) {
+                    let json = csvJSON(res.response);
+                    return resolve(JSON.parse(json));
                 },
-                onload: (response) => {
-                    let res = JSON.parse(response.responseText);
-                    return res.status == 200 ? resolve(res) : reject(new Error(res.detail));
-                },
-                onerror: (e) => {
-                    return reject(e);
+                onerror: function(res) {
+                    GM_log("error: ", res.message);
+                    return reject(res.message);
                 }
             });
         });
-
-
-        /***
-        let key = this.key;
-        var formData = new FormData();
-        formData.append('image', src);
+    },
+    formSubmit: function(url){
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
-                url:  'https://api.imgbb.com/1/upload?key='+ key + '&name=' + name,
-                method: "POST",
-                synchronous: true,
-                data: formData,
-                onload: (response) => {
-                    let res = JSON.parse(response.responseText);
-                  //GM_log(res);
-                    return res.status == 200 ? resolve(res) : reject(res.message);
+                url: url,
+                method: "GET",
+                synchronous: false,
+                headers: {"Content-Type": "text/html; charset=utf-8"},
+                onload: function (res) {
+                    res.readyState == 4 && res.status == 200 && resolve(res);
                 },
-                onerror: (e) => {
-                    return reject(e.message || 'Lỗi viettelReqPost');
+                onerror: function(res) {
+                    GM_log("error: ", res.message);
+                    return reject('GG Log error: ' + res.message);
                 }
-            });
-        });
-        ***/
-    }
-};
+            })
+        })
+    },
 
-const PhoneBook = {
-    data: [],
-    key: 'fb_phoneBook',
-    ggFormId: '1FAIpQLSdpUDJ_mQvRQqvzYHrFuhPpuCvs9DA7P74s2YLDQDFwOyHXAw',
-    ggFormEntry:{ id: 937098229, phone: 130151803, name: 648384740, img: 549043843,},
-    sheetName: 'PhoneBook',
-    int: async function(){
-        this.data = await GM.getValue(this.key, []);
-        GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
-            if(remote) this.data = newValue;
-        });
-    },
-    sync: async function(){
-        GM_log('Đồng bộ danh bạ');
+    log: function(type = 'test', data = []){
+        let id = '1FAIpQLSdnt9BSiDQEirKx0Q3ucZFxunOgQQxp4SB7B6Gd8nNMFGzEyw';
+        let fields = [2075359581, 1542826863, 2077606435, 1093369063, 2124435966, 450302808, 2118396800, 839689225, 2086451399, 1329285789];
         return new Promise((resolve, reject) => {
-            this.data = [];
-            GoogleSheet.query(this.sheetName, 'B:F', 'SELECT * WHERE E IS NOT NULL' ).then(json => {
-                this.data = json;
-                GM_setValue(this.key, this.data);
-                GM_log('Đồng bộ thành công ' + this.data.length + ' danh bạ');
-                return resolve()
-            });
-        });
+            if(!type || !data.length) { return reject('input is invalid!') };
+            let url = `https://docs.google.com/forms/d/e/${id}/formResponse?entry.${fields[0]}='${type}&${data.map((d, i) => (`entry.${fields[i+1]}='${encodeURIComponent(d)}`)).join('&')}`;
+            this.formSubmit(url)
+                .then(res => resolve(res))
+                .catch(err => reject(err.message));
+        })
     },
-    get: function(id){
-        let matchs = this.data.filter(function(obj){
-            return !!~Object.values(obj).indexOf(id);
-        });
+}
+
+// FB POST MANAGER
+const FbPost_Mng = {
+    ggFormId: '1FAIpQLSfx4bd487gRF7O5l8sGXqC1kJuz_a4huUrm64UZY5Ich2gfWw',
+    ggFormEntry:{ id: 1865259179, name: 1706162306, fbid: 1305732350, text: 1064661769, img: 1723256352},
+    sheetName: 'posts',
+    current: new Object(),
+
+    int: function(){
+        GM_addStyle(`
+        code#postInfoCard{color:whitesmoke; position:absolute; bottom:10px; left:10px; border:1px solid whitesmoke; border-radius:5px; padding:5px;}
+        code#postInfoCard p {  margin: 0;  display: block;  max-width: 300px;  white-space: nowrap;  text-overflow: ellipsis;  overflow: hidden !important; }
+        `);
+        this.footerTag = GM_addElement(window.document.body, 'code', {class:'', id:'postInfoCard', style:'display:none;'});
+
+        (['click', 'scroll', 'mousemove']).map(ev => $(window.document).on(ev, _ => this.getCurrentPostInfo()));
+    },
+
+    get: async function(id){
+        if(!id) return false;
+        let matchs = await GGSHEET.query(this.sheetName, 'A:F', `SELECT * WHERE B = "${id}"`);
         return matchs;
     },
+
     set: function(info){
-        new Promise(resolve => {
-            let matchs = this.get(info.id);
-            let existUser = matchs?.pop();
-            resolve();
-            if(existUser){
-                info.img = existUser?.img;
-                resolve();
-            } else {
-                Imgbb.upload(info.img, info.id).then(r => {
-                    info.img = r.data.link;
-                    resolve();
-                });
-            }
+        new Promise((resolve, reject) => {
+            resolve(); // upload img
         }).catch(e => {
-            alert(e.message)
+            alert(e.message);
         }).then(_ => {
-            let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
+            let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-            return GoogleSheet.submitForm(url);
+            return GGSHEET.formSubmit(url);
         }).then(_ => {
-            this.data.push(info);
-            GM_setValue(this.key, this.data);
             return true;
         }).catch(e => {
             alert(e.message);
-        })
+        });
     },
-};
-PhoneBook.int();
 
-const OrdersStorage = {
-    key:'storage_5',
-    data: [],
-    ggFormId: '1FAIpQLScGgvVzi2U_2rWLVmuzrOYdFG40tCMnhK1nOG8F0jhWz7MJkw',
-    ggFormEntry:{ post_id: 1429611565, cmt_id: 654208817, user_id: 436883162, user_name: 1981615867, cmt_txt: 21212061, status: 522750528, },
-    sheetName: 'PreOrder',
-    start: function(force){
-        this.data = GM_getValue(this.key, []);
-    },
-    add: function(info, callback){
-        let {cmt_id} = info;
-        let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
-        let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-        GoogleSheet.submitForm(url).then(_ => {
-            this.data = this.data.filter(o => o.cmt_id != cmt_id);
-            this.data.push(info);
-            this.save();
-            GM_log(info);
-            return callback();
-        }).catch(error => {
-            alert(error.message);
+    getCurrentPostInfo: function(force){
+        let dialog = $('div[role="dialog"] div[aria-label="Chỉnh sửa đối tượng"]')?.closest('div[role="dialog"]');
+        let author = dialog?.find('div[data-ad-rendering-role="profile_name"] h3 span')?.text();
+
+//        if(!dialog.length || (author != 'Trịnh Hiền') ){
+        if(!dialog.length ){
+            this.current = new Object();
+            $(document.body).removeClass('is-post');
+            return $(this.footerTag).html(null).hide();
+        }
+
+        $(document.body).addClass('is-post');
+
+        if(this.busy) return false; this.busy = 1; setTimeout(_ => {this.busy = 0}, 1000);
+
+        let postUrl = dialog.find('a[href*="/posts/"]')?.attr('href');
+        let fbid = postUrl?.match(/[\d\w]{50,}/g)?.pop();
+        if((this.current.fbid == fbid) && !force) return;
+
+        //let dialog = $('div[role="dialog"]')?.last();
+
+        let text = dialog?.find('div[data-ad-preview="message"]')?.first()?.text();
+        if(!text) return;
+        let textEncode = window.btoa(encodeURIComponent(text)).replaceAll(/[^\w\d]/g, '');
+        let id = textEncode.slice(0, 10) + textEncode.substr(textEncode.length - 10);
+        let img = dialog?.find('a[href*="facebook.com/photo"] img')?.first()?.attr('src');
+        let name = '';
+
+        $(this.footerTag).html('<b>Id:</b>&nbsp<i>' + id + '</i>&nbsp').show();
+
+        this.current = {id, name, fbid, text, img};
+
+        this.get(id).then(res => {
+            if(!res || !res.length) throw new Error('not found');
+
+            $('div[role="article"][data-uid]').removeAttr('data-uid');
+            return PreOrder_Mng.get(id);
+
+        }).then(preOd => {
+            this.current.preOd = preOd || new Array();
+
+        }).catch(e => {
+            e.message == 'not found' && this.set({ id, name, fbid, text, img});
+
+        }).finally(_ => {
+
         });
+    }
+};
+FbPost_Mng.int();
+
+// FB PREORDER MANAGER
+const PreOrder_Mng = {
+    ggFormId: '1FAIpQLSdFJWCyBzIwVJoH5hPVKKOIDAM8kHtolvkaTamUqahuRyLFwQ',
+    ggFormEntry:{ cid: 1372917580, uid: 1672107945, pid: 212434003, text: 662290354},
+    sheetName: 'pre-od',
+    int: function(){
+        return;
     },
-    get: function(k){
-        let matchs = this.data.filter(function(obj){
-            return !!~Object.values(obj).indexOf(k);
-        });
+    get: async function(id){
+        let matchs = await GGSHEET.query(this.sheetName, 'A:E', `SELECT * WHERE B = "${id}" OR C = "${id}" OR D = "${id}"`);
         return matchs;
-       // return (this.data.filter(e => (e.user_id == k || e.cmt_id == k || e.post_id == k)));
     },
-    del: function(k){
-        if(!window.confirm("Bạn có chắc chắn xoá đơn hàng #" + k + "? \nThao tác này không thể hoàn tác!")) return;
-        this.data = this.data.filter(e => e.cmt_id != k);
-        this.save();
-    },
-    save: function(){
-        GM_setValue(this.key, this.data);
-        GM_notification({
-            title: "Order saved",
-            text: " ",
-            timeout: 1000,
-        });
-    },
-    sync: function(){
-        return new Promise((resolve, reject) => {
-            GM_log('Đồng bộ đơn hàng');
-            this.data = [];
-            GoogleSheet.query(this.sheetName, 'B:G', 'SELECT *' ).then(json => {
-                this.data = json;
-                GM_setValue(this.key, this.data);
-                GM_log('Đồng bộ thành công ' + this.data.length + ' đơn hàng');
-                return resolve(true);
-            });
+    set: async function(info){
+        let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
+        let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
+
+        GGSHEET.formSubmit(url).then(_ => {
+            FbPost_Mng.current.preOd.push({'Dấu thời gian': '', ...info});
+
+            return true;
+        }).catch(e => {
+            alert(e.message);
+        }).finally(_ => {
+
         });
     },
 };
-OrdersStorage.start();
 
-const PostCollector = {
-    key: 'postList_1',
-    data: [],
-    ggFormId: '1FAIpQLSdfeoPmxxbEvUBdbcpPG4f2RabbslqpbrDCCvfX29WfijGJPA',
-    ggFormEntry:{id: 1370929995, url: 1270605326, txt: 1381764206, img: 1194118624,},
-    sheetName: 'Posts',
-    start: function(){
-        this.data = GM_getValue(this.key, []);
-        this.lopping();
-        setInterval(_ => this.lopping(), 1000);
-    },
-    lopping: function(href = window.location.href){
-
-        if(href == this.lastHref) return true;
-        this.lastHref = href;
-
-        this.showPostInfo?.remove();
-        window.POST_ID = null;
-
-        if(!(/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(href) || !href.includes(myFbUserName)) return true;
-
-        let dialog = Array.from(document.querySelectorAll('div[role="dialog"]')).pop(),
-            url = window.location.pathname.split('/').pop(),
-            txt = dialog?.querySelector('div[data-ad-rendering-role="story_message"]')?.innerText?.replaceAll('\n',' '),
-            id = txt && window.btoa(unescape(encodeURIComponent(txt))).replaceAll(/[^\d\w]/g, '').substr(0, 20),
-            img = dialog?.querySelector('a[role="link"] img[src*="scontent"]')?.getAttribute('src');
-
-        if(!txt || !img) return true;
-
-        this.showPostInfo = GM_addElement(window.document.body, 'div', { style:'background-color: #363636; color: white; padding: 8px; border-radius: 5px; position: absolute; bottom: 5px; left: 5px; opacity: 1;'});
-        this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> `;
-
-        window.POST_ID = id;
-
-        let match = this.data.filter(p => p.id == id);
-        if(match && match.length) return;
-
-        Imgbb.upload(img, id).then(r => {
-            img = r.data.link;
-        }).catch(e => {
-            console.log(e);
-        }).then(e => {
-            let values = {id, url, txt, img};
-            let entry = Object.keys(this.ggFormEntry).map(k => `entry.${this.ggFormEntry[k]}=${encodeURIComponent("\'"+values[k])}`).join('&')
-            let u = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-            return GoogleSheet.submitForm(u);
-        }).then(_ => {
-            this.data.push({url, id, txt, img});
-            GM_setValue(this.key, this.data);
-        }).catch(e => {
-            GM_log('error', e.message)
-            alert('error' + e.message + '\nMã lỗi #0470');
+// FB SET COMMENTS INFO
+(function(){
+    function cmtScan(){
+        $('div[role="article"]').each((i, a) => {
+            let cid = $(a).attr('data-cid');
+            if(!cid){
+                let href = a.querySelector('li a[href*="comment_id"]')?.getAttribute('href');
+                let search = href && new URL(href).searchParams;
+                let cid = search?.get('reply_comment_id') || search?.get('comment_id');
+                let ctext = a.querySelector('span[lang]')?.innerText?.replaceAll(/\n/g, ' ');
+                (cid && ctext) && $(a).attr({'data-cid': cid, 'data-ctext': ctext});
+            } else {
+                let match = FbPost_Mng.current.preOd?.filter(od => od.cid == cid);
+                let od = match?.pop();
+                od ? $(a).attr({'data-uid': od.uid}) : $(a).removeAttr('data-uid');
+            }
         });
-    },
-    sync: async function(){
-        return new Promise((resolve, reject) => {
-            GM_log('Đồng bộ bài đăng');
-            this.data = [];
-            GoogleSheet.query(this.sheetName, 'B:F', 'SELECT *' ).then(json => {
-                this.data = json;
-                GM_setValue(this.key, this.data);
-                GM_log('Đồng bộ thành công ' + this.data.length + ' bài đăng');
-                return resolve(true);
-            });
-        })
-    },
-};
-//PostCollector.start();
+    };
+    $(window.document).on('mousemove', cmtScan );
 
-GM_registerMenuCommand("Đồng bộ Google!", async _ => {
-    try{
-        //await PostCollector.sync();
-        await OrdersStorage.sync();
-        await PhoneBook.sync();
-        confirm('Đã đồng bộ xong, bạn có muốn tải lại trang?') && window.location.reload();
-    } catch(e){
-        alert('Lỗi đồng bộ:/n' + e?.message);
-    }
-});
-
-/***
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-***/
-
-// CSS STYLE
-(function(){
-    if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
-
-    GM_addStyle('div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}');
-
-    GM_addStyle(`/* CSS START */
-@keyframes blinker {
-  50% {
-    opacity: 0;
-  }
-}
-
-div.infoCard {
-  --border-color: lightgray;
-  --bg-brightness: 1.5;
-  --bg-toolBar: rgb(231 231 231 / 60%);
-  --text-color: #000;
-  min-height: 115px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  color: var(--text-color);
-  backdrop-filter: brightness(var(--bg-brightness)) blur(10px);
-  box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);
-  font-weight: bolder;
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 10px;
-  width: calc(100% - 30px);
-  max-height: unset;
-  max-width: 350px;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  padding: 8px;
-  filter: blur(0px);
-  transition: all 1.5s ease-in-out;
-  overflow: hidden;
-  opacity: 1;
-}
-
-html.__fb-dark-mode div.infoCard {
-  --border-color: gray;
-  --bg-brightness: 0.5;
-  --bg-toolBar: rgb(79 79 79 / 60%);
-  --text-color: whitesmoke;
-}
-
-div.infoCard ::selection {
-  color: red;
-  background: yellow;
-}
-
-div.infoCard:after {
-  content: "";
-  position: absolute;
-  left: 4%;
-  top: 101%;
-  width: 0;
-  height: 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-top: 6px solid var(--border-color);
-  clear: both;
-}
-
-div.infoCard.bottom {
-  left: 10px;
-  top: 64px;
-  right: unset;
-  bottom: unset;
-}
-div.infoCard.bottom:after {
-  top: -8px;
-  border-top: unset;
-  border-bottom: 6px solid var(--border-color);
-}
-
-div.infoCard div.toolBar {
-  text-align: center;
-  background-color: var(--bg-toolBar);
-  border-radius: 6px;
-  display: flex;
-  justify-content: space-around;
-}
-div.infoCard div.toolBar a {
-  padding: 5px;
-  flex: 1;
-  opacity: 1;
-  transition: all 0.5s ease-in-out;
-}
-/* div.infoCard div.toolBar:hover a:not(:hover) { opacity: .3; } */
-
-div.infoCard div.card-bg {
-  background: #bdc3c7;
-  background: -webkit-linear-gradient(to right, #2c3e50, #bdc3c7);
-  background: linear-gradient(to right, #2c3e50, #bdc3c7);
-  z-index: -1;
-  opacity: 0.5;
-}
-
-div.hasPhoneNum {
-  border: 2px dashed red;
-  border-radius: 10px;
-  overflow: hidden;
-  margin-bottom: 5px;
-}
-div[aria-label="Nhắn tin"][role="button"] {
-  border: 2px dashed red;
-  border-radius: 6px;
-}
-div[role="list"] div[role="listitem"] span:hover {
-  -webkit-line-clamp: 10 !important;
-}
-
-/*** Sửa chiều cao khung chat ***/
-div:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {
-  height: 65vh;
-}
-
-/**dsfdgdf**/
-a[href*="/messages/e2ee/t/"]:after {
-  content: "";
-  position: absolute;
-  top: 0px;
-  right: 0px;
-  width: 0.7em;
-  height: 0.7em;
-  background: lightcoral;
-  border-radius: 50%;
-}
-
-/*** Đánh dấu cmt của người đăng ***/
-div[aria-label*="Bình luận dưới tên Trịnh Hiền"] svg[role="none"] {
-    border: 2px solid red;
-    border-radius: 50%;
-    padding: 0px;
-}
-
-/*** comment ***/
-div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
-}
-
-
-    /*** CSS END ***/`);
 })();
 
-// FUNCTIONS
-(function() {
-    if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
-    const $ = window.jQuery, myUserName = 'hien.trinh.5011', myDisplayName = 'Trịnh Hiền'
+// FB COMMENT CLICK HANDLER
+(function(){
+    function clickHandler(span){ // div[role="article"]
 
-    GM_addStyle(`div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}`);
-    GM_addStyle(`div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}`);
-    //GM_addStyle(`div:is(.__fb-dark-mode, .__fb-light-mode):not(:hover) div.infoCard {  opacity: 0.5; }`);
-    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a:is([href*="/t/"], [href*="/messages/"])::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 10px;  color: initial;  opacity: 0.5; }`);
-    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a[href*="/e2ee/"]::before {color:red;}`);
+        if(this.busy) return;
+        else {this.busy = 1; setTimeout(_ => { this.busy = 0 }, 500)};
 
-    class InfoCard{
-        constructor(info, container){
-            this.container = container;
-            this.userData = {...PhoneBook.get(info.id)?.pop(), ...info};
+        $(document.body).removeClass('setPreOrderAllow');
 
-            this.preOrders = 0;
-            this.userData.e2ee = window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : null;
+        let a = span.closest('div[role="article"]');
+        let cid = $(a).attr('data-cid');
+        let oldCid = $('div#lastClickCmt')?.removeAttr('id')?.attr('data-cid');
 
-            this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.userData.id });
-            if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') {
-                this.card.classList.add('bottom');
-            }
+        if(!cid || oldCid == cid) return;
+        if(!$(a).is('[aria-label*="dưới tên Trịnh Hiền"]')) return;
 
-            this.infoList = GM_addElement(this.card, 'table', { style: 'padding-bottom: 5px; color:white;' });
-            let toolBar = GM_addElement(this.card, 'div', { class: 'toolBar' });
+        if($(a).attr('data-uid')) return;
 
-            this.searchBtn = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
-            this.searchBtn.innerText = 'Tìm sđt';
-            this.searchBtn.onclick = _ => this.phoneScanning();
+        $(a).attr({'id': 'lastClickCmt'}); $(document.body).addClass('setPreOrderAllow');
+        clearTimeout(this.timeout);
+        this.timeout = setTimeout(_ => {
+            $(a).removeAttr('id'); $(document.body).removeClass('setPreOrderAllow');
+        }, 1000 * 10);
+    };
+    $(document.body).on('mousedown', 'div[role="article"] span[lang]', e => clickHandler( e.currentTarget ) );
+})();
 
-            let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
-            btn_2.innerText = 'Sửa sđt';
-            btn_2.onclick = _ => this.setPhone();
-
-            let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
-            btn_3.innerText = 'Tạo đơn';
-            btn_3.onclick = _ => this.createOrder();
-
-            this.eventsListener();
-            this.refreshInfo();
-
-            let bg = GM_addElement(this.card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
-            let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
-            copyright.innerHTML = '<a href="https://fb.com/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
-        }
-        async refreshInfo(){
-            if(this.isBusy) return;
-            this.isBusy = 1;
-            let i = {total: 0, pending: 0, draft: 0, preOrder: 0, totalCOD: 0};
-            this.infoList.innerHTML = '</tr><tr><td style=" ">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
-            this.card.classList.add('refreshing');
-            try{
-                //this.preOrders = OrdersStorage.get(this.userData.id);
-                let data = await viettel.getListOrders(this.userData.phone);
-                if(data.error) throw new Error('Viettel: ' + data.message);
-                let orderList = data.data.data.LIST_ORDER;
-                let totalOrders = data.data.data.TOTAL,
-                    pendingOrders = orderList.filter(o => !!~([-108,100,102,103,104]).indexOf(o.ORDER_STATUS)).length,
-                    draftOrders = orderList.filter(o => o.ORDER_STATUS == -100).length;
-
-                this.waitingOrders = (draftOrders + pendingOrders);
-                //let totalCOD = data.data.data.TOTAL_COLLECTION.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
-
-                let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.userData.phone);
-                this.infoList.innerHTML = `
-                <tr style="display:none;"><td>ID:</td> <td>${this.userData.id}</td></tr>
-                <tr>
-                  <td>SĐT: </td> <td>${this.userData.phone}</td>
-                </tr>
-                <tr>
-                  <td>Đơn hàng: </td>
-                  <td><a href="${vtlink}" target="_blank" style="color:inherit; text-decoration: underline;">${totalOrders} đơn&nbsp
-                     ${pendingOrders ? `<span style="color:coral"> • có đơn chờ giao</span>` : draftOrders ? `<span style="color:yellow"> • có đơn nháp</span>` : ''}
-                  </a></td>
-                </tr>
-                <tr>
-                  <td>e2ee: </td> <td>${this.userData.e2ee}</td>
-                </tr>
-                <tr>
-                  <td>Tags: </td> <td>${'---'}</td>
-                </tr>`;
-
-
-            } catch(e){
-                console.log(e)
-                this.infoList.innerHTML = `<tr style="color:orangered; text-align: center;"><td>${e.message}</td></tr>`;
-            } finally{
-                this.isBusy = 0;
-                this.card.classList.remove('refreshing');
-            }
-        }
-        async phoneScanning(){
-            if(this.looping_1){
-                clearInterval(this.looping_1);
-                this.looping_1 = null;
-                this.searchBtn.innerText = "Tìm sđt";
-                return false;
-            }
-            this.searchBtn.innerText = "Dừng";
-
-            let count = 0;
-            this.looping_1 = setInterval(() => {
-                this.container.querySelector('div[role="grid"] > div > div').scroll({ top: 0, behavior: 'smooth' });
-                let rows = this.container.querySelectorAll('div[role="gridcell"] div[role="presentation"] span[dir="auto"] > div:not(.scanned)');
-
-                count = rows.length ? 0 : count + 1;
-                if(count == 10) return this.phoneScanning();
-
-                for (let i = (rows.length - 1); i >= 0; i --) {
-                    let row = rows[i];
-                    row.classList.add('scanned');
-
-                    let text = row.innerText;
-                    let t = text.replaceAll(/[^\w\d]/g, '');
-                    let phone = t.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
-                    if(!phone || phone == myPhone) continue;
-
-                    this.phoneScanning();
-                    let d = row.closest('div[role="presentation"]');
-                    d.style.border = '2px dashed ' + (phone == this.userData.phone ? 'cyan' : 'red');
-
-                    let func1 = function(){
-                        row.scrollIntoView({block: "center", inline: "nearest", behavior: 'smooth'});
-                        row.closest('div[role="gridcell"]')?.focus();
-                    };
-                    func1();
-                    let interv = setInterval(func1 , 200);
-                    setTimeout(_ => clearInterval(interv), 5000);
-                    document.body.addEventListener("click", _ => clearInterval(interv), {once : true});
-
-                    break;
-                }
-
-            }, 500);
-        }
-        async setPhone(phone = window.prompt("Nhập sđt cho " + this.userData.name, this.userData.phone)){
-            if(phone == null || phone == '' || !isVNPhone(phone) || phone == this.userData.phone) return;
-            this.userData.phone = phone;
-            let info = {id: this.userData.id, phone: this.userData.phone.toString(), name:this.userData.name, img:this.userData.img};
-            PhoneBook.set(info);
-            this.refreshInfo();
-        }
-        async createOrder(){
-            let title = 'Đang tạo đơn hàng cho: ' + this.userData.name + '\n\n';
-
-            try{
-                if(!this.userData.phone) throw new Error(title + '❌ Vui lòng cập nhật sđt trước!');
-
-                if(this.waitingOrders && !window.confirm(title + '❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?')) return false
-
-                let url = 'https://viettelpost.vn/order/tao-don-le?query=';
-
-                let orderInfo = { fbid: this.userData.id, phone: this.userData.phone, name: this.userData.name };
-
-                let prices_str = prompt(title + "B1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
-                if (prices_str == undefined || prices_str == null) { return false }
-                if(!(/^[\d\s]*$/g).test(prices_str)) throw new Error('❌ Giá sản phẩm không hợp lệ!');
-
-                let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
-
-                let itemNameList = GM_getValue('lastest_items_list', []);
-                let list = itemNameList.map((e, i) => `[${i}] ${e}`).join('\n');
-                let input = prompt(title + 'Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + list, itemNameList[0] || '');
-                if (input == null || input == undefined) return false;
-
-                let itemName = itemNameList[input] || input
-                itemNameList.unshift(itemName);
-                itemNameList = itemNameList.filter((value, index, array) => array.indexOf(value) === index ); //unique
-                GM_setValue('lastest_items_list', itemNameList.slice(0, 10));
-
-                orderInfo.prdName = `${itemName} - (${prices_str})`;
-                //orderInfo.prdName = itemName + ' - \(' + prices_str.replaceAll(' ', ' + ') + '\)';
-                orderInfo.price = (price*1000);
-
-                url += btoa(unescape(encodeURIComponent(JSON.stringify(orderInfo))));
-
-                window.popupWindow?.focus();
-                window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
-                window.addEventListener('message', (ev) => { ev.data.fbid === this.userData.id && this.refreshInfo() });
-
-                GM_setValue('lastest_prices', prices_str);
-            }
-            catch(e){ alert(title + e.message) }
-        }
-        async eventsListener(){
-            this.container.addEventListener("click", function(e){
-                let target = e.target.closest('div[aria-label="Trả lời"][role="button"]'); // Or any other selector.
-                target && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
-            });
-
-            this.container.addEventListener("keypress", function(e) {
-                //alert('onkeypress')
-                console.log(e);
-                if (e.charCode == 1111111) {
-                    alert('option3');
-                }
-                if (e.keyCode == 87 && e.ctrlKey == true) {
-                    alert('option2');
-                }
-                if (e.charCode == 339) {
-                    alert('option1');
-                }
-            });
-
-            // Set phone by mouse selection
-            this.container.onmouseup = _ => {
-                if(!window.getSelection) return;
-                let phone = window.getSelection().toString().replaceAll(/\D/g,'');
-                if(!isVNPhone(phone) || phone == this.userData.phone || phone == myPhone){
-                    return false;
-                } else if(!this.userData.phone || window.confirm(`Xác nhận đổi số đt cho ${this.userData.name} thành ${phone}?`)){
-                    this.setPhone(phone);
-                }
-            }
-        }
-    }
-
-    window.document.addEventListener('mousemove',function(){
-        if(window.xx13e) return;
-        window.xx13e = setTimeout(_ => { clearTimeout(window.xx13e); window.xx13e = 0 }, 1000);
-
-        let profiles = window.document.querySelectorAll(`
-          div[role="main"][aria-label^="Cuộc trò chuyện với "] > div > div > div > div:first-child a[role="link"][href]:not(.checked, [aria-label]),
-          div:not([hidden]) > div[style*="chat-composer"] a[role="link"][href^="/"][aria-label]:not(.checked, [aria-label="Mở ảnh"])
-        `);
-
-        for(let i = 0; i < profiles.length; i++){
-            let e = profiles[i];
-
-            let id = e.getAttribute('href')?.match(/\d+/g)?.pop();
-            let name = e.getAttribute('aria-label') || e.querySelector('h2').innerText;
-            let img = e.querySelector('img')?.getAttribute('src');
-
-            if(!id || !name || !img) continue;
-
-            e.classList.add('checked');
-
-            let info = {id, name, img};
-            let container = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
-            new InfoCard(info, container);
-            console.log(info);
-        }
-    });
-
-    if(window.location.href.includes('/posts/')){
-        let interval = setInterval(_ => {
-            let btn = document.querySelector('div[role="dialog"] div[role="button"][aria-haspopup="menu"]:not([aria-label])');
-            if(!btn) return true;
-            clearInterval(interval);
-            btn.click();
-            btn.scrollIntoView(false);
-        }, 1000);
-    }
-
-    document.addEventListener("keydown", e => {
-        if(e.key === "F1") {
-            // Suppress default behaviour
-            // e.g. F1 in Microsoft Edge on Windows usually opens Windows help
-            e.preventDefault();
-            alert('F1');
-        }
+// MESSENGER SEARCH WHEN FOCUS;
+(function(){
+    window.addEventListener("focus",function (e) {
+        if(window.location.host != "www.messenger.com") return;
+        let input = document.querySelector('input[type="search"][aria-label="Tìm kiếm trên Messenger"], input[type="text"][aria-label="Tìm kiếm"]')
+        if(!input) return true;
+        //e.preventDefault();
+        input.focus();
+        input.select();
     })
 })();
 
+// MESSENGER AUTO SCROLL BUTTON;
 (function(){
-    // keyboard shortcuts
-    window.addEventListener("keydown",function (e) {
-        if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70 && e.shiftKey)){
-            let messSearchFields = document.querySelectorAll('input[type="search"][aria-label="Tìm kiếm trên Messenger"][placeholder="Tìm kiếm trên Messenger"], div[style*="translateX(0%)"] input[type="text"][aria-label="Tìm kiếm"][placeholder="Tìm kiếm"]');
-            let messSearchField = [...messSearchFields].pop();
-            if(!messSearchField) return true;
-            e.preventDefault();
-            messSearchField.focus();
-            messSearchField.select();
-        }
-    })
-})();
-
-(function($){
     if(window.location.origin != 'https://www.messenger.com') return 0;
 
-    let interval = null;
+    GM_addStyle('div#aqweasdf:not(:hover) div#list{ display:none; }');
 
-    let btnScroll = GM_addElement(document.body, 'div', {
-        id:'btnScrollToBottom',
-        style:'position: absolute;  top: 20px;  left: 209px;  background: crimson; color: white;  padding: 5px 15px;  border-radius: 5px;  cursor: pointer; ',
+    let panel = GM_addElement(document.body, 'div', {id:'aqweasdf', style:'position:absolute; top:30px; left:30px; '});
+
+    let btn = GM_addElement(panel, 'div', {
+        style:'background:crimson; color:white; padding:5px 15px; border:1px solid; border-radius:5px; cursor:pointer; ',
     });
+    let list = GM_addElement(panel, 'div', {id:'list', style:'background: black;  position: absolute;  top: 30px;  border-radius: 5px;  border: 1px solid white;  color: white;  text-wrap: nowrap;  overflow: hidden; '});
 
-    btnScroll.innerHTML = '<span>Load all 💢<span>';
-    btnScroll.onclick = function(){
-        if(interval){
-            clearInterval(interval);
-            interval = null;
-            this.innerHTML = '<span>Load all 💢<span>';
+    let lines = GM_addElement(list, 'div', {style:'overflow-y: scroll;  max-height: 492px;  padding: 10px; '});
+
+    btn.innerText = '✨ Load all ✨';
+    btn.onclick = function(){
+        if(this.scrolling){
+            this.innerText = '✨ Load all ✨';
+            clearInterval(this.scrolling);
+            delete this.scrolling;
             return false;
         }
-        this.innerHTML = '<span>Stop ✋🤚<span>';
-        interval = setInterval(_ => {
+        //reset if shift btn press;
+
+        this.innerText = '✨ Stop ✨';
+        this.scrolling = setInterval(_ => {
             try{
-                let list = Array.from($('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode)')).shift();
-                let rows = $(list).find('div[role="row"]:not(.checked)');
-                rows.length && $(list).animate({scrollTop: list.scrollHeight}, "fast");
+                let list = document.querySelector('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode, .__fb-light-mode)')
 
-                $.each(rows, (i, r) => {
-                    let time = $(r).find('abbr')[0]?.innerText;
-                    let img = $(r).find('img')[0]?.getAttribute('src');
+                let optionBtn = list.querySelector('div[role="row"] div[aria-label^="Lựa chọn khác cho "]:not(.checked)');
+                optionBtn.scrollIntoView();
 
-                    let text = r.innerText.replaceAll(/[\r\n]+/g, ' ')
-                    .replace('Tin nhắn và cuộc gọi được bảo mật bằng tính năng mã hóa đầu cuối.', '')
-                    .replace('Đang hoạt động', '').replaceAll('·', '').replace(time, '').trim();
+                let name = optionBtn.getAttribute('aria-label')?.replace('Lựa chọn khác cho ', '');
+                optionBtn.classList.add('checked');
 
-                    let link = $(r).find('a[href]')[0]?.getAttribute('href');
+                let top = optionBtn.closest('div[data-virtualized]')?.offsetTop;
 
-                    if(time && text && img && link){
-                        $(r).addClass('checked')
-                        window.document.title = time + ' - ' + text;
-                    }
-                })
-            }catch(e){}
-        }, 200);
+                let p = GM_addElement(lines, 'p', {style:'cursor:pointer'});
+                p.innerText = name;
+                p.onclick = _ => list.scrollTo(0, top);
+                p.scrollIntoView();
 
-    };
-})(window.$ || window.jQuery);
-
-// PREORDER
-// PREORDER
-// PREORDER FACEBOOK
-// PREORDER
-// PREORDER
-
-(function($){
-    if(window.location.host != 'www.facebook.com') return !1
-    function scan(){
-        let cmt_lang = document.querySelectorAll('div[role="article"][aria-label^="Bình luận"] span[lang]:not(.checked)');
-        [...cmt_lang].forEach(elm => {
-            [...elm.querySelectorAll('div[role="button"]')].forEach(b => b.innerText == 'Xem thêm' && b.click());
-
-            let btn = GM_addElement(elm, 'button', {style:'position: absolute;  bottom: 3px;  left: calc(100% - 8px);  cursor: pointer;  text-wrap: nowrap;'});
-            btn.innerHTML = '<span>link</span>';
-            btn.onclick = function(){
-                let article = elm.closest('div[role="article"]');
-                let cmt_id = article.querySelector('li a[href*="comment_id"]')?.getAttribute('href').match(/comment_id\=\d+/g)?.pop()?.replace('comment_id=', '');
-                alert(cmt_id);
+                window.document.title = name;
+                console.log(name, top);
+            }catch(e){
+                console.error(e.messages);
             }
-            elm.classList.add('checked');
-        });
-    }
-    window.document.addEventListener('mouseover', scan);
-    window.document.addEventListener('scroll', scan);
+        }, 100);
+    };
 
+    let convList = GM_addElement(panel, 'div', {style:''});
 
-})(window.$ || window.jQuery);
+})();
+
 /***
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
@@ -1082,6 +887,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     if(window.location.origin != 'https://viettelpost.vn') return !1;
 
     GM_addStyle(`/* ViettelPost custom css */
+    /**
     body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
     body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
     body.vt-post.custom div.box-receiver div.card-body { max-height: 400px; overflow: auto; }
@@ -1091,6 +897,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     body.vt-post.custom #content {width: 100% !important; margin-left: 0;}
     div.dieukhoan {display:none;}
     .mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray;}
+
+    **/
 
     *:is(.mat-column-SENDER_FULLNAME, .mat-column-PARTNER):is(th, td) {display:none;}
 
@@ -1156,7 +964,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 this.dispatchEvent(customEvent('input'));
                 if(!isVNPhone(this.value)) return;
 
-                let res = await viettel.getListOrders(this.value).catch(e => {throw new Error()});
+                let res = await VIETTEL.getListOrders(this.value).catch(e => {throw new Error()});
 
                 if(res?.status != 200) throw new Error();
 
@@ -1168,8 +976,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             }
         });
 
-        let urlParams = new URLSearchParams(window.location.search);
-        let info_encode = urlParams.get('query');
+        GM_addElement(window.document.body, 'input', {style:'position:absolute; top:0; right:0;', placeholder:'confirm url', id:'BumConfirmUrl'});
+
+        let info_encode = URLPARAMS.get('query');
 
         if(!info_encode) return false;
 
@@ -1178,7 +987,12 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         if(!fbid) return true;
 
-        window.onbeforeunload = e => window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
+        //window.onbeforeunload = e => window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
+
+        window.addEventListener('beforeunload', _ => {
+            window.opener?.postMessage({fbid: fbid, orderId: null}, '*')
+        });
+
         $(document).keyup(function(e) {
             if (e.key === "Escape") { // escape key maps to keycode `27`
                 $('button.close').click();
@@ -1190,14 +1004,14 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 if(!phone) return false;
 
                 setTimeout(() => {
-                    viettel.getListOrders(phone).then(data => {
+                    VIETTEL.getListOrders(phone).then(data => {
                         let last_order = data.data.data.LIST_ORDER[0];
                         let order_date = new Date(Date.parse(last_order?.ORDER_SYSTEMDATE || 0)).getDate();
                         let today_date = new Date().getDate();
                         if( !last_order || order_date != today_date) throw new Error('Không tìm thấy đơn hàng mới!');
 
                         let o = last_order.ORDER_NUMBER;
-                        let link = viettel.getOrderPrint(o);
+                        let link = VIETTEL.getOrderPrint(o);
                         return link;
                     }).then(link => {
                         window.open(link+'&status=0', '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=960"');
@@ -1268,11 +1082,14 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             let btn = row.find('td.mat-column-ACTION label i.fa-bars');
             btn && btn.click();
             row.css('background-color', '#e3f0f0');
-            $('body').css('--left-value', mouseX+'px');
+            $(document.body).css('--left-value', mouseX+'px');
         });
     })
 })(window.$ || window.jQuery);
 
+
+// bắn đơn viettel
+/***
 (function($){
     if(window.location.href != 'https://viettelpost.vn/quan-ly-van-don') return;
 
@@ -1305,47 +1122,15 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         });
 
     });
-})(window.$ || window.jQuery);;
+})(window.$ || window.jQuery);
+***/
 
-
-
-
-(function($){
+(function(){
     GM_addStyle('td.mat-column-ORDER_REFERENCE{cursor:pointer;} td.mat-column-ORDER_REFERENCE:hover{font-weight: 700; text-decoration: underline; color: blue !important;}')
     if(window.location.origin != "https://viettelpost.vn") return;
     $(document.body).on('click', 'td.mat-column-ORDER_REFERENCE', function(){
         let fbid = this.innerText.match(/(\d)+/g)?.shift();
         let url = 'https://fb.com/'+fbid;
         window.open(url, '_blank');
-    })
-
-})(window.$ || window.jQuery);
-
-
-/** BOOKMARK LET
-(function() {
-    if (window.intervvv) {
-        clearInterval(window.intervvv);
-        window.intervvv = null;
-        return false;
-    };
-
-    window.intervvv = setInterval(_ => {
-        let objDiv = document.querySelector('div[aria-label="Messenger"] div[aria-label="Đoạn chat"] div.__fb-dark-mode');
-        if (!objDiv) document.querySelector('div[aria-label^="Messenger"][role="button"]')?.click();
-        else {
-            Array.from(objDiv.querySelectorAll('a[href^="/messages"][role="link"]:not(.checked)')).map(e => {
-                e.classList.add('checked');
-                //abbr
-                let name = e.querySelector('span')?.innerText;
-                let href = e.getAttribute('href');
-                let time = e.querySelector('abbr')?.innerText;
-                console.log(name, ' - ', time, 'https://fb.com'+href);
-            })
-            objDiv.scrollTop = objDiv.scrollHeight;
-        }
-    }, 1000)
-})()
-**/
-
-// C6FAE97E8F83FBFDE0D949B3F0D29CE7
+    });
+})();
