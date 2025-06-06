@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Bum | FB - VTP (2)
+// @name         Bum | FB - VTP
 // @author       QuangPlus
-// @version      2025.6.5.1
+// @version      2025.6.6.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -33,10 +33,8 @@
 // ==/UserScript==
 
 
-const myPhone = '0966628989',
-      myFbName = 'Trịnh Hiền',
-      _myFbUsername = 'hien.trinh.5011',
-      URLPARAMS = new URLSearchParams(window.location.search),
+const _myPhone = '0966628989', _myFbName = 'Trịnh Hiền', _myFbUsername = 'hien.trinh.5011',
+      UrlParams = new URLSearchParams(window.location.search),
       $ = (window.$ || window.jQuery);
 
 function isFBpage(){ return (window.location.host === 'www.facebook.com') }
@@ -45,18 +43,14 @@ function Delay(ms = 1000) { return new Promise(resolve => setTimeout(resolve, ms
 function csvJSON(csv = '{}'){
   var lines = csv.split("\n");
   var result = [];
-
   // NOTE: If your columns contain commas in their values, you'll need
   // to deal with those before doing the next step
   // (you might convert them to &&& or something, then covert them back later)
   // jsfiddle showing the issue https://jsfiddle.net/
   var headers=lines[0].split(",");
-
   for(var i=1;i<lines.length;i++){
-
       var obj = {};
       var currentline=lines[i].split("\",\"");
-
       for(var j=0;j<headers.length;j++){
           let label = headers[j].replaceAll('\"','');
           let value = currentline[j].replaceAll('\"','');
@@ -150,6 +144,7 @@ const Customer_Mng = {
     ggFormId: '1FAIpQLScdh4nIuwIG7wvbarsXyystgnSkTcIzgIBBlcA9ya8DDZvwXA',
     ggFormEntry:{ id: 736845047, name: 64482577, phone: 1863958217, addr: 143609329, img: 1145058745, attr0: 1693043917, attr1: 1173103552, attr2: 398324750, attr3: 696385383, attr4: 2084291905, attr5: 1174020264, attr6: 1243517720, attr7: 1831851967, attr9: 1146378854 },
     sheetName: 'customers',
+    storageKey: 'GMcustomer',
     int: async function(){
 
     },
@@ -158,7 +153,15 @@ const Customer_Mng = {
     },
     get: async function(id){
         if (!id) return false;
-        let matchs = await GGSHEET.query(this.sheetName, 'A:Z', `SELECT * WHERE B = "${id}" OR C = "${id}" OR D = "${id}" `);
+
+        this.dataStorage = await GM_getValue(this.storageKey, []);
+        let matchs = this.dataStorage.filter(i => (i.id == id));
+
+        if(!matchs?.length) {
+            matchs = await GGSHEET.query(this.sheetName, 'A:Z', `SELECT * WHERE B = "${id}" `);
+            GM_setValue(this.storageKey, [...this.dataStorage, ...matchs]);
+        }
+
         return matchs;
     },
     set: async function(info){
@@ -167,7 +170,13 @@ const Customer_Mng = {
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
             let res = await GGSHEET.formSubmit(url);
+
+            if(res.readyState != 4) throw new Error('google set new customer fail!');
+
+            this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
+            GM_setValue(this.storageKey, [...this.dataStorage, info]);
             return res;
+
         } catch(err){
             alert(err.message);
         };
@@ -178,7 +187,6 @@ const Customer_Mng = {
 // FB INFO CARD
 (function() {
     if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
-    const $ = window.jQuery, myUserName = 'hien.trinh.5011', myDisplayName = 'Trịnh Hiền'
 
     GM_addStyle(`div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}`);
     GM_addStyle(`div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}`)
@@ -234,7 +242,8 @@ const Customer_Mng = {
         }
 
         async refreshInfo(){
-            if(this.isBusy) return; this.isBusy = 1;
+
+            if(this.delay_kfbs) return;
 
             try{
                 this.table.innerText = 'Loading viettel data...';
@@ -266,15 +275,19 @@ const Customer_Mng = {
                     ${this.viettelPending ? `&nbsp<span style="color:coral"> • có đơn chờ giao</span>` : ''}
                     </a>
                   </td>
-                  <tr> <td>Đơn pre-order: </td> <td>${(this.preorders?.length || 0)}</td> </tr>
+                  <tr> <td>Đơn pre-order: </td> <td>${(this.preOd?.length || 0)}</td> </tr>
                 </tr>
                 <tr style='display:none;'> <td>e2ee: </td> <td>${e2ee || '---'}</td> </tr>
                 <tr> <td>Tags: </td> <td>---</td> </tr>`;
             } catch(e){
+
                 this.table.innerText = '⚠️ ' + e.message;
+
             } finally{
-                this.isBusy = 0;
+
+                delete this.delay_kfbs;
                 console.log(this.customer);
+
             }
         }
 
@@ -286,34 +299,40 @@ const Customer_Mng = {
                 return false;
             }
             this.btn_1.innerText = "Dừng";
-            //let count = 0;
+            let scroll = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"]');
+            let count = 0;
             this.finder = setInterval(async _ => {
-                let rows = this.container.querySelectorAll('div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"]:is(.__fb-dark-mode, __fb-light-mode):not(.scanned)');
-                let row = rows[rows.length - 1];
-                if(!row) return false;
+                scroll.scrollTop = 0;
+                let rows = scroll.querySelectorAll('div[role="row"]:is(.__fb-dark-mode, __fb-light-mode):not(.scanned)');
+                count = rows.lenght ? 0 : count+1;
+                if(count == 20) return this.phoneFinder();
+                for(let i = rows.length - 1; i > -1; i-- ){
+                    let row = rows[i];
 
-                row.classList.add('scanned');
-                row.scrollIntoView({ behavior: "smooth", block: "end", inline: "end" });
+                    row.classList.add('scanned');
+                    row.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
 
-                let span = row.querySelector('[role="presentation"] span[dir="auto"]:not(:has(span)):not([style])');
-                if(!span) return false;
+                    let span = row.querySelector('[role="presentation"] span[dir="auto"]:not(:has(span)) ');
+                    if(!span) return false;
 
-                let phone = await new Promise(resolve => {
-                    let txt = span.innerText.replaceAll(/[^\w\d]/g, '');
-                    let num = txt && txt.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
-                    return resolve( !num ? false : num == myPhone ? false : num );
-                });
+                    let phone = await new Promise(resolve => {
+                        let txt = span.innerText.replaceAll(/[^\w\d]/g, '');
+                        let num = txt && txt.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
+                        return resolve( !num ? false : num == _myPhone ? false : num );
+                    });
 
-                if(!phone) {
-                    return false; //continue
+                    if(phone){
+                        let p = span.closest('div[role="presentation"]');
+                        p.style.border = '2px dashed ' + (phone == this.customer.phone ? 'cyan' : 'red');
+
+                        let prev = span.previousElementSibling;
+                        if(prev && prev.innerText == 'Tin nhắn gốc:') span.closest('div[role="button"]').focus();
+
+                        this.phoneFinder();
+                        break;
+                    }
                 }
-
-                this.phoneFinder(); //break
-                //span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-
-                let p = span.closest('div[role="presentation"]');
-                p.style.border = '2px dashed ' + (phone == this.customer.phone ? 'cyan' : 'red');
-            }, 100);
+            }, 500);
         }
 
         async setPhone(phone = window.prompt("Nhập sđt cho " + this.customer.name, this.customer.phone)){
@@ -418,15 +437,19 @@ const Customer_Mng = {
             });
 
             // Set phone by mouse selection
-            this.container.onmouseup = _ => {
+            this.container.addEventListener('mouseup', _ => {
+                if(this.delay_xjae) return;
+                this.delay_xjae = setTimeout(_ => delete this.delay_xjae, 1000);
+
                 if(!window.getSelection) return;
                 let phone = window.getSelection().toString().replaceAll(/\D/g,'');
-                if(!isVNPhone(phone) || phone == this.customer.phone || phone == myPhone){
+                if(!isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone){
                     return false;
                 } else if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
                     this.setPhone(phone);
                 }
-            }
+
+            });
         }
     }
 
@@ -657,41 +680,40 @@ const FbPost_Mng = {
     },
 
     getCurrentPostInfo: function(force){
-        let dialog = $('div[role="dialog"] div[aria-label="Chỉnh sửa đối tượng"]')?.closest('div[role="dialog"]');
-        let author = dialog?.find('div[data-ad-rendering-role="profile_name"] h3 span')?.text();
+        let dialog = document.querySelector('div[role="dialog"] div[aria-label="Chỉnh sửa đối tượng"]')?.closest('div[role="dialog"]');
+        let author = dialog?.querySelector('div[data-ad-rendering-role="profile_name"] h3 span').innerText
 
-//        if(!dialog.length || (author != 'Trịnh Hiền') ){
-        if(!dialog.length ){
+        if( !dialog || (author != _myFbName) ){
             this.current = new Object();
-            $(document.body).removeClass('is-post');
-            return $(this.footerTag).html(null).hide();
+            this.footerTag.innerHTML = null;
+            this.footerTag.style.display = 'none';
+            return false;
         }
-
-        $(document.body).addClass('is-post');
 
         if(this.busy) return false; this.busy = 1; setTimeout(_ => {this.busy = 0}, 1000);
 
-        let postUrl = dialog.find('a[href*="/posts/"]')?.attr('href');
+        let postUrl = dialog.querySelector('a[href*="/posts/"]')?.getAttribute('href');
         let fbid = postUrl?.match(/[\d\w]{50,}/g)?.pop();
         if((this.current.fbid == fbid) && !force) return;
 
-        //let dialog = $('div[role="dialog"]')?.last();
+        let text = dialog.querySelector('div[data-ad-preview="message"]')?.innerText;
+        let encode = text && window.btoa(encodeURIComponent(text)).replaceAll(/[^\w\d]/g, '');
+        let id = encode && (encode.slice(0, 10) + encode.substr(encode.length - 10));
+        let img = dialog.querySelector('a[href*="facebook.com/photo"] img')?.getAttribute('src');
+        let name = '---';
 
-        let text = dialog?.find('div[data-ad-preview="message"]')?.first()?.text();
-        if(!text) return;
-        let textEncode = window.btoa(encodeURIComponent(text)).replaceAll(/[^\w\d]/g, '');
-        let id = textEncode.slice(0, 10) + textEncode.substr(textEncode.length - 10);
-        let img = dialog?.find('a[href*="facebook.com/photo"] img')?.first()?.attr('src');
-        let name = '';
+        if(!!~[id, name, fbid, text, img].indexOf(undefined)) return;
 
-        $(this.footerTag).html('<b>Id:</b>&nbsp<i>' + id + '</i>&nbsp').show();
+        this.footerTag.innerHTML = '<b>Id:</b>&nbsp <i>' + id + '</i>';
+        this.footerTag.style.display = 'block';
 
         this.current = {id, name, fbid, text, img};
 
         this.get(id).then(res => {
             if(!res || !res.length) throw new Error('not found');
 
-            $('div[role="article"][data-uid]').removeAttr('data-uid');
+            document.querySelectorAll('div[role="article"][data-uid]').each(el => el.removeAttribute('data-uid') )
+
             return PreOrder_Mng.get(id);
 
         }).then(preOd => {
@@ -770,11 +792,8 @@ const PreOrder_Mng = {
         let cid = $(a).attr('data-cid');
         let oldCid = $('div#lastClickCmt')?.removeAttr('id')?.attr('data-cid');
 
-        if(!cid || oldCid == cid) return;
-        if(!keyState.ControlLeft) return;
-        if(!$(a).is('[aria-label*="dưới tên Trịnh Hiền"]')) return;
-
-        if($(a).attr('data-uid')) return;
+        if(!keyState.ControlLeft && !keyState.AltLeft) return;
+        if(!cid || oldCid == cid) return; if($(a).attr('data-uid')) return;
 
         $(a).attr({'id': 'lastClickCmt'}); $(document.body).addClass('setPreOrderAllow');
         clearTimeout(this.timeout);
@@ -782,7 +801,7 @@ const PreOrder_Mng = {
             $(a).removeAttr('id'); $(document.body).removeClass('setPreOrderAllow');
         }, 1000 * 10);
     };
-    $(document.body).on('mousedown', 'div[role="article"] span[lang]', e => clickHandler( e.currentTarget ) );
+    $(document.body).on('mousedown', 'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"] span[lang]', e => clickHandler( e.currentTarget ) );
 })();
 
 // MESSENGER SEARCH WHEN FOCUS;
@@ -979,7 +998,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         GM_addElement(window.document.body, 'input', {style:'position:absolute; top:0; right:0;', placeholder:'confirm url', id:'BumConfirmUrl'});
 
-        let info_encode = URLPARAMS.get('query');
+        let info_encode = UrlParams.get('query');
 
         if(!info_encode) return false;
 
