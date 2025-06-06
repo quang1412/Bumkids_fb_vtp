@@ -425,19 +425,20 @@ const Customer_Mng = {
                 target && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
             });
 
-            this.container.addEventListener("keypress", function(e) {
-                //alert('onkeypress')
-                console.log(e);
-                if (e.charCode == 122331) {
-                    alert('option3');
+            this.container.addEventListener("keydown", e => {
+                if(e.key === "F1") {
+                    e.preventDefault();
+                    this.phoneFinder();
                 }
-                if (e.keyCode == 87 && e.ctrlKey == true) {
-                    alert('option2');
+                if(e.key === "F2") {
+                    e.preventDefault();
+                    alert('F2');
                 }
-                if (e.charCode == 339) {
-                    alert('option1');
+                if(e.key === "F3") {
+                    e.preventDefault();
+                    this.createOrder();
                 }
-            });
+            })
 
             // Set phone by mouse selection
             this.container.addEventListener('mouseup', _ => {
@@ -478,15 +479,6 @@ const Customer_Mng = {
             new InfoCard({id, name, img}, contain);
         }
     });
-
-    window.document.addEventListener("keydown", e => {
-        if(e.key === "F1") {
-            // Suppress default behaviour
-            // e.g. F1 in Microsoft Edge on Windows usually opens Windows help
-            e.preventDefault();
-            alert('F1');
-        }
-    })
 })();
 
 // VIETTEL
