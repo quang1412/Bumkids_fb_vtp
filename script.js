@@ -114,7 +114,7 @@ Facebook
 
 // ADD CSS STYLE
 (function(){
-    if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
+    if(!isFBpage && !isMessPage) return !1;
 
     GM_addStyle('div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}');
 
@@ -441,14 +441,15 @@ const Customer_Mng = {
 
             // Set phone by mouse selection
             this.container.addEventListener('mouseup', _ => {
-                if(this.delay_xjae) return;
-                this.delay_xjae = setTimeout(_ => delete this.delay_xjae, 1000);
-
-                if(!window.getSelection) return;
+                if(!window.getSelection) return alert('window.getSelection is undifined');
                 let phone = window.getSelection().toString().replaceAll(/\D/g,'');
+
                 if(!isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone){
                     return false;
                 } else if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
+                    if(this.delay_xjae) return;
+                    this.delay_xjae = setTimeout(_ => delete this.delay_xjae, 1000);
+
                     this.setPhone(phone);
                 }
 
@@ -478,7 +479,7 @@ const Customer_Mng = {
         }
     });
 
-    document.addEventListener("keydown", e => {
+    window.document.addEventListener("keydown", e => {
         if(e.key === "F1") {
             // Suppress default behaviour
             // e.g. F1 in Microsoft Edge on Windows usually opens Windows help
@@ -763,6 +764,7 @@ const PreOrder_Mng = {
 // FB SET COMMENTS INFO
 (function(){
     if(!isFBpage) return false;
+
     function cmtScan(){
         $('div[role="article"]').each((i, a) => {
             let cid = $(a).attr('data-cid');
