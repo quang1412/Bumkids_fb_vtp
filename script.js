@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.6.3
+// @version      2025.6.6.4
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -50,13 +50,14 @@ function csvJSON(csv = '{}'){
   // to deal with those before doing the next step
   // (you might convert them to &&& or something, then covert them back later)
   // jsfiddle showing the issue https://jsfiddle.net/
-  var headers=lines[0].split(",");
-  for(var i=1;i<lines.length;i++){
+  var headers = lines[0].split(",");
+  for(var i = 1; i < lines.length; i++){
       var obj = {};
-      var currentline=lines[i].split("\",\"");
-      for(var j=0;j<headers.length;j++){
+      var currentline = lines[i].split("\",\"");
+
+      for(var j = 0; j < headers.length; j++){
           let label = headers[j].replaceAll('\"','');
-          let value = currentline[j].replaceAll('\"','');
+          let value = currentline[j]?.replaceAll('\"','');
           obj[label] = value;
       }
       result.push(obj);
@@ -99,9 +100,38 @@ function makeid(length = 12) {
 }
 
 
-GM_registerMenuCommand("refresh post", async _ => {
+isFBpage && GM_registerMenuCommand("refresh post", async _ => {
     FbPost_Mng.getCurrentPostInfo(true)
 });
+
+isFBpage && GM_registerMenuCommand("Load all fb mess", async _ => {
+    (function(){
+        if(window.location.host != "www.facebook.com" ){
+            return alert('go to facebook!');
+        }
+        else if(window.interval) {
+            clearInterval(window.interval);
+            delete window.interval;
+
+            console.log('stop')
+        }
+        else {
+            console.log('start')
+            window.interval = setInterval(_ => {
+                let scollElm = document.querySelector('div[aria-label="Đoạn chat"] > div > div div.__fb-dark-mode');
+                if(!scollElm) {
+                    let mesBtn = document.querySelector('div[aria-label^="Messenger"][role="button"]');
+                    mesBtn?.click();
+                }
+                else {
+                    scollElm.closest('div[hidden]')?.removeAttribute('hidden');
+                    scollElm.scrollTop = scollElm.scrollHeight;
+                }
+            }, 100)
+        }
+    })()
+});
+
 
 var keyState = {};
 function keyHandler(e){ keyState[e.code] = e.type === "keydown" }
@@ -578,7 +608,7 @@ const VIETTEL = {
         })
     }
 };
-isFBpage && VIETTEL.init();
+VIETTEL.init();
 
 // GOOGLE SHEET
 const GGSHEET = {
@@ -702,24 +732,24 @@ const FbPost_Mng = {
 
         this.footerTag.innerHTML = '<b>Id:</b>&nbsp <i>' + id + '</i>';
         this.footerTag.style.display = 'block';
+        this.footerTag.setAttribute('title', '');
 
         this.current = {id, name, fbid, text, img};
 
         this.get(id).then(res => {
             if(!res || !res.length) throw new Error('not found');
 
-            document.querySelectorAll('div[role="article"][data-uid]').each(el => el.removeAttribute('data-uid') )
+            document.querySelectorAll('div[role="article"][data-uid]').forEach(el => el.removeAttribute('data-uid') )
 
-            return PreOrder_Mng.get(id);
-
-        }).then(preOd => {
+        }).then(_ => PreOrder_Mng.get(id)).then(preOd => {
             this.current.preOd = preOd || new Array();
 
+            console.log('preOd' , this.current.preOd)
         }).catch(e => {
             e.message == 'not found' && this.set({ id, name, fbid, text, img});
 
         }).finally(_ => {
-
+           // this.footerTag.setAttribute('title', this.current.preOd?.map(o => o.text).join(' \n'))
         });
     }
 };
@@ -734,7 +764,8 @@ const PreOrder_Mng = {
         return;
     },
     get: async function(id){
-        let matchs = await GGSHEET.query(this.sheetName, 'A:E', `SELECT * WHERE B = "${id}" OR C = "${id}" OR D = "${id}"`);
+        let matchs = await GGSHEET.query(this.sheetName, 'A:E', `SELECT B, C, D, E WHERE B = "${id}" OR C = "${id}" OR D = "${id}"`);
+        console.log(matchs);
         return matchs;
     },
     set: async function(info){
@@ -742,7 +773,7 @@ const PreOrder_Mng = {
         let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
 
         GGSHEET.formSubmit(url).then(_ => {
-            FbPost_Mng.current.preOd.push({'Dấu thời gian': '', ...info});
+            FbPost_Mng.current.preOd.push(info);
 
             return true;
         }).catch(e => {
@@ -758,18 +789,20 @@ const PreOrder_Mng = {
     if(!isFBpage) return false;
 
     function cmtScan(){
-        $('div[role="article"]').each((i, a) => {
-            let cid = $(a).attr('data-cid');
+        if(this.delay) return;
+        this.delay = setTimeout(_ => delete this.delay, 1000);
+
+        $('div[role="article"][aria-label*="dưới tên ' + _myFbName + '"]').each((i, a) => {
+            let cid = a.getAttribute('data-cid');
             if(!cid){
                 let href = a.querySelector('li a[href*="comment_id"]')?.getAttribute('href');
                 let search = href && new URL(href).searchParams;
                 let cid = search?.get('reply_comment_id') || search?.get('comment_id');
                 let ctext = a.querySelector('span[lang]')?.innerText?.replaceAll(/\n/g, ' ');
-                (cid && ctext) && $(a).attr({'data-cid': cid, 'data-ctext': ctext});
+                (cid && ctext) && a.setAttribute('data-cid', cid); a.setAttribute('data-ctext', ctext);
             } else {
-                let match = FbPost_Mng.current.preOd?.filter(od => od.cid == cid);
-                let od = match?.pop();
-                od ? $(a).attr({'data-uid': od.uid}) : $(a).removeAttr('data-uid');
+                let match = FbPost_Mng.current.preOd?.filter(od => (od.cid == cid))?.pop();
+                match ? a.setAttribute('data-uid', match.uid) : a.removeAttribute('data-uid');
             }
         });
     };
