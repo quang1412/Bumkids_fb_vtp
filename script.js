@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.6.4
+// @version      2025.6.6.5
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -369,17 +369,10 @@ const Customer_Mng = {
         }
 
         async setPhone(phone = window.prompt("Nhập sđt cho " + this.customer.name, this.customer.phone)){
-            if(phone == null || phone == '' || !isVNPhone(phone) || phone == this.customer.phone) return;
-            try{
-                this.table.innerText = 'Đang cập nhật cloud!';
-
-                let newInfo = {...this.customer, phone: phone};
-                let res = await Customer_Mng.set(newInfo);
-                this.customer = newInfo;
-                this.refreshInfo();
-            } catch(err){
-                alert(err.message);
-            }
+            if(!phone || !isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone) return;
+            this.customer.phone = phone;
+            this.refreshInfo();
+            Customer_Mng.set(this.customer).catch(err => alert(err.message))
         }
 
         async preOrder(){
@@ -450,10 +443,12 @@ const Customer_Mng = {
         }
 
         async eventsListener(){
+            /***
             this.container.addEventListener("click", function(e){
                 let target = e.target.closest('div[aria-label="Trả lời"][role="button"]'); // Or any other selector.
                 target && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
             });
+            ***/
 
             this.container.addEventListener("keydown", e => {
                 if(e.key === "F1") {
@@ -475,9 +470,8 @@ const Customer_Mng = {
                 if(!window.getSelection) return alert('window.getSelection is undifined');
                 let phone = window.getSelection().toString().replaceAll(/\D/g,'');
 
-                if(!isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone){
-                    return false;
-                } else if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
+                if(!phone || !isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone) return;
+                if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
                     if(this.delay_xjae) return;
                     this.delay_xjae = setTimeout(_ => delete this.delay_xjae, 1000);
 
@@ -679,8 +673,7 @@ const FbPost_Mng = {
         code#postInfoCard p {  margin: 0;  display: block;  max-width: 300px;  white-space: nowrap;  text-overflow: ellipsis;  overflow: hidden !important; }
         `);
         this.footerTag = GM_addElement(window.document.body, 'code', {class:'', id:'postInfoCard', style:'display:none;'});
-
-        (['click', 'scroll', 'mousemove']).map(ev => $(window.document).on(ev, _ => this.getCurrentPostInfo()));
+        window.document.addEventListener("mousemove", _ => this.getCurrentPostInfo())
     },
 
     get: async function(id){
@@ -970,7 +963,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         }
 
         $(document).one('click', 'div.vtp-bill-table td.mat-column-select', function(){
-            $('a').css({cursor:'not-allowed', 'pointer-events': 'none !important'});
+            //$('a').css({cursor:'not-allowed', 'pointer-events': 'none !important'});
             window.onbeforeunload = function (e) {
                 e = e || window.event;
                 // For IE and Firefox prior to version 4
