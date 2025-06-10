@@ -184,12 +184,12 @@ const Customer_Mng = {
     int: async function(){
         this.dataStorage = await GM_getValue(this.storageKey, []);
         GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => {
-            if(!remote) return;
-
-            this.dataStorage = newValue;
-            let current_title = `${window.document.title} `;
-            window.document.title = '❤ ' + (this.storageKey + ' value changed by remote');
-            setTimeout(function() {window.document.title = current_title}, 10000);
+            if(!remote) {
+                this.dataStorage = newValue;
+                let current_title = `${window.document.title} `;
+                window.document.title = '❤ ' + (this.storageKey + ' value changed by remote');
+                setTimeout(function() {window.document.title = current_title}, 10000);
+            }
         });
     },
     sync: async function(){
