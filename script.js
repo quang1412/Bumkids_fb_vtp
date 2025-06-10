@@ -188,8 +188,8 @@ const Customer_Mng = {
             this.dataStorage = newValue;
 
             let current_title = `${window.document.title} `;
-            window.document.title = '✅' + (this.storageKey + ' value changed by remote');
-            setTimeout(function() {window.document.title = current_title}, 5000);
+            window.document.title = '❤ ' + (this.storageKey + ' value changed by remote');
+            setTimeout(function() {window.document.title = current_title}, 10000);
         });
     },
     sync: async function(){
