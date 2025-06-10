@@ -184,7 +184,7 @@ const Customer_Mng = {
     int: async function(){
         this.dataStorage = await GM_getValue(this.storageKey, []);
         GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => {
-            if(!remote) {
+            if(remote) {
                 this.dataStorage = newValue;
                 let current_title = `${window.document.title} `;
                 window.document.title = '❤ ' + (this.storageKey + ' value changed by remote');
