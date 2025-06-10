@@ -185,8 +185,8 @@ const Customer_Mng = {
         this.dataStorage = await GM_getValue(this.storageKey, []);
         GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => {
             if(!remote) return;
-            this.dataStorage = newValue;
 
+            this.dataStorage = newValue;
             let current_title = `${window.document.title} `;
             window.document.title = '❤ ' + (this.storageKey + ' value changed by remote');
             setTimeout(function() {window.document.title = current_title}, 10000);
@@ -277,14 +277,14 @@ GM_registerMenuCommand("Customer sync" , _ => {
             this.eventsListener();
 
             // get info from Google sheet
-            this.table.innerText = 'Loading google data...';
+            this.table.innerText = 'Loading customer data...';
             Customer_Mng.get(this.customer.id).then(data => {
                 if(!data || !data.length) throw new Error('chưa có sdt!');
                 this.customer = {...this.customer, ...data.pop()};
-            }).catch(err => {
-                this.table.innerText = '⚠️ ' + err.message;
             }).then(_ => {
                 this.refreshInfo();
+            }).catch(err => {
+                this.table.innerText = '⚠️ ' + err.message;
             });
         }
 
