@@ -184,15 +184,18 @@ const Customer_Mng = {
     int: async function(){
         this.dataStorage = await GM_getValue(this.storageKey, []);
         GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
+
+        GM_registerMenuCommand("Customer sync" , _ => this.sync() );
     },
     sync: async function(){
-        this.dataStorage = await GGSHEET.query(this.sheetName, 'A:Z', ` SELECT * WHERE B NOT NULL `);
+        this.dataStorage = await GGSHEET.query(this.sheetName, 'A:Z', `SELECT * WHERE B <> ''`);
         GM_setValue(this.storageKey, this.dataStorage);
+        alert('Customers syncing done!');
     },
     get: async function(id){
         if (!id) return false;
 
-        let matchs = this.dataStorage?.filter(i => (i.id == id));
+        let matchs = this.dataStorage.filter(i => (i.id == id));
 
         if(!matchs?.length) {
             matchs = await GGSHEET.query(this.sheetName, 'A:Z', `SELECT * WHERE B = "${id}" `);
@@ -220,9 +223,7 @@ const Customer_Mng = {
     },
 };
 Customer_Mng.int();
-GM_registerMenuCommand("Customer sync" , _ => {
-    Customer_Mng.sync();
-});
+
 
 // FB INFO CARD
 (function() {
