@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.6.7
+// @version      2025.6.10.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -183,13 +183,13 @@ const Customer_Mng = {
     storageKey: 'GMcustomer',
     int: async function(){
         this.dataStorage = await GM_getValue(this.storageKey, []);
-        GM_addValueChangeListener(this.storageKey, function(key, oldValue, newValue, remote) {
+        GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => {
             if(!remote) return;
             this.dataStorage = newValue;
 
-            let current_title = window.document.title;
-            window.document.title = (this.storageKey + ' value changed by remote');
-            setTimeout(_ => {window.document.title = current_title}, 5000);
+            let current_title = `${window.document.title} `;
+            window.document.title = '✅' + (this.storageKey + ' value changed by remote');
+            setTimeout(function() {window.document.title = current_title}, 5000);
         });
     },
     sync: async function(){
