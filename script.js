@@ -211,7 +211,7 @@ const Customer_Mng = {
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
             let res = await GGSHEET.formSubmit(url);
 
-            if(res.readyState != 4) throw new Error('google set new customer fail!');
+            if(res.readyState != 4) throw new Error('google add new customer fail!');
 
             this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
             GM_setValue(this.storageKey, [...this.dataStorage, info]);
