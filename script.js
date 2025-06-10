@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.6.5
+// @version      2025.6.6.7
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -40,6 +40,7 @@ const _myPhone = '0966628989', _myFbName = 'Trịnh Hiền', _myFbUsername = 'hi
 const isFBpage = window.location.host === 'www.facebook.com';
 const isMessPage = window.location.host === 'www.messenger.com';
 const isViettelPage = window.location.host === 'viettelpost.vn'
+let allowPreOrder = false;
 
 function Delay(ms = 1000) { return new Promise(resolve => setTimeout(resolve, ms)) }
 //var csv is the CSV file with headers
@@ -99,7 +100,6 @@ function makeid(length = 12) {
     return result;
 }
 
-
 isFBpage && GM_registerMenuCommand("refresh post", async _ => {
     FbPost_Mng.getCurrentPostInfo(true)
 });
@@ -132,6 +132,9 @@ isFBpage && GM_registerMenuCommand("Load all fb mess", async _ => {
     })()
 });
 
+isFBpage && GM_registerMenuCommand("Allow pre-order" , _ => {
+    allowPreOrder = !allowPreOrder;
+});
 
 var keyState = {};
 function keyHandler(e){ keyState[e.code] = e.type === "keydown" }
@@ -179,16 +182,24 @@ const Customer_Mng = {
     sheetName: 'customers',
     storageKey: 'GMcustomer',
     int: async function(){
+        this.dataStorage = await GM_getValue(this.storageKey, []);
+        GM_addValueChangeListener(this.storageKey, function(key, oldValue, newValue, remote) {
+            if(!remote) return;
+            this.dataStorage = newValue;
 
+            let current_title = window.document.title;
+            window.document.title = (this.storageKey + ' value changed by remote');
+            setTimeout(_ => {window.document.title = current_title}, 5000);
+        });
     },
     sync: async function(){
-
+        this.dataStorage = await GGSHEET.query(this.sheetName, 'A:Z', ` SELECT * WHERE B NOT NULL `);
+        GM_setValue(this.storageKey, this.dataStorage);
     },
     get: async function(id){
         if (!id) return false;
 
-        this.dataStorage = await GM_getValue(this.storageKey, []);
-        let matchs = this.dataStorage.filter(i => (i.id == id));
+        let matchs = this.dataStorage?.filter(i => (i.id == id));
 
         if(!matchs?.length) {
             matchs = await GGSHEET.query(this.sheetName, 'A:Z', `SELECT * WHERE B = "${id}" `);
@@ -197,7 +208,7 @@ const Customer_Mng = {
 
         return matchs;
     },
-    set: async function(info){
+    add: async function(info){
         try{
             //let img = await uploadimage(info.img);
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
@@ -215,7 +226,10 @@ const Customer_Mng = {
         };
     },
 };
-//Customer_Mng.int();
+Customer_Mng.int();
+GM_registerMenuCommand("Customer sync" , _ => {
+    Customer_Mng.sync();
+});
 
 // FB INFO CARD
 (function() {
@@ -372,7 +386,7 @@ const Customer_Mng = {
             if(!phone || !isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone) return;
             this.customer.phone = phone;
             this.refreshInfo();
-            Customer_Mng.set(this.customer).catch(err => alert(err.message))
+            Customer_Mng.add(this.customer).catch(err => alert(err.message))
         }
 
         async preOrder(){
@@ -388,13 +402,15 @@ const Customer_Mng = {
             title += `Tên FB: ${this.customer.name} \n`;
             title += `Nội dung: ${text} \n`;
 
+            elm.removeAttr('id');
+
             if(!window.confirm(title)) return;
 
-            PreOrder_Mng.set({cid, uid, pid, text}).then(_ => {
-                elm.attr({id: '', 'data-uid': uid});
+            elm.attr({'data-uid': uid});
+            PreOrder_Mng.add({cid, uid, pid, text}).then(_ => {
                 this.refreshInfo();
             }).catch(err => {
-
+                elm.removeAttr('data-uid');
             }).finally()
         }
 
@@ -761,7 +777,7 @@ const PreOrder_Mng = {
         console.log(matchs);
         return matchs;
     },
-    set: async function(info){
+    add: async function(info){
         let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
         let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
 
@@ -785,7 +801,7 @@ const PreOrder_Mng = {
         if(this.delay) return;
         this.delay = setTimeout(_ => delete this.delay, 1000);
 
-        $('div[role="article"][aria-label*="dưới tên ' + _myFbName + '"]').each((i, a) => {
+        window.document.querySelectorAll('div[role="article"][aria-label*="dưới tên ' + _myFbName + '"]').forEach(a => {
             let cid = a.getAttribute('data-cid');
             if(!cid){
                 let href = a.querySelector('li a[href*="comment_id"]')?.getAttribute('href');
@@ -794,12 +810,12 @@ const PreOrder_Mng = {
                 let ctext = a.querySelector('span[lang]')?.innerText?.replaceAll(/\n/g, ' ');
                 (cid && ctext) && a.setAttribute('data-cid', cid); a.setAttribute('data-ctext', ctext);
             } else {
-                let match = FbPost_Mng.current.preOd?.filter(od => (od.cid == cid))?.pop();
+                let match = FbPost_Mng.current?.preOd?.filter(od => (od.cid == cid))?.pop();
                 match ? a.setAttribute('data-uid', match.uid) : a.removeAttribute('data-uid');
             }
         });
     };
-    $(window.document).on('mousemove', cmtScan );
+    window.document.addEventListener('mousemove', cmtScan );
 
 })();
 
@@ -809,7 +825,7 @@ const PreOrder_Mng = {
 
     function clickHandler(span){ // div[role="article"]
 
-        if(this.busy) return;
+        if(this.busy || !allowPreOrder) return;
         else {this.busy = 1; setTimeout(_ => { this.busy = 0 }, 500)};
 
         $(document.body).removeClass('setPreOrderAllow');
@@ -818,7 +834,6 @@ const PreOrder_Mng = {
         let cid = $(a).attr('data-cid');
         let oldCid = $('div#lastClickCmt')?.removeAttr('id')?.attr('data-cid');
 
-        if(!keyState.ControlLeft && !keyState.AltLeft) return;
         if(!cid || oldCid == cid) return; if($(a).attr('data-uid')) return;
 
         $(a).attr({'id': 'lastClickCmt'}); $(document.body).addClass('setPreOrderAllow');
@@ -848,53 +863,64 @@ const PreOrder_Mng = {
     if(!isMessPage) return false;
 
     GM_addStyle('div#aqweasdf:not(:hover) div#list{ display:none; }');
+    GM_addStyle('div#aqweasdf div#list p {margin:0; padding:3px; border-radius:3px;}')
+    GM_addStyle('div#aqweasdf div#list p:hover { background-color:whitesmoke; color:#333; }')
 
-    let panel = GM_addElement(document.body, 'div', {id:'aqweasdf', style:'position:absolute; top:30px; left:30px; '});
-
-    let btn = GM_addElement(panel, 'div', {
+    let panelContainer = GM_addElement(document.body, 'div', {id:'aqweasdf', style:'position:absolute; top:30px; left:30px; '});
+    let scrollBtn = GM_addElement(panelContainer, 'div', {
         style:'background:crimson; color:white; padding:5px 15px; border:1px solid; border-radius:5px; cursor:pointer; ',
     });
-    let list = GM_addElement(panel, 'div', {id:'list', style:'background: black;  position: absolute;  top: 30px;  border-radius: 5px;  border: 1px solid white;  color: white;  text-wrap: nowrap;  overflow: hidden; '});
+    let userListPanel = GM_addElement(panelContainer, 'div', {id:'list', style:'background: black;  position: absolute;  top: 30px;  border-radius: 5px;  border: 1px solid white;  color: white;  text-wrap: nowrap;  overflow: hidden; '});
+    let userList = GM_addElement(userListPanel, 'div', {style:'overflow-y: scroll;  max-height: 492px;  padding: 10px; '});
 
-    let lines = GM_addElement(list, 'div', {style:'overflow-y: scroll;  max-height: 492px;  padding: 10px; '});
+    //let convList = GM_addElement(panel, 'div', {style:''});
 
-    btn.innerText = '✨ Load all ✨';
-    btn.onclick = function(){
-        if(this.scrolling){
-            this.innerText = '✨ Load all ✨';
+    scrollBtn.innerText = '✨ Load all ✨';
+    scrollBtn.onclick = _ => doScroll();
+
+    const doScroll = function(isStop = 0){
+        let messList = document.querySelector('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode, .__fb-light-mode)');
+
+        if(!messList || this.scrolling || isStop){
+            scrollBtn.innerText = '✨ Load all ✨';
             clearInterval(this.scrolling);
             delete this.scrolling;
             return false;
         }
-        //reset if shift btn press;
 
-        this.innerText = '✨ Stop ✨';
+        scrollBtn.innerText = '✨ Stop ✨';
+
         this.scrolling = setInterval(_ => {
             try{
-                let list = document.querySelector('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode, .__fb-light-mode)')
+                messList.scrollTo(0, messList.scrollHeight);
 
-                let optionBtn = list.querySelector('div[role="row"] div[aria-label^="Lựa chọn khác cho "]:not(.checked)');
-                optionBtn.scrollIntoView();
+                let containers = messList.querySelectorAll('div[data-virtualized="false"]:has(a[href][role="link"]):not(.checked)');
+                containers.forEach(container => {
+                    let name = container.querySelector('div[aria-label^="Lựa chọn khác cho "]')?.getAttribute('aria-label')?.replace('Lựa chọn khác cho ', '');
+                    let href = container.querySelector('a[href][role="link"]')?.getAttribute('href');
 
-                let name = optionBtn.getAttribute('aria-label')?.replace('Lựa chọn khác cho ', '');
-                optionBtn.classList.add('checked');
+                    if(!href || !name) return;
 
-                let top = optionBtn.closest('div[data-virtualized]')?.offsetTop;
+                    let top = container.offsetTop;
 
-                let p = GM_addElement(lines, 'p', {style:'cursor:pointer'});
-                p.innerText = name;
-                p.onclick = _ => list.scrollTo(0, top);
-                p.scrollIntoView();
+                    userList.querySelector('p[data-href="'+href+'"]')?.remove();
+                    let p = GM_addElement(userList, 'p', {style:'cursor:pointer','data-href':href});
+                    p.innerText = name;
+                    p.onclick = _ => {
+                        doScroll(true); // stop scrolling;
+                        messList.scrollTo(0, top);
+                    }
+                    //p.scrollIntoView();
 
-                window.document.title = name;
-                console.log(name, top);
+                    window.document.title = name;
+                    container.classList.add('checked');
+                });
+
             }catch(e){
                 console.error(e.messages);
             }
-        }, 100);
+        }, 1000);
     };
-
-    let convList = GM_addElement(panel, 'div', {style:''});
 
 })();
 
