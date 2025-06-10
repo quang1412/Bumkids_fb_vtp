@@ -459,12 +459,10 @@ GM_registerMenuCommand("Customer sync" , _ => {
         }
 
         async eventsListener(){
-            /***
             this.container.addEventListener("click", function(e){
                 let target = e.target.closest('div[aria-label="Trả lời"][role="button"]'); // Or any other selector.
                 target && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
             });
-            ***/
 
             this.container.addEventListener("keydown", e => {
                 if(e.key === "F1") {
