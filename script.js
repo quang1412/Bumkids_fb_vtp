@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.11.0
+// @version      2025.6.11.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -174,7 +174,7 @@ Facebook
 
                 'body:not(.setPreOrderAllow) a.setPreOrderBtn{ display:none; }' +
 
-               'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }');
+               'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 300px); }');
 })();
 
 //FB CUSTOMER MANAGER
@@ -335,8 +335,8 @@ Customer_Mng.int();
             }
         }
 
-        async phoneFinder(){
-            if(this.scanner){
+        async phoneFinder(isStop = null){
+            if(this.scanner || isStop){
                 clearInterval(this.scanner);
                 delete this.scanner;
                 this.btn_1.innerText = "Tìm sđt";
@@ -345,40 +345,39 @@ Customer_Mng.int();
             this.btn_1.innerText = "Dừng";
             let scroll = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
             let count = 0;
-
             this.scanner = setInterval(async _ => {
-
                 let rows = scroll.querySelectorAll('div[role="row"]:is(.__fb-dark-mode, __fb-light-mode):not(.scanned)');
-
                 rows.length ? (count = 0) : (scroll.scrollTop = 0, count++);
-                //count = rows.lenght ? 0 : (count + 1);
-
-                if(count == 100) return this.phoneFinder();
-
+                if(count == 100) return this.phoneFinder('stop');
                 for(let i = rows.length - 1; i > -1; i-- ){
                     let row = rows[i];
 
-                    row.classList.add('scanned');
-                    row.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+                    let top = row.offsetParent.offsetTop;
+                    scroll.scrollTop = top;
 
+                    row.classList.add('scanned');
+                    //row.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
                     let span = row.querySelector('[role="presentation"] span[dir="auto"]:not(:has(span)) ');
                     if(!span) return false;
-
                     let phone = await new Promise(resolve => {
                         let txt = span.innerText.replaceAll(/[^\w\d]/g, '');
                         let num = txt && txt.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
                         return resolve( !num ? false : num == _myPhone ? false : num );
                     });
-
                     if(phone){
                         let p = span.closest('div[role="presentation"]');
                         p.style.border = '2px dashed ' + (phone == this.customer.phone ? 'cyan' : 'red');
 
-                        //let prev = span.previousElementSibling;
-                        //if(prev && prev.innerText == 'Tin nhắn gốc:') span.closest('div[role="button"]').focus();
+                        row.querySelector('div[data-release-focus-from="CLICK"][role="gridcell"]')?.focus();
+                        setTimeout(_ => {
+                            let repBtn = row.querySelector('div[aria-label="Trả lời"]')
+                            repBtn?.focus({ focusVisible: true });
+                            repBtn?.click();
+                        }, 200)
 
-                        this.phoneFinder();
+                        this.phoneFinder('stop');
                         break;
+
                     }
                 }
             }, 500);
