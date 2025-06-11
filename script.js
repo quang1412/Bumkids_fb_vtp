@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.10.0
+// @version      2025.6.11.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -172,7 +172,9 @@ Facebook
                 'div[role="article"]#lastClickCmt span[lang] * { animation:blinker 1s linear infinite !important; color:cyan !important; }' +
                 'div[role="article"][data-uid] span[lang] * { color:yellow; }' +
 
-                'body:not(.setPreOrderAllow) a.setPreOrderBtn{ display:none; }');
+                'body:not(.setPreOrderAllow) a.setPreOrderBtn{ display:none; }' +
+
+               'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }');
 })();
 
 //FB CUSTOMER MANAGER
@@ -188,9 +190,10 @@ const Customer_Mng = {
         GM_registerMenuCommand("Customer sync" , _ => this.sync() );
     },
     sync: async function(){
-        this.dataStorage = await GGSHEET.query(this.sheetName, 'A:Z', `SELECT * WHERE B <> ''`);
+        this.dataStorage = await GGSHEET.query(this.sheetName, 'A:Q', `SELECT B,C,D,E,F,G WHERE B <> '' AND Q <> 'duplicate' `);
         GM_setValue(this.storageKey, this.dataStorage);
         alert('Customers syncing done!');
+        console.log(this.dataStorage)
     },
     get: async function(id){
         if (!id) return false;
@@ -333,20 +336,25 @@ Customer_Mng.int();
         }
 
         async phoneFinder(){
-            if(this.finder){
-                clearInterval(this.finder);
-                delete this.finder;
+            if(this.scanner){
+                clearInterval(this.scanner);
+                delete this.scanner;
                 this.btn_1.innerText = "Tìm sđt";
                 return false;
             }
             this.btn_1.innerText = "Dừng";
-            let scroll = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"]');
+            let scroll = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
             let count = 0;
-            this.finder = setInterval(async _ => {
-                scroll.scrollTop = 0;
+
+            this.scanner = setInterval(async _ => {
+
                 let rows = scroll.querySelectorAll('div[role="row"]:is(.__fb-dark-mode, __fb-light-mode):not(.scanned)');
-                count = rows.lenght ? 0 : count+1;
-                if(count == 20) return this.phoneFinder();
+
+                rows.length ? (count = 0) : (scroll.scrollTop = 0, count++);
+                //count = rows.lenght ? 0 : (count + 1);
+
+                if(count == 100) return this.phoneFinder();
+
                 for(let i = rows.length - 1; i > -1; i-- ){
                     let row = rows[i];
 
@@ -366,8 +374,8 @@ Customer_Mng.int();
                         let p = span.closest('div[role="presentation"]');
                         p.style.border = '2px dashed ' + (phone == this.customer.phone ? 'cyan' : 'red');
 
-                        let prev = span.previousElementSibling;
-                        if(prev && prev.innerText == 'Tin nhắn gốc:') span.closest('div[role="button"]').focus();
+                        //let prev = span.previousElementSibling;
+                        //if(prev && prev.innerText == 'Tin nhắn gốc:') span.closest('div[role="button"]').focus();
 
                         this.phoneFinder();
                         break;
@@ -681,6 +689,7 @@ const FbPost_Mng = {
         code#postInfoCard p {  margin: 0;  display: block;  max-width: 300px;  white-space: nowrap;  text-overflow: ellipsis;  overflow: hidden !important; }
         `);
         this.footerTag = GM_addElement(window.document.body, 'code', {class:'', id:'postInfoCard', style:'display:none;'});
+        window.document.addEventListener("click", _ => this.getCurrentPostInfo())
         window.document.addEventListener("mousemove", _ => this.getCurrentPostInfo())
     },
 
@@ -707,10 +716,10 @@ const FbPost_Mng = {
     },
 
     getCurrentPostInfo: function(force){
-        let dialog = document.querySelector('div[role="dialog"] div[aria-label="Chỉnh sửa đối tượng"]')?.closest('div[role="dialog"]');
+        let dialog = document.querySelector('div[role="dialog"]:has(div[role="dialog"] div[aria-label="Chỉnh sửa đối tượng"])');
         let author = dialog?.querySelector('div[data-ad-rendering-role="profile_name"] h3 span').innerText
 
-        if( !dialog || (author != _myFbName) ){
+        if(author != _myFbName){
             this.current = new Object();
             this.footerTag.innerHTML = null;
             this.footerTag.style.display = 'none';
@@ -737,6 +746,7 @@ const FbPost_Mng = {
 
         this.current = {id, name, fbid, text, img};
 
+        /***
         this.get(id).then(res => {
             if(!res || !res.length) throw new Error('not found');
 
@@ -752,6 +762,7 @@ const FbPost_Mng = {
         }).finally(_ => {
            // this.footerTag.setAttribute('title', this.current.preOd?.map(o => o.text).join(' \n'))
         });
+        ***/
     }
 };
 isFBpage && FbPost_Mng.int();
@@ -864,8 +875,6 @@ const PreOrder_Mng = {
     });
     let userListPanel = GM_addElement(panelContainer, 'div', {id:'list', style:'background: black;  position: absolute;  top: 30px;  border-radius: 5px;  border: 1px solid white;  color: white;  text-wrap: nowrap;  overflow: hidden; '});
     let userList = GM_addElement(userListPanel, 'div', {style:'overflow-y: scroll;  max-height: 492px;  padding: 10px; '});
-
-    //let convList = GM_addElement(panel, 'div', {style:''});
 
     scrollBtn.innerText = '✨ Load all ✨';
     scrollBtn.onclick = _ => doScroll();
