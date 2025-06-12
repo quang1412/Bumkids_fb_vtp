@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.11.1
+// @version      2025.6.12.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -104,34 +104,6 @@ isFBpage && GM_registerMenuCommand("refresh post", async _ => {
     FbPost_Mng.getCurrentPostInfo(true)
 });
 
-isFBpage && GM_registerMenuCommand("Load all fb mess", async _ => {
-    (function(){
-        if(window.location.host != "www.facebook.com" ){
-            return alert('go to facebook!');
-        }
-        else if(window.interval) {
-            clearInterval(window.interval);
-            delete window.interval;
-
-            console.log('stop')
-        }
-        else {
-            console.log('start')
-            window.interval = setInterval(_ => {
-                let scollElm = document.querySelector('div[aria-label="Đoạn chat"] > div > div div.__fb-dark-mode');
-                if(!scollElm) {
-                    let mesBtn = document.querySelector('div[aria-label^="Messenger"][role="button"]');
-                    mesBtn?.click();
-                }
-                else {
-                    scollElm.closest('div[hidden]')?.removeAttribute('hidden');
-                    scollElm.scrollTop = scollElm.scrollHeight;
-                }
-            }, 100)
-        }
-    })()
-});
-
 isFBpage && GM_registerMenuCommand("Allow pre-order" , _ => {
     allowPreOrder = !allowPreOrder;
 });
@@ -174,7 +146,7 @@ Facebook
 
                 'body:not(.setPreOrderAllow) a.setPreOrderBtn{ display:none; }' +
 
-               'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 300px); }');
+               'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }');
 })();
 
 //FB CUSTOMER MANAGER
@@ -182,6 +154,7 @@ const Customer_Mng = {
     ggFormId: '1FAIpQLScdh4nIuwIG7wvbarsXyystgnSkTcIzgIBBlcA9ya8DDZvwXA',
     ggFormEntry:{ id: 736845047, name: 64482577, phone: 1863958217, addr: 143609329, img: 1145058745, attr0: 1693043917, attr1: 1173103552, attr2: 398324750, attr3: 696385383, attr4: 2084291905, attr5: 1174020264, attr6: 1243517720, attr7: 1831851967, attr9: 1146378854 },
     sheetName: 'customers',
+    sheetRange: 'A:O',
     storageKey: 'GMcustomer',
     int: async function(){
         this.dataStorage = await GM_getValue(this.storageKey, []);
@@ -190,7 +163,7 @@ const Customer_Mng = {
         GM_registerMenuCommand("Customer sync" , _ => this.sync() );
     },
     sync: async function(){
-        this.dataStorage = await GGSHEET.query(this.sheetName, 'A:Q', `SELECT B,C,D,E,F,G WHERE B <> '' AND Q <> 'duplicate' `);
+        this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT * WHERE B <> '' `);
         GM_setValue(this.storageKey, this.dataStorage);
         alert('Customers syncing done!');
         console.log(this.dataStorage)
@@ -201,7 +174,7 @@ const Customer_Mng = {
         let matchs = this.dataStorage.filter(i => (i.id == id));
 
         if(!matchs?.length) {
-            matchs = await GGSHEET.query(this.sheetName, 'A:Z', `SELECT * WHERE B = "${id}" `);
+            matchs = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT * WHERE B = "${id}" `);
             GM_setValue(this.storageKey, [...this.dataStorage, ...matchs]);
         }
 
@@ -227,6 +200,171 @@ const Customer_Mng = {
 };
 Customer_Mng.int();
 
+// FB POST MANAGER
+const FbPost_Mng = {
+    ggFormId: '1FAIpQLSfx4bd487gRF7O5l8sGXqC1kJuz_a4huUrm64UZY5Ich2gfWw',
+    ggFormEntry:{ id: 1865259179, name: 1706162306, fbid: 1305732350, text: 1064661769, imgs: 1723256352},
+    sheetName: 'posts',
+    sheetRange: 'A:F',
+    storageKey: 'GMpostsStorage',
+
+    int: async function(){
+        GM_addStyle(`
+        code#postInfoCard{color:whitesmoke; position:absolute; bottom:10px; left:10px; border:1px solid whitesmoke; border-radius:5px; padding:5px;}
+        code#postInfoCard p {  margin: 0;  display: block;  max-width: 300px;  white-space: nowrap;  text-overflow: ellipsis;  overflow: hidden !important; }
+        `);
+
+        this.footerTag = GM_addElement(window.document.body, 'code', {class:'', id:'postInfoCard', style:'display:none;'});
+        (["click", "mousemove"]).map(ev => window.document.addEventListener(ev, _ => this.getCurrentPostInfo()))
+
+        this.dataStorage = await GM_getValue(this.storageKey, []);
+        GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
+
+        GM_registerMenuCommand("FB Posts sync" , _ => this.sync() );
+    },
+
+    sync: async function(){
+        this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT B,C,D,E,F WHERE B <> '' `);
+        GM_setValue(this.storageKey, this.dataStorage);
+        alert('FB posts syncing done!');
+        console.log(this.dataStorage)
+    },
+
+    get: async function(id){
+        if (!id) return false;
+
+        let matchs = this.dataStorage.filter(i => (i.id == id));
+
+        if(!matchs?.length) {
+            matchs = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT * WHERE B = "${id}" `);
+            GM_setValue(this.storageKey, [...this.dataStorage, ...matchs]);
+        }
+        return matchs;
+    },
+
+    add: async function(info){
+        try{
+            //let img = await uploadimage(info.img);
+            let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
+            let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
+            let res = await GGSHEET.formSubmit(url);
+
+            if(res.readyState != 4) throw new Error('google add new posts fail!');
+
+            this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
+            GM_setValue(this.storageKey, [...this.dataStorage, info]);
+            return res;
+
+        } catch(err){
+            alert(err.message);
+        };
+    },
+
+    getCurrentPostInfo: function(force){
+        let dialog = document.querySelector('div[role="dialog"]:has(div[role="dialog"] div[aria-label="Chỉnh sửa đối tượng"])');
+        let author = dialog?.querySelector('div[data-ad-rendering-role="profile_name"] h3 span').innerText
+
+        if(author != _myFbName){
+            this.current = new Object();
+            this.footerTag.innerHTML = null;
+            this.footerTag.style.display = 'none';
+            return false;
+        }
+
+        if(this.busy) return false; this.busy = 1; setTimeout(_ => {this.busy = 0}, 1000);
+
+        let postUrl = dialog.querySelector('a[href*="/posts/"]')?.getAttribute('href');
+        let fbid = postUrl?.match(/(pfbid)[\d\w]{50,}/g)[0];
+
+        if((!fbid || this.current?.fbid == fbid) && !force) return;
+
+        this.current = new Object();
+
+        let text = dialog.querySelector('div[data-ad-preview="message"]')?.innerText?.replaceAll(/\n/g, ' ');
+        let encode = text && window.btoa(encodeURIComponent(text)).replaceAll(/[^\w\d]/g, '');
+        let id = encode && (encode.slice(0, 10) + encode.substr(encode.length - 10));
+        let imgs = [...dialog.querySelectorAll('a[href*="facebook.com/photo"] img')].map(e => e.getAttribute('src')).join(', ');
+        let name = '---';
+
+        if(!!~[id, name, fbid, text, imgs].indexOf(undefined)) return;
+
+        this.current = {id, name, fbid, text, imgs};
+
+        this.footerTag.innerHTML = '<b>Id:</b>&nbsp <i>' + id + '</i>';
+        this.footerTag.style.display = 'block';
+        this.footerTag.setAttribute('title', '');
+
+        this.get(id).then(res => {
+            if(!res || !res.length){
+                throw new Error('not found');
+            }
+            document.querySelectorAll('div[role="article"][data-uid]').forEach(el => el.removeAttribute('data-uid') )
+        }).then(_ => PreOrder_Mng.get(id)).then(preOd => {
+            this.current.preOd = preOd || new Array();
+        }).catch(e => {
+            if(e.message == 'not found'){
+                this.add({ id, name, fbid, text, imgs});
+            } else {
+                alert(e.message);
+            }
+        }).finally(_ => {
+        });
+    }
+};
+isFBpage && FbPost_Mng.int();
+
+// FB PREORDER MANAGER
+const PreOrder_Mng = {
+    ggFormId: '1FAIpQLSdFJWCyBzIwVJoH5hPVKKOIDAM8kHtolvkaTamUqahuRyLFwQ',
+    ggFormEntry:{ cid: 1372917580, uid: 1672107945, pid: 212434003, text: 662290354},
+    sheetName: 'pre-od',
+    sheetRange: 'A:E',
+    storageKey: 'GMpreOrder',
+
+    int: async function(){
+        this.dataStorage = await GM_getValue(this.storageKey, []);
+        GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
+
+        GM_registerMenuCommand("FB Preorder sync" , _ => this.sync() );
+    },
+
+    sync: async function(){
+        this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT B,C,D,E WHERE B <> '' `);
+        GM_setValue(this.storageKey, this.dataStorage);
+        alert('FB preOrder syncing done!');
+        console.log(this.dataStorage)
+    },
+
+    get: async function(id){
+        if (!id) return false;
+
+        let matchs = this.dataStorage.filter(i => ((i.uid == id) || (i.cid == id) || (i.pid == id)) );
+
+        if(!matchs?.length) {
+            matchs = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT B, C, D, E WHERE B = "${id}" OR C = "${id}" OR D = "${id}"`);
+            GM_setValue(this.storageKey, [...this.dataStorage, ...matchs]);
+        }
+        return matchs;
+    },
+
+    add: async function(info){
+        try{
+            let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
+            let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
+            let res = await GGSHEET.formSubmit(url);
+
+            if(res.readyState != 4) throw new Error('google add preOrder fail!');
+
+            this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
+            GM_setValue(this.storageKey, [...this.dataStorage, info]);
+            return res;
+
+        } catch(err){
+            alert(err.message);
+        };
+    },
+};
+isFBpage && PreOrder_Mng.int();
 
 // FB INFO CARD
 (function() {
@@ -335,8 +473,8 @@ Customer_Mng.int();
             }
         }
 
-        async phoneFinder(isStop = null){
-            if(this.scanner || isStop){
+        async phoneFinder(){
+            if(this.scanner){
                 clearInterval(this.scanner);
                 delete this.scanner;
                 this.btn_1.innerText = "Tìm sđt";
@@ -345,39 +483,40 @@ Customer_Mng.int();
             this.btn_1.innerText = "Dừng";
             let scroll = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
             let count = 0;
+
             this.scanner = setInterval(async _ => {
+
                 let rows = scroll.querySelectorAll('div[role="row"]:is(.__fb-dark-mode, __fb-light-mode):not(.scanned)');
+
                 rows.length ? (count = 0) : (scroll.scrollTop = 0, count++);
-                if(count == 100) return this.phoneFinder('stop');
+                //count = rows.lenght ? 0 : (count + 1);
+
+                if(count == 100) return this.phoneFinder();
+
                 for(let i = rows.length - 1; i > -1; i-- ){
                     let row = rows[i];
 
-                    let top = row.offsetParent.offsetTop;
-                    scroll.scrollTop = top;
-
                     row.classList.add('scanned');
-                    //row.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+                    row.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+
                     let span = row.querySelector('[role="presentation"] span[dir="auto"]:not(:has(span)) ');
                     if(!span) return false;
+
                     let phone = await new Promise(resolve => {
                         let txt = span.innerText.replaceAll(/[^\w\d]/g, '');
                         let num = txt && txt.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
                         return resolve( !num ? false : num == _myPhone ? false : num );
                     });
+
                     if(phone){
                         let p = span.closest('div[role="presentation"]');
                         p.style.border = '2px dashed ' + (phone == this.customer.phone ? 'cyan' : 'red');
 
-                        row.querySelector('div[data-release-focus-from="CLICK"][role="gridcell"]')?.focus();
-                        setTimeout(_ => {
-                            let repBtn = row.querySelector('div[aria-label="Trả lời"]')
-                            repBtn?.focus({ focusVisible: true });
-                            repBtn?.click();
-                        }, 200)
+                        //let prev = span.previousElementSibling;
+                        //if(prev && prev.innerText == 'Tin nhắn gốc:') span.closest('div[role="button"]').focus();
 
-                        this.phoneFinder('stop');
+                        this.phoneFinder();
                         break;
-
                     }
                 }
             }, 500);
@@ -674,126 +813,6 @@ const GGSHEET = {
         })
     },
 }
-
-// FB POST MANAGER
-const FbPost_Mng = {
-    ggFormId: '1FAIpQLSfx4bd487gRF7O5l8sGXqC1kJuz_a4huUrm64UZY5Ich2gfWw',
-    ggFormEntry:{ id: 1865259179, name: 1706162306, fbid: 1305732350, text: 1064661769, img: 1723256352},
-    sheetName: 'posts',
-    current: new Object(),
-
-    int: function(){
-        GM_addStyle(`
-        code#postInfoCard{color:whitesmoke; position:absolute; bottom:10px; left:10px; border:1px solid whitesmoke; border-radius:5px; padding:5px;}
-        code#postInfoCard p {  margin: 0;  display: block;  max-width: 300px;  white-space: nowrap;  text-overflow: ellipsis;  overflow: hidden !important; }
-        `);
-        this.footerTag = GM_addElement(window.document.body, 'code', {class:'', id:'postInfoCard', style:'display:none;'});
-        window.document.addEventListener("click", _ => this.getCurrentPostInfo())
-        window.document.addEventListener("mousemove", _ => this.getCurrentPostInfo())
-    },
-
-    get: async function(id){
-        if(!id) return false;
-        let matchs = await GGSHEET.query(this.sheetName, 'A:F', `SELECT * WHERE B = "${id}"`);
-        return matchs;
-    },
-
-    set: function(info){
-        new Promise((resolve, reject) => {
-            resolve(); // upload img
-        }).catch(e => {
-            alert(e.message);
-        }).then(_ => {
-            let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
-            let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-            return GGSHEET.formSubmit(url);
-        }).then(_ => {
-            return true;
-        }).catch(e => {
-            alert(e.message);
-        });
-    },
-
-    getCurrentPostInfo: function(force){
-        let dialog = document.querySelector('div[role="dialog"]:has(div[role="dialog"] div[aria-label="Chỉnh sửa đối tượng"])');
-        let author = dialog?.querySelector('div[data-ad-rendering-role="profile_name"] h3 span').innerText
-
-        if(author != _myFbName){
-            this.current = new Object();
-            this.footerTag.innerHTML = null;
-            this.footerTag.style.display = 'none';
-            return false;
-        }
-
-        if(this.busy) return false; this.busy = 1; setTimeout(_ => {this.busy = 0}, 1000);
-
-        let postUrl = dialog.querySelector('a[href*="/posts/"]')?.getAttribute('href');
-        let fbid = postUrl?.match(/[\d\w]{50,}/g)?.pop();
-        if((this.current.fbid == fbid) && !force) return;
-
-        let text = dialog.querySelector('div[data-ad-preview="message"]')?.innerText;
-        let encode = text && window.btoa(encodeURIComponent(text)).replaceAll(/[^\w\d]/g, '');
-        let id = encode && (encode.slice(0, 10) + encode.substr(encode.length - 10));
-        let img = dialog.querySelector('a[href*="facebook.com/photo"] img')?.getAttribute('src');
-        let name = '---';
-
-        if(!!~[id, name, fbid, text, img].indexOf(undefined)) return;
-
-        this.footerTag.innerHTML = '<b>Id:</b>&nbsp <i>' + id + '</i>';
-        this.footerTag.style.display = 'block';
-        this.footerTag.setAttribute('title', '');
-
-        this.current = {id, name, fbid, text, img};
-
-        /***
-        this.get(id).then(res => {
-            if(!res || !res.length) throw new Error('not found');
-
-            document.querySelectorAll('div[role="article"][data-uid]').forEach(el => el.removeAttribute('data-uid') )
-
-        }).then(_ => PreOrder_Mng.get(id)).then(preOd => {
-            this.current.preOd = preOd || new Array();
-
-            console.log('preOd' , this.current.preOd)
-        }).catch(e => {
-            e.message == 'not found' && this.set({ id, name, fbid, text, img});
-
-        }).finally(_ => {
-           // this.footerTag.setAttribute('title', this.current.preOd?.map(o => o.text).join(' \n'))
-        });
-        ***/
-    }
-};
-isFBpage && FbPost_Mng.int();
-
-// FB PREORDER MANAGER
-const PreOrder_Mng = {
-    ggFormId: '1FAIpQLSdFJWCyBzIwVJoH5hPVKKOIDAM8kHtolvkaTamUqahuRyLFwQ',
-    ggFormEntry:{ cid: 1372917580, uid: 1672107945, pid: 212434003, text: 662290354},
-    sheetName: 'pre-od',
-    int: function(){
-        return;
-    },
-    get: async function(id){
-        let matchs = await GGSHEET.query(this.sheetName, 'A:E', `SELECT B, C, D, E WHERE B = "${id}" OR C = "${id}" OR D = "${id}"`);
-        console.log(matchs);
-        return matchs;
-    },
-    add: async function(info){
-        let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
-        let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-
-        GGSHEET.formSubmit(url).then(_ => {
-            FbPost_Mng.current.preOd.push(info);
-
-            return true;
-        }).catch(e => {
-            alert(e.message);
-        }).finally(_ => {
-
-        });
-    },
-};
 
 // FB SET COMMENTS INFO
 (function(){
