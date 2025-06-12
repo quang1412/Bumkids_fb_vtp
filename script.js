@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.12.1
+// @version      2025.6.12.3
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -630,11 +630,11 @@ const PreOrder_Mng = {
             }
         }
 
-        async phoneFinder(){
-            if(this.scanner){
+        async phoneFinder(isStop){
+            if(this.scanner || isStop){
+                this.btn_1.innerText = "Tìm sđt";
                 clearInterval(this.scanner);
                 delete this.scanner;
-                this.btn_1.innerText = "Tìm sđt";
                 return false;
             }
             this.btn_1.innerText = "Dừng";
@@ -646,9 +646,8 @@ const PreOrder_Mng = {
                 let rows = scroll.querySelectorAll('div[role="row"]:is(.__fb-dark-mode, __fb-light-mode):not(.scanned)');
 
                 rows.length ? (count = 0) : (scroll.scrollTop = 0, count++);
-                //count = rows.lenght ? 0 : (count + 1);
 
-                if(count == 100) return this.phoneFinder();
+                if(count == 100) return this.phoneFinder('stop'); /*** timeout ***/
 
                 for(let i = rows.length - 1; i > -1; i-- ){
                     let row = rows[i];
@@ -672,7 +671,7 @@ const PreOrder_Mng = {
                         //let prev = span.previousElementSibling;
                         //if(prev && prev.innerText == 'Tin nhắn gốc:') span.closest('div[role="button"]').focus();
 
-                        this.phoneFinder();
+                        this.phoneFinder('stop');
                         break;
                     }
                 }
@@ -770,7 +769,7 @@ const PreOrder_Mng = {
                 }
                 if(e.key === "F2") {
                     e.preventDefault();
-                    alert('F2');
+                    this.setPhone();
                 }
                 if(e.key === "F3") {
                     e.preventDefault();
@@ -778,14 +777,20 @@ const PreOrder_Mng = {
                 }
             })
 
+            this.container.addEventListener('contextmenu', function(e) {
+                return;
+                event.preventDefault();
+                alert('contextmenu');
+            });
+
             // Set phone by mouse selection
             this.container.addEventListener('mouseup', _ => {
-                if(!window.getSelection) return alert('window.getSelection is undifined');
-                let phone = window.getSelection().toString().replaceAll(/\D/g,'');
+                if(!window.getSelection) return alert('⚠ window.getSelection is undifined');
+                let phone = window.getSelection().toString().replaceAll(/\D/g,``);
 
-                if(!phone || !isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone) return;
-                if(window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
-                //if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
+                if(!phone || phone.length < 10 || phone == this.customer.phone || phone == _myPhone || !isVNPhone(phone)) return;
+                //if(window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
+                if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
                     if(this.delay_xjae) return;
                     this.delay_xjae = setTimeout(_ => delete this.delay_xjae, 1000);
 
