@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.12.0
+// @version      2025.6.12.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -149,6 +149,163 @@ Facebook
                'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }');
 })();
 
+
+// VIETTEL
+const VIETTEL = {
+    init: function(){
+        this.deviceId = GM_getValue('vtp_deviceId', null);
+        GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => {
+            if(remote) this.deviceId = newValue;
+        });
+
+        this.token = GM_getValue('vtp_tokenKey', null);
+        GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
+            if(remote) this.token = newValue;
+        });
+    },
+    getReq: function(url){
+       // let i = this.deviceId, t = this.token;
+        let token = this.token;
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                url: url,
+                method: "GET",
+                synchronous: true,
+                headers: { 'Authorization': 'Bearer ' + token },
+                onload: function (response) {
+                    return resolve(JSON.parse(response.responseText))
+                },
+                onerror: function(reponse) {
+                    return reject(reponse.message || 'Lỗi viettelReqGet');
+                }
+            })
+        })
+    },
+    postReq: function(url, json){
+        let deviceId = this.deviceId, token = this.token;
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                url:  url,
+                method: "POST",
+                synchronous: true,
+                headers: { "Token": token, "Content-Type": "application/json" },
+                data: JSON.stringify({...json, "deviceId": deviceId}),
+                onload: (response) => {
+                    let res = JSON.parse(response.responseText);
+                    return res.status == 200 ? resolve(res) : reject(new Error(res.message));
+                },
+                onerror: (e) => {
+                    alert(e.message || 'Lỗi viettel \nMã lỗi: #178');
+                    return reject(e);
+                }
+            })
+        })
+    },
+    getListOrders: function(key){
+        return new Promise((resolve, reject) => {
+            if(!key) return reject(new Error('Chưa có sdt'));
+            let url = 'https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2';
+            let json = {
+                "PAGE_INDEX": 1,
+                "PAGE_SIZE": 10,
+                "INVENTORY": null,
+                "TYPE": 0,
+                "DATE_FROM": getFormatedDate(-30),
+                "DATE_TO": getFormatedDate(),
+                "ORDER_PROPERTIES": key,
+                "ORDER_PAYMENT": "",
+                "IS_FAST_DELIVERY": false,
+                "REASON_RETURN": null,
+                "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,101,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570,516,517",
+            };
+            this.postReq(url, json ).then(resolve).catch(e => {
+                alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
+                reject(e);
+            });
+        })
+    },
+    getOrderPrint: function(id){
+        return new Promise((resolve, reject) => {
+            if(!id) return reject(new Error('Chưa có sdt'));
+            let url = 'https://api.viettelpost.vn/api/setting/encryptLinkPrintV2';
+            let json = {
+                "TYPE": 100,
+                "ORDER_NUMBER": id + "," + (new Date().getTime() + (360000000)),
+                "IS_SHOW_POSTAGE": 0,
+                "PRINT_COPY": 1,
+            };
+            this.postReq(url, json).then(res => {
+                if(res.error) return reject(res.message);
+                let link = res?.data?.enCryptUrl;
+                GM_log(json)
+                return resolve(link);
+
+            }).catch(e => {
+                alert(e || 'Lỗi viettel \nMã lỗi: #202');
+                reject(e);
+            });
+        })
+    }
+};
+VIETTEL.init();
+
+// GOOGLE SHEET
+const GGSHEET = {
+    query: function( sheet = 'log', range = 'A:A', queryStr = 'SELECT *'){
+        return new Promise((resolve, reject) => {
+            let ggsid = '1KAhQCGOIInG3Et77PfY03V_Nn4fWvi0z1ITh1BKFkmk';
+            let tq = encodeURIComponent(queryStr);
+            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:csv&sheet=${sheet}&range=${range}&tq=${tq}&time=${new Date().getTime()}`;
+
+            console.log(url)
+            GM_xmlhttpRequest({
+                url: url,
+                method: "GET",
+                synchronous: true,
+                headers: {"Content-Type": "text/html; charset=utf-8"},
+                onload: function (res) {
+                    let json = csvJSON(res.response);
+                    return resolve(JSON.parse(json));
+                },
+                onerror: function(res) {
+                    GM_log("error: ", res.message);
+                    return reject(res.message);
+                }
+            });
+        });
+    },
+    formSubmit: function(url){
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                url: url,
+                method: "GET",
+                synchronous: false,
+                headers: {"Content-Type": "text/html; charset=utf-8"},
+                onload: function (res) {
+                    res.readyState == 4 && res.status == 200 && resolve(res);
+                },
+                onerror: function(res) {
+                    GM_log("error: ", res.message);
+                    return reject('GG Log error: ' + res.message);
+                }
+            })
+        })
+    },
+
+    log: function(type = 'test', data = []){
+        let id = '1FAIpQLSdnt9BSiDQEirKx0Q3ucZFxunOgQQxp4SB7B6Gd8nNMFGzEyw';
+        let fields = [2075359581, 1542826863, 2077606435, 1093369063, 2124435966, 450302808, 2118396800, 839689225, 2086451399, 1329285789];
+        return new Promise((resolve, reject) => {
+            if(!type || !data.length) { return reject('input is invalid!') };
+            let url = `https://docs.google.com/forms/d/e/${id}/formResponse?entry.${fields[0]}='${type}&${data.map((d, i) => (`entry.${fields[i+1]}='${encodeURIComponent(d)}`)).join('&')}`;
+            this.formSubmit(url)
+                .then(res => resolve(res))
+                .catch(err => reject(err.message));
+        })
+    },
+}
+
+
 //FB CUSTOMER MANAGER
 const Customer_Mng = {
     ggFormId: '1FAIpQLScdh4nIuwIG7wvbarsXyystgnSkTcIzgIBBlcA9ya8DDZvwXA',
@@ -198,7 +355,7 @@ const Customer_Mng = {
         };
     },
 };
-Customer_Mng.int();
+(isMessPage || isFBpage) && Customer_Mng.int();
 
 // FB POST MANAGER
 const FbPost_Mng = {
@@ -311,7 +468,7 @@ const FbPost_Mng = {
         });
     }
 };
-isFBpage && FbPost_Mng.int();
+(isMessPage || isFBpage) && FbPost_Mng.int();
 
 // FB PREORDER MANAGER
 const PreOrder_Mng = {
@@ -337,7 +494,6 @@ const PreOrder_Mng = {
 
     get: async function(id){
         if (!id) return false;
-
         let matchs = this.dataStorage.filter(i => ((i.uid == id) || (i.cid == id) || (i.pid == id)) );
 
         if(!matchs?.length) {
@@ -355,8 +511,9 @@ const PreOrder_Mng = {
 
             if(res.readyState != 4) throw new Error('google add preOrder fail!');
 
-            this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
+            this.dataStorage = this.dataStorage.filter(i => ((i.cid != info.cid) && (i.uid != info.uid) && (i.pid != info.pid))); // unique filter;
             GM_setValue(this.storageKey, [...this.dataStorage, info]);
+
             return res;
 
         } catch(err){
@@ -364,7 +521,7 @@ const PreOrder_Mng = {
         };
     },
 };
-isFBpage && PreOrder_Mng.int();
+(isMessPage || isFBpage) && PreOrder_Mng.int();
 
 // FB INFO CARD
 (function() {
@@ -547,7 +704,9 @@ isFBpage && PreOrder_Mng.int();
             if(!window.confirm(title)) return;
 
             elm.attr({'data-uid': uid});
-            PreOrder_Mng.add({cid, uid, pid, text}).then(_ => {
+            let info = {cid, uid, pid, text};
+            PreOrder_Mng.add(info).then(_ => {
+                FbPost_Mng.current?.preOd?.push(info);
                 this.refreshInfo();
             }).catch(err => {
                 elm.removeAttr('data-uid');
@@ -625,7 +784,8 @@ isFBpage && PreOrder_Mng.int();
                 let phone = window.getSelection().toString().replaceAll(/\D/g,'');
 
                 if(!phone || !isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone) return;
-                if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
+                if(window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
+                //if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
                     if(this.delay_xjae) return;
                     this.delay_xjae = setTimeout(_ => delete this.delay_xjae, 1000);
 
@@ -647,7 +807,7 @@ isFBpage && PreOrder_Mng.int();
         for(let i = 0; i < links.length; i++){
             let e = links[i];
             let id = e.getAttribute('href')?.match(/\d+/g)?.pop();
-            let name = e.getAttribute('aria-label') || e.querySelector('h2').innerText;
+            let name = e.getAttribute('aria-label') || e.querySelector('h2')?.innerText;
             let img = e.querySelector('img')?.getAttribute('src');
 
             if(!id || !name || !img) continue;
@@ -658,161 +818,6 @@ isFBpage && PreOrder_Mng.int();
         }
     });
 })();
-
-// VIETTEL
-const VIETTEL = {
-    init: function(){
-        this.deviceId = GM_getValue('vtp_deviceId', null);
-        GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => {
-            if(remote) this.deviceId = newValue;
-        });
-
-        this.token = GM_getValue('vtp_tokenKey', null);
-        GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
-            if(remote) this.token = newValue;
-        });
-    },
-    getReq: function(url){
-       // let i = this.deviceId, t = this.token;
-        let token = this.token;
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                url: url,
-                method: "GET",
-                synchronous: true,
-                headers: { 'Authorization': 'Bearer ' + token },
-                onload: function (response) {
-                    return resolve(JSON.parse(response.responseText))
-                },
-                onerror: function(reponse) {
-                    return reject(reponse.message || 'Lỗi viettelReqGet');
-                }
-            })
-        })
-    },
-    postReq: function(url, json){
-        let deviceId = this.deviceId, token = this.token;
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                url:  url,
-                method: "POST",
-                synchronous: true,
-                headers: { "Token": token, "Content-Type": "application/json" },
-                data: JSON.stringify({...json, "deviceId": deviceId}),
-                onload: (response) => {
-                    let res = JSON.parse(response.responseText);
-                    return res.status == 200 ? resolve(res) : reject(new Error(res.message));
-                },
-                onerror: (e) => {
-                    alert(e.message || 'Lỗi viettel \nMã lỗi: #178');
-                    return reject(e);
-                }
-            })
-        })
-    },
-    getListOrders: function(key){
-        return new Promise((resolve, reject) => {
-            if(!key) return reject(new Error('Chưa có sdt'));
-            let url = 'https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2';
-            let json = {
-                "PAGE_INDEX": 1,
-                "PAGE_SIZE": 10,
-                "INVENTORY": null,
-                "TYPE": 0,
-                "DATE_FROM": getFormatedDate(-30),
-                "DATE_TO": getFormatedDate(),
-                "ORDER_PROPERTIES": key,
-                "ORDER_PAYMENT": "",
-                "IS_FAST_DELIVERY": false,
-                "REASON_RETURN": null,
-                "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,101,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570,516,517",
-            };
-            this.postReq(url, json ).then(resolve).catch(e => {
-                alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
-                reject(e);
-            });
-        })
-    },
-    getOrderPrint: function(id){
-        return new Promise((resolve, reject) => {
-            if(!id) return reject(new Error('Chưa có sdt'));
-            let url = 'https://api.viettelpost.vn/api/setting/encryptLinkPrintV2';
-            let json = {
-                "TYPE": 100,
-                "ORDER_NUMBER": id + "," + (new Date().getTime() + (360000000)),
-                "IS_SHOW_POSTAGE": 0,
-                "PRINT_COPY": 1,
-            };
-            this.postReq(url, json).then(res => {
-                if(res.error) return reject(res.message);
-                let link = res?.data?.enCryptUrl;
-                GM_log(json)
-                return resolve(link);
-
-            }).catch(e => {
-                alert(e || 'Lỗi viettel \nMã lỗi: #202');
-                reject(e);
-            });
-        })
-    }
-};
-VIETTEL.init();
-
-// GOOGLE SHEET
-const GGSHEET = {
-    query: function( sheet = 'log', range = 'A:A', queryStr = 'SELECT *'){
-        return new Promise((resolve, reject) => {
-            let ggsid = '1KAhQCGOIInG3Et77PfY03V_Nn4fWvi0z1ITh1BKFkmk';
-            let tq = encodeURIComponent(queryStr);
-            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:csv&sheet=${sheet}&range=${range}&tq=${tq}&time=${new Date().getTime()}`;
-
-            console.log(url)
-            GM_xmlhttpRequest({
-                url: url,
-                method: "GET",
-                synchronous: true,
-                headers: {"Content-Type": "text/html; charset=utf-8"},
-                onload: function (res) {
-                    let json = csvJSON(res.response);
-                    return resolve(JSON.parse(json));
-                },
-                onerror: function(res) {
-                    GM_log("error: ", res.message);
-                    return reject(res.message);
-                }
-            });
-        });
-    },
-    formSubmit: function(url){
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                url: url,
-                method: "GET",
-                synchronous: false,
-                headers: {"Content-Type": "text/html; charset=utf-8"},
-                onload: function (res) {
-                    res.readyState == 4 && res.status == 200 && resolve(res);
-                },
-                onerror: function(res) {
-                    GM_log("error: ", res.message);
-                    return reject('GG Log error: ' + res.message);
-                }
-            })
-        })
-    },
-
-    log: function(type = 'test', data = []){
-        let id = '1FAIpQLSdnt9BSiDQEirKx0Q3ucZFxunOgQQxp4SB7B6Gd8nNMFGzEyw';
-        let fields = [2075359581, 1542826863, 2077606435, 1093369063, 2124435966, 450302808, 2118396800, 839689225, 2086451399, 1329285789];
-        return new Promise((resolve, reject) => {
-            if(!type || !data.length) { return reject('input is invalid!') };
-            let url = `https://docs.google.com/forms/d/e/${id}/formResponse?entry.${fields[0]}='${type}&${data.map((d, i) => (`entry.${fields[i+1]}='${encodeURIComponent(d)}`)).join('&')}`;
-            this.formSubmit(url)
-                .then(res => resolve(res))
-                .catch(err => reject(err.message));
-        })
-    },
-}
 
 // FB SET COMMENTS INFO
 (function(){
@@ -837,7 +842,6 @@ const GGSHEET = {
         });
     };
     window.document.addEventListener('mousemove', cmtScan );
-
 })();
 
 // FB COMMENT CLICK HANDLER
