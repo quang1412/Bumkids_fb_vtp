@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.13.2
+// @version      2025.6.13.3
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -900,12 +900,10 @@ const PreOrder_Mng = {
 (function(){
     if(!isMessPage) return false;
 
-    window.addEventListener("focus",function (e) {
-        let input = document.querySelector('input[type="search"][aria-label="Tìm kiếm trên Messenger"], input[type="text"][aria-label="Tìm kiếm"]')
-        if(!input) return true;
-        //e.preventDefault();
-        input.focus();
-        input.select();
+    window.addEventListener("focus", function (e) {
+        let input = document.querySelector('input[type="search"][aria-label="Tìm kiếm trên Messenger"], input[type="text"][aria-label="Tìm kiếm"]');
+        input?.focus();
+        input?.select();
     })
 })();
 
