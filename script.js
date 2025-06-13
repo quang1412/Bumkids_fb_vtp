@@ -153,26 +153,23 @@ Facebook
 // VIETTEL
 const VIETTEL = {
     init: function(){
-        isViettelPage && this.getToken();
-
-        this.deviceId = GM_getValue('vtp_deviceId', null);
-        GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => {
-            if(remote) this.deviceId = newValue;
-        });
-        this.token = GM_getValue('vtp_tokenKey', null);
-        GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
-            if(remote) this.token = newValue;
-        });
+        if(isViettelPage){
+            this.deviceId = window.localStorage.deviceId;
+            GM_setValue('vtp_deviceId', this.deviceId);
+            this.token = this.deviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
+            GM_setValue('vtp_tokenKey', this.token);
+        }
+        else if(isFBpage || isMessPage){
+            this.deviceId = GM_getValue('vtp_deviceId', null);
+            GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => {
+                if(remote) this.deviceId = newValue;
+            });
+            this.token = GM_getValue('vtp_tokenKey', null);
+            GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
+                if(remote) this.token = newValue;
+            });
+        }
     },
-
-    getToken: function(){
-        // in Viettelpost.vn page
-        this.deviceId = window.localStorage.deviceId;
-        this.token = this.deviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
-        GM_setValue('vtp_deviceId', this.deviceId);
-        GM_setValue('vtp_tokenKey', this.token);
-    },
-
     getReq: function(url){
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
@@ -312,7 +309,6 @@ const GGSHEET = {
         })
     },
 }
-
 
 //FB CUSTOMER MANAGER
 const Customer_Mng = {
@@ -491,18 +487,6 @@ const PreOrder_Mng = {
         GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { this.dataStorage = newValue });
 
         GM_registerMenuCommand("FB Preorder sync" , _ => this.sync() );
-
-        // set new pre order;
-        this.newOrder = await GM_getValue('newPreOrderData', {});
-        GM_addValueChangeListener('newPreOrderData', (key, oldValue, newValue, remote) => {
-            console.log('oldValue: ', oldValue);
-            console.log('newValue: ', newValue);
-
-            let {cid, uid, pid, text} = newValue;
-            if(([cid, uid, pid, text]).indexOf(undefined) == -1){
-                this.add(newValue);
-            }
-        });
     },
 
     sync: async function(){
