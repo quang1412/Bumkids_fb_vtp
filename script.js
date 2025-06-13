@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.13.1
+// @version      2025.6.13.2
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -690,8 +690,7 @@ const PreOrder_Mng = {
                         let p = span.closest('div[role="presentation"]');
                         p.style.border = '2px dashed ' + (phone == this.customer.phone ? 'cyan' : 'red');
 
-                        //let prev = span.previousElementSibling;
-                        //if(prev && prev.innerText == 'Tin nhắn gốc:') span.closest('div[role="button"]').focus();
+                        row.querySelector('div[role="gridcell"][data-release-focus-from="CLICK"]')?.focus();
 
                         this.phoneFinder('stop');
                         break;
