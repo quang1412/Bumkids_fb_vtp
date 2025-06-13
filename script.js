@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.12.3
+// @version      2025.6.13.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -142,6 +142,7 @@ Facebook
 
     GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
                 'div[role="article"]#lastClickCmt span[lang] * { animation:blinker 1s linear infinite !important; color:cyan !important; }' +
+
                 'div[role="article"][data-uid] span[lang] * { color:yellow; }' +
 
                 'body:not(.setPreOrderAllow) a.setPreOrderBtn{ display:none; }' +
@@ -149,29 +150,36 @@ Facebook
                'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }');
 })();
 
-
 // VIETTEL
 const VIETTEL = {
     init: function(){
+        isViettelPage && this.getToken();
+
         this.deviceId = GM_getValue('vtp_deviceId', null);
         GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => {
             if(remote) this.deviceId = newValue;
         });
-
         this.token = GM_getValue('vtp_tokenKey', null);
         GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
             if(remote) this.token = newValue;
         });
     },
+
+    getToken: function(){
+        // in Viettelpost.vn page
+        this.deviceId = window.localStorage.deviceId;
+        this.token = this.deviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
+        GM_setValue('vtp_deviceId', this.deviceId);
+        GM_setValue('vtp_tokenKey', this.token);
+    },
+
     getReq: function(url){
-       // let i = this.deviceId, t = this.token;
-        let token = this.token;
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 url: url,
                 method: "GET",
                 synchronous: true,
-                headers: { 'Authorization': 'Bearer ' + token },
+                headers: { 'Authorization': 'Bearer ' + this.token },
                 onload: function (response) {
                     return resolve(JSON.parse(response.responseText))
                 },
@@ -182,14 +190,14 @@ const VIETTEL = {
         })
     },
     postReq: function(url, json){
-        let deviceId = this.deviceId, token = this.token;
+        //let deviceId = this.deviceId, token = this.token;
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 url:  url,
                 method: "POST",
                 synchronous: true,
-                headers: { "Token": token, "Content-Type": "application/json" },
-                data: JSON.stringify({...json, "deviceId": deviceId}),
+                headers: { "Token": this.token, "Content-Type": "application/json" },
+                data: JSON.stringify({...json, "deviceId": this.deviceId}),
                 onload: (response) => {
                     let res = JSON.parse(response.responseText);
                     return res.status == 200 ? resolve(res) : reject(new Error(res.message));
@@ -430,7 +438,7 @@ const FbPost_Mng = {
 
         if(this.busy) return false; this.busy = 1; setTimeout(_ => {this.busy = 0}, 1000);
 
-        let postUrl = dialog.querySelector('a[href*="/posts/"]')?.getAttribute('href');
+        let postUrl = dialog.querySelector('a[href*="/posts/pfbid"]')?.getAttribute('href');
         let fbid = postUrl?.match(/(pfbid)[\d\w]{50,}/g)[0];
 
         if((!fbid || this.current?.fbid == fbid) && !force) return;
@@ -480,9 +488,21 @@ const PreOrder_Mng = {
 
     int: async function(){
         this.dataStorage = await GM_getValue(this.storageKey, []);
-        GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
+        GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { this.dataStorage = newValue });
 
         GM_registerMenuCommand("FB Preorder sync" , _ => this.sync() );
+
+        // set new pre order;
+        this.newOrder = await GM_getValue('newPreOrderData', {});
+        GM_addValueChangeListener('newPreOrderData', (key, oldValue, newValue, remote) => {
+            console.log('oldValue: ', oldValue);
+            console.log('newValue: ', newValue);
+
+            let {cid, uid, pid, text} = newValue;
+            if(([cid, uid, pid, text]).indexOf(undefined) == -1){
+                this.add(newValue);
+            }
+        });
     },
 
     sync: async function(){
@@ -503,7 +523,7 @@ const PreOrder_Mng = {
         return matchs;
     },
 
-    add: async function(info){
+    add: async function(info = {}){
         try{
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
@@ -511,8 +531,9 @@ const PreOrder_Mng = {
 
             if(res.readyState != 4) throw new Error('google add preOrder fail!');
 
+            this.dataStorage?.push(info);
             this.dataStorage = this.dataStorage.filter(i => ((i.cid != info.cid) && (i.uid != info.uid) && (i.pid != info.pid))); // unique filter;
-            GM_setValue(this.storageKey, [...this.dataStorage, info]);
+            GM_setValue(this.storageKey, this.dataStorage);
 
             return res;
 
@@ -533,6 +554,7 @@ const PreOrder_Mng = {
     GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a[href*="/e2ee/"]::before {color:red;}`);
 
     class InfoCard{
+
         constructor(info, container){
             this.container = container;
 
@@ -685,7 +707,7 @@ const PreOrder_Mng = {
             Customer_Mng.add(this.customer).catch(err => alert(err.message))
         }
 
-        async preOrder(){
+        async prethisOrder(){
             let title = `Tạo đơn Pre-order \n\n`;
             let elm = $('div#lastClickCmt:not([data-uid])');
             if(!elm || !elm.length) return alert('⚠️ Chọn comment note đơn trước!');
@@ -788,8 +810,7 @@ const PreOrder_Mng = {
                 if(!window.getSelection) return alert('⚠ window.getSelection is undifined');
                 let phone = window.getSelection().toString().replaceAll(/\D/g,``);
 
-                if(!phone || phone.length < 10 || phone == this.customer.phone || phone == _myPhone || !isVNPhone(phone)) return;
-                //if(window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
+                if(!phone || phone.length != 10 || phone == this.customer.phone || phone == _myPhone || !isVNPhone(phone)) return;
                 if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
                     if(this.delay_xjae) return;
                     this.delay_xjae = setTimeout(_ => delete this.delay_xjae, 1000);
@@ -830,7 +851,7 @@ const PreOrder_Mng = {
 
     function cmtScan(){
         if(this.delay) return;
-        this.delay = setTimeout(_ => delete this.delay, 1000);
+        this.delay = setTimeout(_ => delete this.delay, 500);
 
         window.document.querySelectorAll('div[role="article"][aria-label*="dưới tên ' + _myFbName + '"]').forEach(a => {
             let cid = a.getAttribute('data-cid');
@@ -872,6 +893,7 @@ const PreOrder_Mng = {
             $(a).removeAttr('id'); $(document.body).removeClass('setPreOrderAllow');
         }, 1000 * 10);
     };
+
     $(document.body).on('mousedown', 'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"] span[lang]', e => clickHandler( e.currentTarget ) );
 })();
 
@@ -981,10 +1003,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
     /* ViettelPost custom css */`);
 
-    let i = window.localStorage.deviceId;
-    let t = i && JSON.parse(window.localStorage['vtp-token']).tokenKey;
-    GM_setValue('vtp_deviceId', i);
-    GM_setValue('vtp_tokenKey', t);
 
     $(document).ready( async function(){
         await new Promise(resolve => { setTimeout(resolve, 1000)});
