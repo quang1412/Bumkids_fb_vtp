@@ -25,7 +25,6 @@
 // @grant        GM_addElement
 // @grant        GM_notification
 // @grant        GM_addValueChangeListener
-// @grant        GM_removeValueChangeListener
 // @grant        GM_webRequest
 // @grant        GM_setClipboard
 // @grant        window.onurlchange
@@ -142,11 +141,8 @@ Facebook
     `);
 
     GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
-                'div[role="article"]#lastClickCmt span[lang] * { animation:blinker 1s linear infinite !important; color:cyan !important; }' +
 
                 'div[role="article"][data-uid] span[lang] * { color:yellow; }' +
-
-                'body:not(.setPreOrderAllow) a.setPreOrderBtn{ display:none; }' +
 
                'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }');
 })();
@@ -291,7 +287,7 @@ const GGSHEET = {
                     res.readyState == 4 && res.status == 200 && resolve(res);
                 },
                 onerror: function(res) {
-                    GM_log("error: ", res.message);
+                    alert('⚠ Google sheet form submit fail!! \nURL:' + url);
                     return reject('GG Log error: ' + res.message);
                 }
             })
@@ -351,9 +347,7 @@ const Customer_Mng = {
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
             let res = await GGSHEET.formSubmit(url);
-            if(res.readyState != 4) throw new Error('google add new customer fail!');
             return res;
-
         } catch(err){
             alert(err.message);
         };
@@ -412,7 +406,6 @@ const FbPost_Mng = {
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
             let res = await GGSHEET.formSubmit(url);
-            if(res.readyState != 4) throw new Error('google add new posts fail!');
             return res;
         } catch(err){
             alert(err.message);
@@ -516,7 +509,6 @@ const PreOrder_Mng = {
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
             let res = await GGSHEET.formSubmit(url);
-            if(res.readyState != 4) throw new Error('google add preOrder fail!');
             return res;
 
         } catch(err){
@@ -693,17 +685,17 @@ const PreOrder_Mng = {
         async preOrder(){
             let title = `Tạo đơn Pre-order \n\n`;
 
-            let info = GM_getValue('lastestPreOdInfo', null)
+            let i = GM_getValue('lastestPreOdInfo', null)
 
-            if(!info?.cid) return alert('⚠️ Chọn comment note đơn trước!');
+            if(!i?.cid) return alert('⚠️ Chọn comment note đơn trước!');
 
             let uid = this.customer.id;
-            info.uid = uid;
+            i.uid = uid;
 
-            title += `Tên FB: ${this.customer.name} \n`;
-            title += `Nội dung: ${info.text} \n`;
+            title += `Tên FB: \n${this.customer.name} \n`;
+            title += `Nội dung: \n${i.text} \n`;
 
-            window.confirm(title) && GM_setValue('lastestPreOdInfo', info); this.refreshInfo();
+            window.confirm(title) && GM_setValue('lastestPreOdInfo', i); this.refreshInfo();
         }
 
         async createOrder(){
@@ -821,23 +813,22 @@ const PreOrder_Mng = {
 (function(){
     if(!isFBpage) return false;
 
-    function cmtClick({cid, text}){
-        if(this.busy_qwe) return;
+    GM_addValueChangeListener('lastestPreOdInfo', (key, oldValue, newValue, remote) => {
+        let i = {...oldValue, ...newValue};
+        if(!i.uid) return;
+        GM_deleteValue("lastestPreOdInfo");
+        PreOrder_Mng.add(i);
+    });
+
+    function cmtClick(a){
+        if(this.busy_qwe || a.getAttribute('data-uid')) return;
         this.busy_qwe = setTimeout(_ => delete this.busy_qwe, 1000);
 
-        clearTimeout(this.timeout); GM_removeValueChangeListener(this.valueListener);
+        let cid = a.getAttribute('data-cid'),
+            text = a.getAttribute('data-text'),
+            pid = FbPost_Mng.current?.id;
 
-        GM_setValue('lastestPreOdInfo', {cid, text, pid: FbPost_Mng.current?.id});
-
-        this.valueListener = GM_addValueChangeListener('lastestPreOdInfo', (key, oldValue, newValue, remote) => {
-            let info = {...oldValue, ...newValue};
-
-            if(!info.uid) return;
-
-            PreOrder_Mng.add(info);
-        });
-
-        this.timeout = setTimeout(_ => { GM_removeValueChangeListener(this.valueListener); GM_deleteValue("lastestPreOdInfo"); }, 30 * 1000);
+        GM_setValue('lastestPreOdInfo', {cid, text, pid});
     }
 
     function cmtScan(){
@@ -846,10 +837,12 @@ const PreOrder_Mng = {
 
         window.document.querySelectorAll('div[role="article"][aria-label*="dưới tên ' + _myFbName + '"]').forEach(a => {
             let cid = a.getAttribute('data-cid');
-            if(!cid){ /*** init ***/
+            let uid = a.getAttribute('data-uid');
+
+            if(!cid){
                 let href = a.querySelector('li a[href*="comment_id"]')?.getAttribute('href');
                 let search = href && new URL(href).searchParams;
-                let cid = search?.get('reply_comment_id') || search?.get('comment_id');
+                cid = search?.get('reply_comment_id') || search?.get('comment_id');
                 let text = a.querySelector('span[lang]')?.innerText?.replaceAll(/\n/g, ' ');
 
                 if(!cid || !text) return;
@@ -857,15 +850,12 @@ const PreOrder_Mng = {
                 a.setAttribute('data-cid', cid);
                 a.setAttribute('data-text', text);
 
-                let span = a.querySelector('span[lang]');
-                span?.addEventListener('mouseup', _ => cmtClick({cid, text}));
+                a.querySelector('span[lang]')?.addEventListener('mouseup', _ => cmtClick(a));
 
-            } else if(!a.getAttribute('data-uid')) {
+            } else if(!uid) {
                 let match = PreOrder_Mng.get(cid)?.pop();
-
-                match ? a.setAttribute('data-uid', match.uid) : a.removeAttribute('data-uid');
+                match && a.setAttribute('data-uid', match.uid);
             }
-
         });
     };
     window.document.addEventListener('mousemove', cmtScan );
