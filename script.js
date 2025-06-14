@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.14.0
+// @version      2025.6.14.2
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -496,19 +496,20 @@ const PreOrder_Mng = {
         this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT B,C,D,E WHERE B <> '' `);
         GM_setValue(this.storageKey, this.dataStorage);
         alert('FB preOrder syncing done!');
-        console.log(this.dataStorage)
+        console.log(this.dataStorage);
     },
 
     get: async function(id){
         if (!id) return false;
         let matchs = this.dataStorage.filter(i => ((i.uid == id) || (i.cid == id) || (i.pid == id)) );
 
+        /***
         if(!matchs?.length) {
             matchs = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT B, C, D, E WHERE B = "${id}" OR C = "${id}" OR D = "${id}"`);
             GM_setValue(this.storageKey, [...this.dataStorage, ...matchs]);
         }
+        ***/
         return matchs;
-        console.log(matchs);
     },
 
     add: async function(info = {}){
@@ -520,7 +521,7 @@ const PreOrder_Mng = {
             if(res.readyState != 4) throw new Error('google add preOrder fail!');
 
             this.dataStorage?.push(info);
-            this.dataStorage = this.dataStorage.filter(({cid, uid, pid}) => ((cid != info.cid) && (uid != info.uid) && (pid != info.pid))); // unique filter;
+            //this.dataStorage = this.dataStorage.filter(({cid, uid, pid}) => ((cid != info.cid) && (uid != info.uid) && (pid != info.pid))); // unique filter;
             GM_setValue(this.storageKey, this.dataStorage);
 
             return res;
@@ -711,13 +712,9 @@ const PreOrder_Mng = {
 
             if(!window.confirm(title)) return;
 
-            PreOrder_Mng.add(info).then(_ => {
+            GM_setValue('lastestPreOdInfo', info);
+            this.refreshInfo();
 
-                GM_setValue('lastestPreOdInfo', info);
-                this.refreshInfo();
-
-            }).catch(err => {
-            }).finally()
         }
 
         async createOrder(){
@@ -839,20 +836,19 @@ const PreOrder_Mng = {
         if(this.busy_qwe) return;
         this.busy_qwe = setTimeout(_ => delete this.busy_qwe, 1000);
 
-        clearTimeout(this.timeout);
-        GM_removeValueChangeListener(this.valueListener);
+        clearTimeout(this.timeout); GM_removeValueChangeListener(this.valueListener);
 
         GM_setValue('lastestPreOdInfo', {cid, text, pid: FbPost_Mng.current?.id});
 
         this.valueListener = GM_addValueChangeListener('lastestPreOdInfo', (key, oldValue, newValue, remote) => {
             let info = {...oldValue, ...newValue};
-            info.uid && FbPost_Mng.current?.preOd?.push(info);
+
+            if(!info.uid) return;
+
+            PreOrder_Mng.add(info);
         });
 
-        this.timeout = setTimeout(_ => {
-            GM_removeValueChangeListener(this.valueListener);
-            GM_deleteValue("lastestPreOdInfo");
-        }, 30 * 1000);
+        this.timeout = setTimeout(_ => { GM_removeValueChangeListener(this.valueListener); GM_deleteValue("lastestPreOdInfo"); }, 30 * 1000);
     }
 
     function cmtScan(){
@@ -875,8 +871,11 @@ const PreOrder_Mng = {
                 let span = a.querySelector('span[lang]');
                 span?.addEventListener('mouseup', _ => cmtClick({cid, text}));
 
-            } else {
-                let match = FbPost_Mng.current?.preOd?.filter(od => (od.cid == cid))?.pop();
+            } else if(!a.getAttribute('data-uid')) {
+                //let match = FbPost_Mng.current?.preOd?.filter(od => (od.cid == cid))?.pop();
+
+                let match = PreOrder_Mng.get(cid)?.pop();
+
                 match ? a.setAttribute('data-uid', match.uid) : a.removeAttribute('data-uid');
             }
 
