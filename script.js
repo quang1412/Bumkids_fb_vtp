@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.13.3
+// @version      2025.6.14.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -25,6 +25,7 @@
 // @grant        GM_addElement
 // @grant        GM_notification
 // @grant        GM_addValueChangeListener
+// @grant        GM_removeValueChangeListener
 // @grant        GM_webRequest
 // @grant        GM_setClipboard
 // @grant        window.onurlchange
@@ -462,6 +463,8 @@ const FbPost_Mng = {
             document.querySelectorAll('div[role="article"][data-uid]').forEach(el => el.removeAttribute('data-uid') )
         }).then(_ => PreOrder_Mng.get(id)).then(preOd => {
             this.current.preOd = preOd || new Array();
+
+            console.log(preOd);
         }).catch(e => {
             if(e.message == 'not found'){
                 this.add({ id, name, fbid, text, imgs});
@@ -505,6 +508,7 @@ const PreOrder_Mng = {
             GM_setValue(this.storageKey, [...this.dataStorage, ...matchs]);
         }
         return matchs;
+        console.log(matchs);
     },
 
     add: async function(info = {}){
@@ -516,7 +520,7 @@ const PreOrder_Mng = {
             if(res.readyState != 4) throw new Error('google add preOrder fail!');
 
             this.dataStorage?.push(info);
-            this.dataStorage = this.dataStorage.filter(i => ((i.cid != info.cid) && (i.uid != info.uid) && (i.pid != info.pid))); // unique filter;
+            this.dataStorage = this.dataStorage.filter(({cid, uid, pid}) => ((cid != info.cid) && (uid != info.uid) && (pid != info.pid))); // unique filter;
             GM_setValue(this.storageKey, this.dataStorage);
 
             return res;
@@ -565,8 +569,10 @@ const PreOrder_Mng = {
             let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
             btn_3.innerText = 'Tạo đơn'; btn_3.onclick = _ => this.createOrder();
 
+            /***
             let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:whitesmoke;', class: 'setPreOrderBtn'});
             btn_4.innerText = 'Pre-od'; btn_4.onclick = _ => this.preOrder();
+            ***/
 
             GM_addElement(card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
             let quangplus = GM_addElement(card, 'small', {style: 'opacity: .5; position: absolute; top: 5px; right: 5px;'});
@@ -690,35 +696,32 @@ const PreOrder_Mng = {
             Customer_Mng.add(this.customer).catch(err => alert(err.message))
         }
 
-        async prethisOrder(){
+        async preOrder(){
             let title = `Tạo đơn Pre-order \n\n`;
-            let elm = $('div#lastClickCmt:not([data-uid])');
-            if(!elm || !elm.length) return alert('⚠️ Chọn comment note đơn trước!');
 
-            let text = elm.attr('data-ctext');
-            let cid = elm.attr('data-cid');
+            let info = GM_getValue('lastestPreOdInfo', null)
+
+            if(!info?.cid) return alert('⚠️ Chọn comment note đơn trước!');
+
             let uid = this.customer.id;
-            let pid = FbPost_Mng.current?.id;
+            info.uid = uid;
 
             title += `Tên FB: ${this.customer.name} \n`;
-            title += `Nội dung: ${text} \n`;
-
-            elm.removeAttr('id');
+            title += `Nội dung: ${info.text} \n`;
 
             if(!window.confirm(title)) return;
 
-            elm.attr({'data-uid': uid});
-            let info = {cid, uid, pid, text};
             PreOrder_Mng.add(info).then(_ => {
-                FbPost_Mng.current?.preOd?.push(info);
+
+                GM_setValue('lastestPreOdInfo', info);
                 this.refreshInfo();
+
             }).catch(err => {
-                elm.removeAttr('data-uid');
             }).finally()
         }
 
         async createOrder(){
-            //if(keyState.MetaLeft) { return this.preOrder() }
+            if(keyState.MetaLeft) return (this.preOrder(), delete keyState.MetaLeft);
 
             let title = 'Đang tạo đơn hàng cho: ' + this.customer.name + '\n\n';
 
@@ -832,35 +835,65 @@ const PreOrder_Mng = {
 (function(){
     if(!isFBpage) return false;
 
+    function cmtClick({cid, text}){
+        if(this.busy_qwe) return;
+        this.busy_qwe = setTimeout(_ => delete this.busy_qwe, 1000);
+
+        clearTimeout(this.timeout);
+        GM_removeValueChangeListener(this.valueListener);
+
+        GM_setValue('lastestPreOdInfo', {cid, text, pid: FbPost_Mng.current?.id});
+
+        this.valueListener = GM_addValueChangeListener('lastestPreOdInfo', (key, oldValue, newValue, remote) => {
+            let info = {...oldValue, ...newValue};
+            info.uid && FbPost_Mng.current?.preOd?.push(info);
+        });
+
+        this.timeout = setTimeout(_ => {
+            GM_removeValueChangeListener(this.valueListener);
+            GM_deleteValue("lastestPreOdInfo");
+        }, 30 * 1000);
+    }
+
     function cmtScan(){
         if(this.delay) return;
         this.delay = setTimeout(_ => delete this.delay, 500);
 
         window.document.querySelectorAll('div[role="article"][aria-label*="dưới tên ' + _myFbName + '"]').forEach(a => {
             let cid = a.getAttribute('data-cid');
-            if(!cid){
+            if(!cid){ /*** init ***/
                 let href = a.querySelector('li a[href*="comment_id"]')?.getAttribute('href');
                 let search = href && new URL(href).searchParams;
                 let cid = search?.get('reply_comment_id') || search?.get('comment_id');
-                let ctext = a.querySelector('span[lang]')?.innerText?.replaceAll(/\n/g, ' ');
-                (cid && ctext) && a.setAttribute('data-cid', cid); a.setAttribute('data-ctext', ctext);
+                let text = a.querySelector('span[lang]')?.innerText?.replaceAll(/\n/g, ' ');
+
+                if(!cid || !text) return;
+
+                a.setAttribute('data-cid', cid);
+                a.setAttribute('data-text', text);
+
+                let span = a.querySelector('span[lang]');
+                span?.addEventListener('mouseup', _ => cmtClick({cid, text}));
+
             } else {
                 let match = FbPost_Mng.current?.preOd?.filter(od => (od.cid == cid))?.pop();
                 match ? a.setAttribute('data-uid', match.uid) : a.removeAttribute('data-uid');
             }
+
         });
     };
     window.document.addEventListener('mousemove', cmtScan );
 })();
 
 // FB COMMENT CLICK HANDLER
+/***
 (function(){
     if(!isFBpage) return false;
 
     function clickHandler(span){ // div[role="article"]
 
         if(this.busy || !allowPreOrder) return;
-        else {this.busy = 1; setTimeout(_ => { this.busy = 0 }, 500)};
+        this.busy = 1; setTimeout(_ => { this.busy = 0 }, 500);
 
         $(document.body).removeClass('setPreOrderAllow');
 
@@ -870,6 +903,7 @@ const PreOrder_Mng = {
 
         if(!cid || oldCid == cid) return; if($(a).attr('data-uid')) return;
 
+        GM_setValue('lastestCmtInfo', {cid});
         $(a).attr({'id': 'lastClickCmt'}); $(document.body).addClass('setPreOrderAllow');
         clearTimeout(this.timeout);
         this.timeout = setTimeout(_ => {
@@ -877,8 +911,9 @@ const PreOrder_Mng = {
         }, 1000 * 10);
     };
 
-    $(document.body).on('mousedown', 'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"] span[lang]', e => clickHandler( e.currentTarget ) );
+    //$(document.body).on('mousedown', 'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"] span[lang]', e => clickHandler( e.currentTarget ) );
 })();
+***/
 
 // MESSENGER SEARCH WHEN FOCUS;
 (function(){
