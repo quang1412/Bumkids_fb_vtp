@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.14.2
+// @version      2025.6.14.3
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -25,7 +25,7 @@
 // @grant        GM_addElement
 // @grant        GM_notification
 // @grant        GM_addValueChangeListener
-// @grant        GM_webRequest
+// @grant        GM_removeValueChangeListener
 // @grant        GM_setClipboard
 // @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
@@ -101,7 +101,7 @@ function makeid(length = 12) {
 }
 
 isFBpage && GM_registerMenuCommand("refresh post", async _ => {
-    FbPost_Mng.getCurrentPostInfo(true)
+    FbPost_Mng.getCurrentPostInfo('force');
 });
 
 isFBpage && GM_registerMenuCommand("Allow pre-order" , _ => {
@@ -323,25 +323,19 @@ const Customer_Mng = {
     sync: async function(){
         this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT * WHERE B <> '' `);
         GM_setValue(this.storageKey, this.dataStorage);
-        alert('Customers syncing done!');
-        console.log(this.dataStorage)
+        alert(`Customers syncing done! length: ${this.dataStorage.length} \neg: ${JSON.stringify(this.dataStorage[0])}`);
+        console.log(this.dataStorage);
     },
     get: async function(id){
         if (!id) return false;
-
         let matchs = this.dataStorage.filter(i => (i.id == id));
-
-        if(!matchs?.length) {
-            matchs = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT * WHERE B = "${id}" `);
-            GM_setValue(this.storageKey, [...this.dataStorage, ...matchs]);
-        }
-
         return matchs;
     },
     add: async function(info){
         try{
             //let img = await uploadimage(info.img);
             this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
+            this.dataStorage.push(info)
             GM_setValue(this.storageKey, [...this.dataStorage, info]);
 
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
@@ -364,18 +358,16 @@ const FbPost_Mng = {
     storageKey: 'GMpostsStorage',
 
     int: async function(){
-        GM_addStyle(`
-        code#postInfoCard{color:whitesmoke; position:absolute; bottom:10px; left:10px; border:1px solid whitesmoke; border-radius:5px; padding:5px;}
-        code#postInfoCard p {  margin: 0;  display: block;  max-width: 300px;  white-space: nowrap;  text-overflow: ellipsis;  overflow: hidden !important; }
-        `);
-
-        this.footerTag = GM_addElement(window.document.body, 'code', {class:'', id:'postInfoCard', style:'display:none;'});
-        (["click", "mousemove"]).map(ev => window.document.addEventListener(ev, _ => this.getCurrentPostInfo()))
-
         this.dataStorage = await GM_getValue(this.storageKey, []);
         GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
 
         GM_registerMenuCommand("FB Posts sync" , _ => this.sync() );
+
+        GM_addStyle('code#postInfoCard{color:whitesmoke; position:absolute; bottom:10px; left:10px; border:1px solid whitesmoke; border-radius:5px; padding:5px;}' +
+                    'code#postInfoCard p {  margin: 0;  display: block;  max-width: 300px;  white-space: nowrap;  text-overflow: ellipsis;  overflow: hidden !important; }');
+
+        this.footerTag = GM_addElement(window.document.body, 'code', {class:'', id:'postInfoCard', style:'display:none;'});
+        (["click", "mousemove"]).map(ev => window.document.addEventListener(ev, _ => this.getCurrentPostInfo()))
     },
 
     sync: async function(){
@@ -387,13 +379,7 @@ const FbPost_Mng = {
 
     get: async function(id){
         if (!id) return false;
-
         let matchs = this.dataStorage.filter(i => (i.id == id));
-
-        if(!matchs?.length) {
-            matchs = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT * WHERE B = "${id}" `);
-            GM_setValue(this.storageKey, [...this.dataStorage, ...matchs]);
-        }
         return matchs;
     },
 
@@ -401,6 +387,7 @@ const FbPost_Mng = {
         try{
             //let img = await uploadimage(info.img);
             this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
+            this.dataStorage.push(info)
             GM_setValue(this.storageKey, [...this.dataStorage, info]);
 
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
@@ -473,7 +460,7 @@ const PreOrder_Mng = {
 
     int: async function(){
         this.dataStorage = await GM_getValue(this.storageKey, []);
-        GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { this.dataStorage = newValue });
+        GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
 
         GM_registerMenuCommand("FB Preorder sync" , _ => this.sync() );
     },
@@ -488,22 +475,15 @@ const PreOrder_Mng = {
     get: function(id){
         if (!id) return false;
         let matchs = this.dataStorage.filter(i => ((i.uid == id) || (i.cid == id) || (i.pid == id)) );
-
-        /***
-        if(!matchs?.length) {
-            matchs = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT B, C, D, E WHERE B = "${id}" OR C = "${id}" OR D = "${id}"`);
-            GM_setValue(this.storageKey, [...this.dataStorage, ...matchs]);
-        }
-        ***/
         return matchs;
     },
 
     add: async function(info = {}){
         try{
             /***
-            this.dataStorage = this.dataStorage.filter(({cid, uid, pid}) => ((cid != info.cid) && (uid != info.uid) && (pid != info.pid))); // unique filter;
             ***/
-            this.dataStorage?.push(info);
+            this.dataStorage = this.dataStorage.filter(({cid}) => (cid != info.cid)); // unique filter;
+            this.dataStorage.push(info);
             GM_setValue(this.storageKey, this.dataStorage);
 
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
@@ -522,13 +502,12 @@ const PreOrder_Mng = {
 (function() {
     if(!isFBpage && !isMessPage) return !1;
 
-    GM_addStyle(`div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}`);
-    GM_addStyle(`div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}`)
-    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a:is([href*="/t/"], [href*="/messages/"])::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 10px;  color: initial;  opacity: 0.5; }`);
-    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a[href*="/e2ee/"]::before {color:red;}`);
+    GM_addStyle('div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}'+
+                'div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}'+
+                'div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a:is([href*="/t/"], [href*="/messages/"])::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 10px;  color: initial;  opacity: 0.5; }'+
+                'div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a[href*="/e2ee/"]::before {color:red;}');
 
     class InfoCard{
-
         constructor(info, container){
             this.container = container;
 
@@ -692,14 +671,14 @@ const PreOrder_Mng = {
             let uid = this.customer.id;
             i.uid = uid;
 
-            title += `Tên FB: \n${this.customer.name} \n`;
-            title += `Nội dung: \n${i.text} \n`;
+            title += `Tên FB: ${this.customer.name} \n`;
+            title += `Nội dung: ${i.text} \n`;
 
             window.confirm(title) && GM_setValue('lastestPreOdInfo', i); this.refreshInfo();
         }
 
         async createOrder(){
-            if(keyState.AltLeft ) return (this.preOrder(), delete keyState.AltLeft);
+            if(keyState.ControlLeft ) return (this.preOrder(), delete keyState.ControlLeft);
 
             let title = 'Đang tạo đơn hàng cho: ' + this.customer.name + '\n\n';
 
@@ -749,17 +728,9 @@ const PreOrder_Mng = {
             });
 
             this.container.addEventListener("keydown", e => {
-                if(e.key === "F1") {
-                    e.preventDefault();
-                    this.phoneFinder();
-                }
                 if(e.key === "F2") {
                     e.preventDefault();
-                    this.setPhone();
-                }
-                if(e.key === "F3") {
-                    e.preventDefault();
-                    this.createOrder();
+                    this.preOrder();
                 }
             })
 
@@ -771,17 +742,16 @@ const PreOrder_Mng = {
 
             // Set phone by mouse selection
             this.container.addEventListener('mouseup', _ => {
+                if(this.delay_xjae) return;
+                this.delay_xjae = setTimeout(_ => {delete this.delay_xjae}, 1000);
+
                 if(!window.getSelection) return alert('⚠ window.getSelection is undifined');
                 let phone = window.getSelection().toString().replaceAll(/\D/g,``);
 
                 if(!phone || phone.length != 10 || phone == this.customer.phone || phone == _myPhone || !isVNPhone(phone)) return;
                 if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
-                    if(this.delay_xjae) return;
-                    this.delay_xjae = setTimeout(_ => delete this.delay_xjae, 1000);
-
                     this.setPhone(phone);
                 }
-
             });
         }
     }
@@ -813,22 +783,26 @@ const PreOrder_Mng = {
 (function(){
     if(!isFBpage) return false;
 
-    GM_addValueChangeListener('lastestPreOdInfo', (key, oldValue, newValue, remote) => {
-        let i = {...oldValue, ...newValue};
-        if(!i.uid) return;
-        GM_deleteValue("lastestPreOdInfo");
-        PreOrder_Mng.add(i);
-    });
+    let listener;
+
+    function clearData(){ GM_removeValueChangeListener(listener); GM_deleteValue("lastestPreOdInfo") }
 
     function cmtClick(a){
         if(this.busy_qwe || a.getAttribute('data-uid')) return;
         this.busy_qwe = setTimeout(_ => delete this.busy_qwe, 1000);
+        clearData();
 
         let cid = a.getAttribute('data-cid'),
             text = a.getAttribute('data-text'),
             pid = FbPost_Mng.current?.id;
 
         GM_setValue('lastestPreOdInfo', {cid, text, pid});
+        listener = GM_addValueChangeListener('lastestPreOdInfo', (key, oldValue, newValue, remote) => {
+            let i = {...oldValue, ...newValue};
+            if(!i.uid) return;
+            PreOrder_Mng.add(i);
+            clearData();
+        });
     }
 
     function cmtScan(){
