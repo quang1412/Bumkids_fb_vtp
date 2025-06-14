@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.14.2
+// @version      2025.6.14.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -499,7 +499,7 @@ const PreOrder_Mng = {
         console.log(this.dataStorage);
     },
 
-    get: async function(id){
+    get: function(id){
         if (!id) return false;
         let matchs = this.dataStorage.filter(i => ((i.uid == id) || (i.cid == id) || (i.pid == id)) );
 
@@ -613,7 +613,7 @@ const PreOrder_Mng = {
                 this.viettelDraft = list.filter(od => od.ORDER_STATUS == -100).length;
 
                 await Delay();
-                this.preOd = await PreOrder_Mng.get(id);
+                this.preOd = PreOrder_Mng.get(id);
 
                 this.table.innerHTML = `
                 <tr style="display:none;"><td>ID:</td> <td>${id}</td></tr>
@@ -872,8 +872,6 @@ const PreOrder_Mng = {
                 span?.addEventListener('mouseup', _ => cmtClick({cid, text}));
 
             } else if(!a.getAttribute('data-uid')) {
-                //let match = FbPost_Mng.current?.preOd?.filter(od => (od.cid == cid))?.pop();
-
                 let match = PreOrder_Mng.get(cid)?.pop();
 
                 match ? a.setAttribute('data-uid', match.uid) : a.removeAttribute('data-uid');
