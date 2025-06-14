@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.14.1
+// @version      2025.6.14.2
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -311,7 +311,7 @@ const GGSHEET = {
     },
 }
 
-//FB CUSTOMER MANAGER
+// FB CUSTOMER MANAGER
 const Customer_Mng = {
     ggFormId: '1FAIpQLScdh4nIuwIG7wvbarsXyystgnSkTcIzgIBBlcA9ya8DDZvwXA',
     ggFormEntry:{ id: 736845047, name: 64482577, phone: 1863958217, addr: 143609329, img: 1145058745, attr0: 1693043917, attr1: 1173103552, attr2: 398324750, attr3: 696385383, attr4: 2084291905, attr5: 1174020264, attr6: 1243517720, attr7: 1831851967, attr9: 1146378854 },
@@ -345,14 +345,13 @@ const Customer_Mng = {
     add: async function(info){
         try{
             //let img = await uploadimage(info.img);
+            this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
+            GM_setValue(this.storageKey, [...this.dataStorage, info]);
+
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
             let res = await GGSHEET.formSubmit(url);
-
             if(res.readyState != 4) throw new Error('google add new customer fail!');
-
-            this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
-            GM_setValue(this.storageKey, [...this.dataStorage, info]);
             return res;
 
         } catch(err){
@@ -407,16 +406,14 @@ const FbPost_Mng = {
     add: async function(info){
         try{
             //let img = await uploadimage(info.img);
+            this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
+            GM_setValue(this.storageKey, [...this.dataStorage, info]);
+
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
             let res = await GGSHEET.formSubmit(url);
-
             if(res.readyState != 4) throw new Error('google add new posts fail!');
-
-            this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
-            GM_setValue(this.storageKey, [...this.dataStorage, info]);
             return res;
-
         } catch(err){
             alert(err.message);
         };
@@ -461,10 +458,6 @@ const FbPost_Mng = {
                 throw new Error('not found');
             }
             document.querySelectorAll('div[role="article"][data-uid]').forEach(el => el.removeAttribute('data-uid') )
-        }).then(_ => PreOrder_Mng.get(id)).then(preOd => {
-            this.current.preOd = preOd || new Array();
-
-            console.log(preOd);
         }).catch(e => {
             if(e.message == 'not found'){
                 this.add({ id, name, fbid, text, imgs});
@@ -514,16 +507,16 @@ const PreOrder_Mng = {
 
     add: async function(info = {}){
         try{
+            /***
+            this.dataStorage = this.dataStorage.filter(({cid, uid, pid}) => ((cid != info.cid) && (uid != info.uid) && (pid != info.pid))); // unique filter;
+            ***/
+            this.dataStorage?.push(info);
+            GM_setValue(this.storageKey, this.dataStorage);
+
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
             let res = await GGSHEET.formSubmit(url);
-
             if(res.readyState != 4) throw new Error('google add preOrder fail!');
-
-            this.dataStorage?.push(info);
-            //this.dataStorage = this.dataStorage.filter(({cid, uid, pid}) => ((cid != info.cid) && (uid != info.uid) && (pid != info.pid))); // unique filter;
-            GM_setValue(this.storageKey, this.dataStorage);
-
             return res;
 
         } catch(err){
@@ -710,15 +703,11 @@ const PreOrder_Mng = {
             title += `Tên FB: ${this.customer.name} \n`;
             title += `Nội dung: ${info.text} \n`;
 
-            if(!window.confirm(title)) return;
-
-            GM_setValue('lastestPreOdInfo', info);
-            this.refreshInfo();
-
+            window.confirm(title) && GM_setValue('lastestPreOdInfo', info); this.refreshInfo();
         }
 
         async createOrder(){
-            if(keyState.MetaLeft) return (this.preOrder(), delete keyState.MetaLeft);
+            if(keyState.AltLeft ) return (this.preOrder(), delete keyState.AltLeft);
 
             let title = 'Đang tạo đơn hàng cho: ' + this.customer.name + '\n\n';
 
