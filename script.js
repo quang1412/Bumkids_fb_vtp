@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.14.3
+// @version      2025.6.15.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -26,6 +26,7 @@
 // @grant        GM_notification
 // @grant        GM_addValueChangeListener
 // @grant        GM_removeValueChangeListener
+// @grant        GM_webRequest
 // @grant        GM_setClipboard
 // @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
@@ -135,16 +136,16 @@ Facebook
 
     div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }
     div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }
-
-    /*** Đánh dấu cmt của người đăng ***/
-    div[aria-label*="Bình luận dưới tên Trịnh Hiền"] svg[role="none"] { border: 2px solid red; border-radius: 50%; padding: 0px; }
     `);
 
     GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
 
-                'div[role="article"][data-uid] span[lang] * { color:yellow; }' +
+                'div[aria-label*="dưới tên"]:not([aria-label*="Trịnh Hiền"]):not(:hover) {  opacity: .5; }' +
+                'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }' +
 
-               'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }');
+                /*** Đánh dấu cmt của người đăng ***/
+                // 'div[aria-label*="Bình luận dưới tên Trịnh Hiền"] svg[role="none"] { border: 2px solid red; border-radius: 50%; padding: 0px; }' +
+                '');
 })();
 
 // VIETTEL
@@ -323,8 +324,7 @@ const Customer_Mng = {
     sync: async function(){
         this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT * WHERE B <> '' `);
         GM_setValue(this.storageKey, this.dataStorage);
-        alert(`Customers syncing done! length: ${this.dataStorage.length} \neg: ${JSON.stringify(this.dataStorage[0])}`);
-        console.log(this.dataStorage);
+        window.prompt(`${this.dataStorage.length} customers syncing done! \n\nE.g.: `, JSON.stringify(this.dataStorage[0]));
     },
     get: async function(id){
         if (!id) return false;
@@ -373,8 +373,7 @@ const FbPost_Mng = {
     sync: async function(){
         this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT B,C,D,E,F WHERE B <> '' `);
         GM_setValue(this.storageKey, this.dataStorage);
-        alert('FB posts syncing done!');
-        console.log(this.dataStorage)
+        window.prompt(`${this.dataStorage.length} posts syncing done! \n\nE.g.: `, JSON.stringify(this.dataStorage[0]));
     },
 
     get: async function(id){
@@ -468,8 +467,7 @@ const PreOrder_Mng = {
     sync: async function(){
         this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT B,C,D,E WHERE B <> '' `);
         GM_setValue(this.storageKey, this.dataStorage);
-        alert('FB preOrder syncing done!');
-        console.log(this.dataStorage);
+        window.prompt(`${this.dataStorage.length} posts syncing done! \n\nE.g.: `, JSON.stringify(this.dataStorage[0]));
     },
 
     get: function(id){
@@ -630,7 +628,6 @@ const PreOrder_Mng = {
                     let row = rows[i];
 
                     row.classList.add('scanned');
-                    row.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
 
                     let span = row.querySelector('[role="presentation"] span[dir="auto"]:not(:has(span)) ');
                     if(!span) return false;
@@ -645,6 +642,7 @@ const PreOrder_Mng = {
                         let p = span.closest('div[role="presentation"]');
                         p.style.border = '2px dashed ' + (phone == this.customer.phone ? 'cyan' : 'red');
 
+                        row.scrollIntoView({ behavior: "auto", block: "center", inline: "center" });
                         row.querySelector('div[role="gridcell"][data-release-focus-from="CLICK"]')?.focus();
 
                         this.phoneFinder('stop');
@@ -835,37 +833,13 @@ const PreOrder_Mng = {
         });
     };
     window.document.addEventListener('mousemove', cmtScan );
+
+    GM_addStyle('div[role="article"][aria-label*="dưới tên ' + _myFbName + '"] span[lang]::after { position:absolute; top:0; right:-5px; color:red; }' +
+                'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"]:not([data-uid]) span[lang]::after { content:"🌿🍀"; }' +
+                'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"][data-uid] span[lang]::after { content:"🌻🌸"; }' +
+                '' );
+
 })();
-
-// FB COMMENT CLICK HANDLER
-/***
-(function(){
-    if(!isFBpage) return false;
-
-    function clickHandler(span){ // div[role="article"]
-
-        if(this.busy || !allowPreOrder) return;
-        this.busy = 1; setTimeout(_ => { this.busy = 0 }, 500);
-
-        $(document.body).removeClass('setPreOrderAllow');
-
-        let a = span.closest('div[role="article"]');
-        let cid = $(a).attr('data-cid');
-        let oldCid = $('div#lastClickCmt')?.removeAttr('id')?.attr('data-cid');
-
-        if(!cid || oldCid == cid) return; if($(a).attr('data-uid')) return;
-
-        GM_setValue('lastestCmtInfo', {cid});
-        $(a).attr({'id': 'lastClickCmt'}); $(document.body).addClass('setPreOrderAllow');
-        clearTimeout(this.timeout);
-        this.timeout = setTimeout(_ => {
-            $(a).removeAttr('id'); $(document.body).removeClass('setPreOrderAllow');
-        }, 1000 * 10);
-    };
-
-    //$(document.body).on('mousedown', 'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"] span[lang]', e => clickHandler( e.currentTarget ) );
-})();
-***/
 
 // MESSENGER SEARCH WHEN FOCUS;
 (function(){
@@ -882,16 +856,21 @@ const PreOrder_Mng = {
 (function(){
     if(!isMessPage) return false;
 
-    GM_addStyle('div#aqweasdf:not(:hover) div#list{ display:none; }');
-    GM_addStyle('div#aqweasdf div#list p {margin:0; padding:3px; border-radius:3px;}')
-    GM_addStyle('div#aqweasdf div#list p:hover { background-color:whitesmoke; color:#333; }')
+    GM_addStyle('div#aqweasdf div#list p { margin:0; padding:3px; border-radius:3px; overflow:hidden; }'+
+                'div#aqweasdf div#list p:hover { background-color:whitesmoke; color:#333; }'+
+                'div#aqweasdf div#list {background:black; position:absolute; top:30px; border-radius:5px; border:1px solid white; color:white; text-wrap:nowrap; overflow:hidden; }'+
+
+                'div#aqweasdf div#list > div { max-height:492px; padding:10px 0; max-width:200px; width:30px; overflow-x:hidden; }'+
+                'div#aqweasdf div#list > div { -webkit-transition: width .3s ease-in-out !important; -moz-transition: width .3s ease-in-out !important; -o-transition: width .3s ease-in-out !important; transition: width .3s ease-in-out !important; }'+
+                'div#aqweasdf div#list > div:hover{ padding:10px; overflow-y:overlay; width:150px; }'+
+                '');
 
     let panelContainer = GM_addElement(document.body, 'div', {id:'aqweasdf', style:'position:absolute; top:30px; left:30px; '});
     let scrollBtn = GM_addElement(panelContainer, 'div', {
         style:'background:crimson; color:white; padding:5px 15px; border:1px solid; border-radius:5px; cursor:pointer; ',
     });
-    let userListPanel = GM_addElement(panelContainer, 'div', {id:'list', style:'background: black;  position: absolute;  top: 30px;  border-radius: 5px;  border: 1px solid white;  color: white;  text-wrap: nowrap;  overflow: hidden; '});
-    let userList = GM_addElement(userListPanel, 'div', {style:'overflow-y: scroll;  max-height: 492px;  padding: 10px; '});
+    let userListPanel = GM_addElement(panelContainer, 'div', {id:'list', style:''});
+    let userList = GM_addElement(userListPanel, 'div', {style:''});
 
     scrollBtn.innerText = '✨ Load all ✨';
     scrollBtn.onclick = _ => doScroll();
@@ -925,10 +904,9 @@ const PreOrder_Mng = {
                     let p = GM_addElement(userList, 'p', {style:'cursor:pointer','data-href':href});
                     p.innerText = name;
                     p.onclick = _ => {
-                        doScroll(true); // stop scrolling;
+                        doScroll('stop'); // stop scrolling;
                         messList.scrollTo(0, top);
                     }
-                    //p.scrollIntoView();
 
                     window.document.title = name;
                     container.classList.add('checked');
