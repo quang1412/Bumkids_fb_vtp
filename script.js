@@ -742,14 +742,16 @@ const PreOrder_Mng = {
 
             // Set phone by mouse selection
             this.container.addEventListener('mouseup', _ => {
-                if(this.delay_xjae) return;
-                this.delay_xjae = setTimeout(_ => {delete this.delay_xjae}, 1000);
+
 
                 if(!window.getSelection) return alert('⚠ window.getSelection is undifined');
                 let phone = window.getSelection().toString().replaceAll(/\D/g,``);
 
                 if(!phone || phone.length != 10 || phone == this.customer.phone || phone == _myPhone || !isVNPhone(phone)) return;
                 if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
+                    if(this.delay_xjae) return;
+                    this.delay_xjae = setTimeout(_ => {delete this.delay_xjae}, 1000);
+
                     this.setPhone(phone);
                 }
             });
