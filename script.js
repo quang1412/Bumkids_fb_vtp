@@ -336,7 +336,7 @@ const Customer_Mng = {
             //let img = await uploadimage(info.img);
             this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
             this.dataStorage.push(info)
-            GM_setValue(this.storageKey, [...this.dataStorage, info]);
+            GM_setValue(this.storageKey, this.dataStorage);
 
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
@@ -385,9 +385,9 @@ const FbPost_Mng = {
     add: async function(info){
         try{
             //let img = await uploadimage(info.img);
-            this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
+            this.dataStorage = this.dataStorage.filter(i => i.id != info.id); // unique filter;
             this.dataStorage.push(info)
-            GM_setValue(this.storageKey, [...this.dataStorage, info]);
+            GM_setValue(this.storageKey, this.dataStorage);
 
             let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
             let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
