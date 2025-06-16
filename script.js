@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.16.1
+// @version      2025.6.16.2
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -546,7 +546,9 @@ const PreOrder_Mng = {
             Customer_Mng.get(this.customer.id).then(res => {
                 let data = res?.pop();
 
-                if(!data) { Customer_Mng.add(this.customer); return false }
+                if(!data || (this.customer.e2ee != data.e2ee)){
+                    Customer_Mng.add({...this.customer, ...data});
+                }
 
                 this.customer = {...this.customer, ...data};
 
