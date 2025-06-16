@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.15.1
+// @version      2025.6.16.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -311,7 +311,7 @@ const GGSHEET = {
 // FB CUSTOMER MANAGER
 const Customer_Mng = {
     ggFormId: '1FAIpQLScdh4nIuwIG7wvbarsXyystgnSkTcIzgIBBlcA9ya8DDZvwXA',
-    ggFormEntry:{ id: 736845047, name: 64482577, phone: 1863958217, addr: 143609329, img: 1145058745, attr0: 1693043917, attr1: 1173103552, attr2: 398324750, attr3: 696385383, attr4: 2084291905, attr5: 1174020264, attr6: 1243517720, attr7: 1831851967, attr9: 1146378854 },
+    ggFormEntry:{ id: 736845047, name: 64482577, phone: 1863958217, addr: 143609329, img: 1145058745, e2ee: 1693043917, attr1: 1173103552, attr2: 398324750, attr3: 696385383, attr4: 2084291905, attr5: 1174020264, attr6: 1243517720, attr7: 1831851967, attr9: 1146378854 },
     sheetName: 'customers',
     sheetRange: 'A:O',
     storageKey: 'GMcustomer',
@@ -334,7 +334,7 @@ const Customer_Mng = {
     add: async function(info){
         try{
             //let img = await uploadimage(info.img);
-            this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // unique filter;
+            this.dataStorage = this.dataStorage.filter(i => i.id != info.id); // del old id;
             this.dataStorage.push(info)
             GM_setValue(this.storageKey, this.dataStorage);
 
@@ -509,10 +509,8 @@ const PreOrder_Mng = {
         constructor(info, container){
             this.container = container;
 
-            this.customer = {
-                id: null,
-                e2ee: (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : null),
-                ...info,
+            this.customer = {"id":'', ...info,
+                "e2ee": (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : null),
             };
 
             let card = GM_addElement(container, 'div', { class: 'infoCard', 'data-fbid': this.customer.id });
@@ -545,9 +543,13 @@ const PreOrder_Mng = {
 
             // get info from Google sheet
             this.table.innerText = 'Loading customer data...';
-            Customer_Mng.get(this.customer.id).then(data => {
-                if(!data || !data.length) throw new Error('chưa có sdt!');
-                this.customer = {...this.customer, ...data.pop()};
+            Customer_Mng.get(this.customer.id).then(res => {
+                let data = res?.pop();
+
+                if(!data) { Customer_Mng.add(this.customer); return false }
+
+                this.customer = {...this.customer, ...data};
+
             }).then(_ => {
                 this.refreshInfo();
             }).catch(err => {
@@ -562,7 +564,7 @@ const PreOrder_Mng = {
             try{
                 this.table.innerText = 'Loading viettel data...';
 
-                let {id, phone, e2ee} = this.customer;
+                let {id, phone, addr, e2ee} = this.customer;
                 if(!phone) throw new Error('chưa có số đt!');
 
                 // get info from Viettel Post
