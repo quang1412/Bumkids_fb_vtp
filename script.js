@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.16.2
+// @version      2025.6.16.3
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -108,6 +108,13 @@ isFBpage && GM_registerMenuCommand("refresh post", async _ => {
 isFBpage && GM_registerMenuCommand("Allow pre-order" , _ => {
     allowPreOrder = !allowPreOrder;
 });
+
+/*** Sync and reload all pages ***/
+(isMessPage || isFBpage) && GM_addValueChangeListener('do_reload_page', function(){ window.confirm('Đã cập nhật dữ liệu mới! \nEnter để tải lại trang!') && window.location.reload() });
+(isMessPage || isFBpage) && GM_registerMenuCommand("Đồng bộ lại" , async _ => {
+    await Customer_Mng.sync(); await FbPost_Mng.sync(); await PreOrder_Mng.sync();
+    GM_setValue('do_reload_page', new Date().getTime());
+})
 
 var keyState = {};
 function keyHandler(e){ keyState[e.code] = e.type === "keydown" }
@@ -361,8 +368,6 @@ const FbPost_Mng = {
         this.dataStorage = await GM_getValue(this.storageKey, []);
         GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
 
-        GM_registerMenuCommand("FB Posts sync" , _ => this.sync() );
-
         GM_addStyle('code#postInfoCard{color:whitesmoke; position:absolute; bottom:10px; left:10px; border:1px solid whitesmoke; border-radius:5px; padding:5px;}' +
                     'code#postInfoCard p {  margin: 0;  display: block;  max-width: 300px;  white-space: nowrap;  text-overflow: ellipsis;  overflow: hidden !important; }');
 
@@ -460,14 +465,12 @@ const PreOrder_Mng = {
     int: async function(){
         this.dataStorage = await GM_getValue(this.storageKey, []);
         GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
-
-        GM_registerMenuCommand("FB Preorder sync" , _ => this.sync() );
     },
 
     sync: async function(){
         this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT B,C,D,E WHERE B <> '' `);
         GM_setValue(this.storageKey, this.dataStorage);
-        window.prompt(`${this.dataStorage.length} posts syncing done! \n\nE.g.: `, JSON.stringify(this.dataStorage[0]));
+        window.prompt(`${this.dataStorage.length} pre-order syncing done! \n\nE.g.: `, JSON.stringify(this.dataStorage[0]));
     },
 
     get: function(id){
