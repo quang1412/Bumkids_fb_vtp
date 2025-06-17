@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.16.3
+// @version      2025.6.16.4
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -512,9 +512,9 @@ const PreOrder_Mng = {
         constructor(info, container){
             this.container = container;
 
-            this.customer = {"id":'', ...info,
-                "e2ee": (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : null),
-            };
+            this.customer = {"id":'', ...info};
+            let e2ee = (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : '');
+            if(e2ee) this.customer.e2ee = e2ee;
 
             let card = GM_addElement(container, 'div', { class: 'infoCard', 'data-fbid': this.customer.id });
             if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') card.classList.add('bottom');
@@ -549,12 +549,10 @@ const PreOrder_Mng = {
             Customer_Mng.get(this.customer.id).then(res => {
                 let data = res?.pop();
 
-                if(!data || (this.customer.e2ee != data.e2ee)){
-                    Customer_Mng.add({...this.customer, ...data});
-                }
+                if(!data) Customer_Mng.add(this.customer);
+                else if(data && this.customer.e2ee && !data.e2ee) Customer_Mng.add( {...data, ...this.customer});
 
-                this.customer = {...this.customer, ...data};
-
+                this.customer = {...data, ...this.customer};
             }).then(_ => {
                 this.refreshInfo();
             }).catch(err => {
@@ -598,7 +596,7 @@ const PreOrder_Mng = {
                   </td>
                   <tr> <td>Đơn pre-order: </td> <td>${(this.preOd?.length || 0)}</td> </tr>
                 </tr>
-                <tr style='display:none;'> <td>e2ee: </td> <td>${e2ee || '---'}</td> </tr>
+                <tr style='display:unset;'> <td>e2ee: </td> <td>${e2ee || '---'}</td> </tr>
                 <tr> <td>Tags: </td> <td>---</td> </tr>`;
             } catch(e){
 
@@ -627,8 +625,8 @@ const PreOrder_Mng = {
 
                 let rows = scroll.querySelectorAll('div[role="row"]:is(.__fb-dark-mode, __fb-light-mode):not(.scanned)');
 
-                rows.length ? (count = 0) : (scroll.scrollTop = 0, count++);
-
+                if(rows.length) count = 0;
+                else count++; scroll.scrollTop = 0;
                 if(count == 100) return this.phoneFinder('stop'); /*** timeout ***/
 
                 for(let i = rows.length - 1; i > -1; i-- ){
@@ -882,6 +880,12 @@ const PreOrder_Mng = {
     scrollBtn.innerText = '✨ Load all ✨';
     scrollBtn.onclick = _ => doScroll();
 
+    function scrollTo1(x){
+        let messList = document.querySelector('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode, .__fb-light-mode)');
+        messList.style.height = x + 100;
+        messList.scrollTo(0, x);
+    };
+
     const doScroll = function(isStop = 0){
         let messList = document.querySelector('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode, .__fb-light-mode)');
 
@@ -896,7 +900,7 @@ const PreOrder_Mng = {
 
         this.scrolling = setInterval(_ => {
             try{
-                messList.scrollTo(0, messList.scrollHeight);
+                scrollTo1(messList.scrollHeight);
 
                 let containers = messList.querySelectorAll('div[data-virtualized="false"]:has(a[href][role="link"]):not(.checked)');
                 containers.forEach(container => {
@@ -912,7 +916,7 @@ const PreOrder_Mng = {
                     p.innerText = name;
                     p.onclick = _ => {
                         doScroll('stop'); // stop scrolling;
-                        messList.scrollTo(0, top);
+                        scrollTo1(top);
                     }
 
                     window.document.title = name;
