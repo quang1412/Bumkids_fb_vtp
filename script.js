@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.16.4
+// @version      2025.6.19.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -46,26 +46,21 @@ let allowPreOrder = false;
 function Delay(ms = 1000) { return new Promise(resolve => setTimeout(resolve, ms)) }
 //var csv is the CSV file with headers
 function csvJSON(csv = '{}'){
-  var lines = csv.split("\n");
-  var result = [];
-  // NOTE: If your columns contain commas in their values, you'll need
-  // to deal with those before doing the next step
-  // (you might convert them to &&& or something, then covert them back later)
-  // jsfiddle showing the issue https://jsfiddle.net/
-  var headers = lines[0].split(",");
-  for(var i = 1; i < lines.length; i++){
-      var obj = {};
-      var currentline = lines[i].split("\",\"");
-
-      for(var j = 0; j < headers.length; j++){
-          let label = headers[j].replaceAll('\"','');
-          let value = currentline[j]?.replaceAll('\"','');
-          obj[label] = value;
-      }
-      result.push(obj);
-  }
-  //return result; //JavaScript object
-  return JSON.stringify(result); //JSON
+    csv = csv.replace('Dấu thời gian', 'time');
+    let lines = csv.split("\n");
+    let result = [];
+    let headers = lines[0].split(",");
+    for(let i = 1; i < lines.length; i++){
+        let obj = {};
+        let currentline = lines[i].split("\",\"");
+        for(let j = 0; j < headers.length; j++){
+            let label = headers[j].replaceAll('\"','');
+            let value = currentline[j]?.replaceAll('\"','');
+            obj[label] = value;
+        }
+        result.push(obj);
+    }
+    return result;
 }
 function randomInteger(min, max) {return Math.floor(Math.random() * (max - min + 1)) + min};
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
@@ -275,7 +270,7 @@ const GGSHEET = {
                 headers: {"Content-Type": "text/html; charset=utf-8"},
                 onload: function (res) {
                     let json = csvJSON(res.response);
-                    return resolve(JSON.parse(json));
+                    return resolve(json);
                 },
                 onerror: function(res) {
                     GM_log("error: ", res.message);
@@ -318,7 +313,7 @@ const GGSHEET = {
 // FB CUSTOMER MANAGER
 const Customer_Mng = {
     ggFormId: '1FAIpQLScdh4nIuwIG7wvbarsXyystgnSkTcIzgIBBlcA9ya8DDZvwXA',
-    ggFormEntry:{ id: 736845047, name: 64482577, phone: 1863958217, addr: 143609329, img: 1145058745, e2ee: 1693043917, attr1: 1173103552, attr2: 398324750, attr3: 696385383, attr4: 2084291905, attr5: 1174020264, attr6: 1243517720, attr7: 1831851967, attr9: 1146378854 },
+    ggFormEntry:{ uid: 736845047, name: 64482577, phone: 1863958217, addr: 143609329, img: 1145058745, e2ee: 1693043917, attr1: 1173103552, attr2: 398324750, attr3: 696385383, attr4: 2084291905, attr5: 1174020264, attr6: 1243517720, attr7: 1831851967, attr9: 1146378854 },
     sheetName: 'customers',
     sheetRange: 'A:O',
     storageKey: 'GMcustomer',
@@ -333,15 +328,15 @@ const Customer_Mng = {
         GM_setValue(this.storageKey, this.dataStorage);
         window.prompt(`${this.dataStorage.length} customers syncing done! \n\nE.g.: `, JSON.stringify(this.dataStorage[0]));
     },
-    get: async function(id){
-        if (!id) return false;
-        let matchs = this.dataStorage.filter(i => (i.id == id));
+    get: async function(uid){
+        if (!uid) return false;
+        let matchs = this.dataStorage.filter(i => (i.uid == uid));
         return matchs;
     },
     add: async function(info){
         try{
             //let img = await uploadimage(info.img);
-            this.dataStorage = this.dataStorage.filter(i => i.id != info.id); // del old id;
+            this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // del old id;
             this.dataStorage.push(info)
             GM_setValue(this.storageKey, this.dataStorage);
 
@@ -359,7 +354,7 @@ const Customer_Mng = {
 // FB POST MANAGER
 const FbPost_Mng = {
     ggFormId: '1FAIpQLSfx4bd487gRF7O5l8sGXqC1kJuz_a4huUrm64UZY5Ich2gfWw',
-    ggFormEntry:{ id: 1865259179, name: 1706162306, fbid: 1305732350, text: 1064661769, imgs: 1723256352},
+    ggFormEntry:{ pid: 1865259179, name: 1706162306, fbid: 1305732350, text: 1064661769, imgs: 1723256352},
     sheetName: 'posts',
     sheetRange: 'A:F',
     storageKey: 'GMpostsStorage',
@@ -381,9 +376,9 @@ const FbPost_Mng = {
         window.prompt(`${this.dataStorage.length} posts syncing done! \n\nE.g.: `, JSON.stringify(this.dataStorage[0]));
     },
 
-    get: async function(id){
-        if (!id) return false;
-        let matchs = this.dataStorage.filter(i => (i.id == id));
+    get: async function(pid){
+        if (!pid) return false;
+        let matchs = this.dataStorage.filter(i => (i.pid == pid));
         return matchs;
     },
 
@@ -416,35 +411,32 @@ const FbPost_Mng = {
 
         if(this.busy) return false; this.busy = 1; setTimeout(_ => {this.busy = 0}, 1000);
 
-        let postUrl = dialog.querySelector('a[href*="/posts/pfbid"]')?.getAttribute('href');
-        let fbid = postUrl?.match(/(pfbid)[\d\w]{50,}/g)[0];
+        let text = dialog.querySelector('div[data-ad-preview="message"]')?.innerText?.replaceAll(/\n/g, ' ');
+        let pid = dialog.querySelector('a[href*="/photo/?fbid"][href*="set=pcb"]')?.getAttribute('href').match(/(pcb\.)\d+/g)[0]?.replace('pcb.', '');
+        let imgs = [...dialog.querySelectorAll('a[href*="/photo/?fbid"] img')].map(e => e.getAttribute('src')).join(', ');
+        let name = '---';
 
-        if((!fbid || this.current?.fbid == fbid) && !force) return;
+        if((!pid || this.current?.pid == pid) && !force) return;
 
         this.current = new Object();
 
-        let text = dialog.querySelector('div[data-ad-preview="message"]')?.innerText?.replaceAll(/\n/g, ' ');
-        let encode = text && window.btoa(encodeURIComponent(text)).replaceAll(/[^\w\d]/g, '');
-        let id = encode && (encode.slice(0, 10) + encode.substr(encode.length - 10));
-        let imgs = [...dialog.querySelectorAll('a[href*="facebook.com/photo"] img')].map(e => e.getAttribute('src')).join(', ');
-        let name = '---';
+        if(!pid || !name || !text || !imgs) return;
 
-        if(!!~[id, name, fbid, text, imgs].indexOf(undefined)) return;
+        this.current = {pid, name, text, imgs};
+        console.log(this.current)
 
-        this.current = {id, name, fbid, text, imgs};
-
-        this.footerTag.innerHTML = '<b>Id:</b>&nbsp <i>' + id + '</i>';
+        this.footerTag.innerHTML = '<b>Id:</b>&nbsp <i>' + pid + '</i>';
         this.footerTag.style.display = 'block';
         this.footerTag.setAttribute('title', '');
 
-        this.get(id).then(res => {
+        this.get(pid).then(res => {
             if(!res || !res.length){
                 throw new Error('not found');
             }
             document.querySelectorAll('div[role="article"][data-uid]').forEach(el => el.removeAttribute('data-uid') )
         }).catch(e => {
             if(e.message == 'not found'){
-                this.add({ id, name, fbid, text, imgs});
+                this.add({ pid, name, text, imgs});
             } else {
                 alert(e.message);
             }
@@ -512,7 +504,7 @@ const PreOrder_Mng = {
         constructor(info, container){
             this.container = container;
 
-            this.customer = {"id":'', ...info};
+            this.customer = {"uid":'', ...info};
             let e2ee = (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : '');
             if(e2ee) this.customer.e2ee = e2ee;
 
@@ -546,7 +538,7 @@ const PreOrder_Mng = {
 
             // get info from Google sheet
             this.table.innerText = 'Loading customer data...';
-            Customer_Mng.get(this.customer.id).then(res => {
+            Customer_Mng.get(this.customer.uid).then(res => {
                 let data = res?.pop();
 
                 if(!data) Customer_Mng.add(this.customer);
@@ -567,7 +559,7 @@ const PreOrder_Mng = {
             try{
                 this.table.innerText = 'Loading viettel data...';
 
-                let {id, phone, addr, e2ee} = this.customer;
+                let {uid, phone, addr, e2ee} = this.customer;
                 if(!phone) throw new Error('chưa có số đt!');
 
                 // get info from Viettel Post
@@ -580,10 +572,10 @@ const PreOrder_Mng = {
                 this.viettelDraft = list.filter(od => od.ORDER_STATUS == -100).length;
 
                 await Delay();
-                this.preOd = PreOrder_Mng.get(id);
+                this.preOd = PreOrder_Mng.get(uid);
 
                 this.table.innerHTML = `
-                <tr style="display:none;"><td>ID:</td> <td>${id}</td></tr>
+                <tr style="display:none;"><td>ID:</td> <td>${uid}</td></tr>
                 <tr> <td>Số điện thoại: </td> <td>${phone}</td> </tr>
                 <tr>
                   <td>Đơn viettel 30ng: </td>
@@ -671,7 +663,7 @@ const PreOrder_Mng = {
 
             if(!i?.cid) return alert('⚠️ Chọn comment note đơn trước!');
 
-            let uid = this.customer.id;
+            let uid = this.customer.uid;
             i.uid = uid;
 
             title += `Tên FB: ${this.customer.name} \n`;
@@ -771,15 +763,15 @@ const PreOrder_Mng = {
         `);
         for(let i = 0; i < links.length; i++){
             let e = links[i];
-            let id = e.getAttribute('href')?.match(/\d+/g)?.pop();
+            let uid = e.getAttribute('href')?.match(/\d+/g)?.pop();
             let name = e.getAttribute('aria-label') || e.querySelector('h2')?.innerText;
             let img = e.querySelector('img')?.getAttribute('src');
 
-            if(!id || !name || !img) continue;
+            if(!uid || !name || !img) continue;
 
             e.classList.add('checked');
             let contain = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
-            new InfoCard({id, name, img}, contain);
+            new InfoCard({uid, name, img}, contain);
         }
     });
 })();
@@ -799,7 +791,7 @@ const PreOrder_Mng = {
 
         let cid = a.getAttribute('data-cid'),
             text = a.getAttribute('data-text'),
-            pid = FbPost_Mng.current?.id;
+            pid = FbPost_Mng.current?.pid;
 
         GM_setValue('lastestPreOdInfo', {cid, text, pid});
         listener = GM_addValueChangeListener('lastestPreOdInfo', (key, oldValue, newValue, remote) => {
