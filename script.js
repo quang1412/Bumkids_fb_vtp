@@ -385,7 +385,7 @@ const FbPost_Mng = {
     add: async function(info){
         try{
             //let img = await uploadimage(info.img);
-            this.dataStorage = this.dataStorage.filter(i => i.id != info.id); // unique filter;
+            this.dataStorage = this.dataStorage.filter(i => i.pid != info.pid); // unique filter;
             this.dataStorage.push(info)
             GM_setValue(this.storageKey, this.dataStorage);
 
@@ -425,11 +425,12 @@ const FbPost_Mng = {
         this.current = {pid, name, text, imgs};
         console.log(this.current)
 
-        this.footerTag.innerHTML = '<b>Id:</b>&nbsp <i>' + pid + '</i>';
+        this.footerTag.innerHTML = '<b>pid:</b>&nbsp<b>' + pid + '</b>';
         this.footerTag.style.display = 'block';
         this.footerTag.setAttribute('title', '');
 
         this.get(pid).then(res => {
+            console.log(res)
             if(!res || !res.length){
                 throw new Error('not found');
             }
@@ -684,7 +685,7 @@ const PreOrder_Mng = {
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
-                let orderInfo = { fbid: this.customer.id, phone: this.customer.phone, name: this.customer.name };
+                let orderInfo = { fbid: this.customer.uid, phone: this.customer.phone, name: this.customer.name };
 
                 let prices_str = prompt(title + "B1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
@@ -832,8 +833,8 @@ const PreOrder_Mng = {
     window.document.addEventListener('mousemove', cmtScan );
 
     GM_addStyle('div[role="article"][aria-label*="dưới tên ' + _myFbName + '"] span[lang]::after { position:absolute; top:0; right:-5px; color:red; }' +
-                'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"]:not([data-uid]) span[lang]::after { content:"🌿🍀"; }' +
-                'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"][data-uid] span[lang]::after { content:"🌻🌸"; }' +
+               // 'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"]:not([data-uid]) span[lang]::after { content:"🌿🍀"; }' +
+              //  'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"][data-uid] span[lang]::after { content:"🌻🌸"; }' +
                 '' );
 
 })();
