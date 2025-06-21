@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.21.3
+// @version      2025.6.21.4
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -398,9 +398,9 @@ const FbPost_Mng = {
         };
     },
 
-    getCurrentPostInfo: function(force){
+    getCurrentPostInfo: async function(force){
         let dialog = document.querySelector('div[role="dialog"]:has(div[role="dialog"] div[aria-label="Chỉnh sửa đối tượng"])');
-        let author = dialog?.querySelector('div[data-ad-rendering-role="profile_name"] h3 span').innerText
+        let author = dialog?.querySelector('div[data-ad-rendering-role="profile_name"] h3 span').innerText;
 
         if(author != _myFbName){
             this.current = new Object();
@@ -411,10 +411,15 @@ const FbPost_Mng = {
 
         if(this.busy) return false; this.busy = 1; setTimeout(_ => {this.busy = 0}, 1000);
 
-        let text = dialog.querySelector('div[data-ad-preview="message"]')?.innerText?.replaceAll(/\n/g, ' ');
-        let pid = dialog.querySelector('a[href*="/photo/?fbid"][href*="set=pcb"]')?.getAttribute('href').match(/(pcb\.)\d+/g)[0]?.replace('pcb.', '');
+
+        let pid = window.location.pathname.split('/').pop();
         let imgs = [...dialog.querySelectorAll('a[href*="/photo/?fbid"] img')].map(e => e.getAttribute('src')).join(', ');
         let name = '---';
+        dialog.querySelectorAll('div[data-ad-preview="message"] div[role="button"]').forEach(el => {
+            el.innerText == "Xem thêm" && el.click();
+        });
+        await Delay(100);
+        let text = dialog.querySelector('div[data-ad-preview="message"]')?.innerText?.replaceAll(/\n/g, ' ');
 
         if((!pid || this.current?.pid == pid) && !force) return;
 
