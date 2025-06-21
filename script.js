@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.19.0
+// @version      2025.6.21.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -710,7 +710,7 @@ const PreOrder_Mng = {
 
                 window.popupWindow?.focus();
                 window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
-                window.addEventListener('message', (ev) => { ev.data.fbid === this.customer.id && this.refreshInfo() });
+                window.addEventListener('message', (ev) => { ev.data.fbid === this.customer.uid && this.refreshInfo() });
 
                 GM_setValue('lastest_prices', prices_str);
             }
