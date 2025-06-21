@@ -10,9 +10,9 @@
 // @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main0506/script.js
 
 // @match        *viettelpost.vn/*
+// @match        *api.viettelpost.vn/*
 // @match        *.facebook.com/*
 // @match        *.messenger.com/*
-// @match        *api.viettelpost.vn/*
 
 // @require      https://code.jquery.com/jquery-3.7.1.js
 
