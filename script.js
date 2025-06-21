@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.21.0
+// @version      2025.6.21.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -10,9 +10,9 @@
 // @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main0506/script.js
 
 // @match        https://viettelpost.vn/*
-// @match        https://www.facebook.com/*
-// @match        https://www.messenger.com/*
-// @match        https://api.viettelpost.vn/*
+// @match        *.facebook.com/*
+// @match        *.messenger.com/*
+// @match        *api.viettelpost.vn/*
 
 // @require      https://code.jquery.com/jquery-3.7.1.js
 
