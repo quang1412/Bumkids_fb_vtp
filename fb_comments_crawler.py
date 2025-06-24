@@ -211,8 +211,10 @@ options = Options();
 options.add_argument('--headless')  # Bỏ ghi chú nếu bạn muốn chạy ẩn
 service = Service(executable_path="/Users/trinhdacquang/Downloads/geckodriver");
 
-try: driver = webdriver.Firefox(service=service);
-except: driver = webdriver.Firefox(service=service, options=options);
+try: 
+    driver = webdriver.Firefox(options=options);
+except: 
+    driver = webdriver.Firefox(service=service, options=options);
 driver.set_window_size(800, 800);
 
 try:
