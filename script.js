@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.21.4
+// @version      2025.6.24.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -32,7 +32,6 @@
 // @grant        GM_registerMenuCommand
 
 // ==/UserScript==
-
 
 const _myPhone = '0966628989', _myFbName = 'Trịnh Hiền', _myFbUsername = 'hien.trinh.5011',
       UrlParams = new URLSearchParams(window.location.search),
@@ -96,18 +95,14 @@ function makeid(length = 12) {
     return result;
 }
 
-isFBpage && GM_registerMenuCommand("refresh post", async _ => {
-    FbPost_Mng.getCurrentPostInfo('force');
-});
-
-isFBpage && GM_registerMenuCommand("Allow pre-order" , _ => {
-    allowPreOrder = !allowPreOrder;
-});
-
 /*** Sync and reload all pages ***/
-(isMessPage || isFBpage) && GM_addValueChangeListener('do_reload_page', function(){ window.confirm('Đã cập nhật dữ liệu mới! \nEnter để tải lại trang!') && window.location.reload() });
+(isMessPage || isFBpage) && GM_addValueChangeListener('do_reload_page', function(){
+    window.confirm('Đã cập nhật dữ liệu mới! \nEnter để tải lại trang!') && window.location.reload();
+});
+
 (isMessPage || isFBpage) && GM_registerMenuCommand("Đồng bộ lại" , async _ => {
-    await Customer_Mng.sync(); await FbPost_Mng.sync(); await PreOrder_Mng.sync();
+    await Customer_Mng.sync();
+    // await FbPost_Mng.sync(); await PreOrder_Mng.sync();
     GM_setValue('do_reload_page', new Date().getTime());
 })
 
@@ -320,8 +315,6 @@ const Customer_Mng = {
     int: async function(){
         this.dataStorage = await GM_getValue(this.storageKey, []);
         GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
-
-        GM_registerMenuCommand("Customer sync" , _ => this.sync() );
     },
     sync: async function(){
         this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT * WHERE B <> '' `);
@@ -351,151 +344,6 @@ const Customer_Mng = {
 };
 (isMessPage || isFBpage) && Customer_Mng.int();
 
-// FB POST MANAGER
-const FbPost_Mng = {
-    ggFormId: '1FAIpQLSfx4bd487gRF7O5l8sGXqC1kJuz_a4huUrm64UZY5Ich2gfWw',
-    ggFormEntry:{ pid: 1865259179, name: 1706162306, fbid: 1305732350, text: 1064661769, imgs: 1723256352},
-    sheetName: 'posts',
-    sheetRange: 'A:F',
-    storageKey: 'GMpostsStorage',
-
-    int: async function(){
-        this.dataStorage = await GM_getValue(this.storageKey, []);
-        GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
-
-        GM_addStyle('code#postInfoCard{color:whitesmoke; position:absolute; bottom:10px; left:10px; border:1px solid whitesmoke; border-radius:5px; padding:5px;}' +
-                    'code#postInfoCard p {  margin: 0;  display: block;  max-width: 300px;  white-space: nowrap;  text-overflow: ellipsis;  overflow: hidden !important; }');
-
-        this.footerTag = GM_addElement(window.document.body, 'code', {class:'', id:'postInfoCard', style:'display:none;'});
-        (["click", "mousemove"]).map(ev => window.document.addEventListener(ev, _ => this.getCurrentPostInfo()))
-    },
-
-    sync: async function(){
-        this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT B,C,D,E,F WHERE B <> '' `);
-        GM_setValue(this.storageKey, this.dataStorage);
-        window.prompt(`${this.dataStorage.length} posts syncing done! \n\nE.g.: `, JSON.stringify(this.dataStorage[0]));
-    },
-
-    get: async function(pid){
-        if (!pid) return false;
-        let matchs = this.dataStorage.filter(i => (i.pid == pid));
-        return matchs;
-    },
-
-    add: async function(info){
-        try{
-            //let img = await uploadimage(info.img);
-            this.dataStorage = this.dataStorage.filter(i => i.pid != info.pid); // unique filter;
-            this.dataStorage.push(info)
-            GM_setValue(this.storageKey, this.dataStorage);
-
-            let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
-            let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-            let res = await GGSHEET.formSubmit(url);
-            return res;
-        } catch(err){
-            alert(err.message);
-        };
-    },
-
-    getCurrentPostInfo: async function(force){
-        let dialog = document.querySelector('div[role="dialog"]:has(div[role="dialog"] div[aria-label="Chỉnh sửa đối tượng"])');
-        let author = dialog?.querySelector('div[data-ad-rendering-role="profile_name"] h3 span').innerText;
-
-        if(author != _myFbName){
-            this.current = new Object();
-            this.footerTag.innerHTML = null;
-            this.footerTag.style.display = 'none';
-            return false;
-        }
-
-        if(this.busy) return false; this.busy = 1; setTimeout(_ => {this.busy = 0}, 1000);
-
-
-        let pid = window.location.pathname.split('/').pop();
-        let imgs = [...dialog.querySelectorAll('a[href*="/photo/?fbid"] img')].map(e => e.getAttribute('src')).join(', ');
-        let name = '---';
-        dialog.querySelectorAll('div[data-ad-preview="message"] div[role="button"]').forEach(el => {
-            el.innerText == "Xem thêm" && el.click();
-        });
-        await Delay(100);
-        let text = dialog.querySelector('div[data-ad-preview="message"]')?.innerText?.replaceAll(/\n/g, ' ');
-
-        if((!pid || this.current?.pid == pid) && !force) return;
-
-        this.current = new Object();
-
-        if(!pid || !name || !text || !imgs) return;
-
-        this.current = {pid, name, text, imgs};
-        console.log(this.current)
-
-        this.footerTag.innerHTML = '<b>pid:</b>&nbsp<b>' + pid + '</b>';
-        this.footerTag.style.display = 'block';
-        this.footerTag.setAttribute('title', '');
-
-        this.get(pid).then(res => {
-            console.log(res)
-            if(!res || !res.length){
-                throw new Error('not found');
-            }
-            document.querySelectorAll('div[role="article"][data-uid]').forEach(el => el.removeAttribute('data-uid') )
-        }).catch(e => {
-            if(e.message == 'not found'){
-                this.add({ pid, name, text, imgs});
-            } else {
-                alert(e.message);
-            }
-        }).finally(_ => {
-        });
-    }
-};
-(isMessPage || isFBpage) && FbPost_Mng.int();
-
-// FB PREORDER MANAGER
-const PreOrder_Mng = {
-    ggFormId: '1FAIpQLSdFJWCyBzIwVJoH5hPVKKOIDAM8kHtolvkaTamUqahuRyLFwQ',
-    ggFormEntry:{ cid: 1372917580, uid: 1672107945, pid: 212434003, text: 662290354},
-    sheetName: 'pre-od',
-    sheetRange: 'A:E',
-    storageKey: 'GMpreOrder',
-
-    int: async function(){
-        this.dataStorage = await GM_getValue(this.storageKey, []);
-        GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
-    },
-
-    sync: async function(){
-        this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT B,C,D,E WHERE B <> '' `);
-        GM_setValue(this.storageKey, this.dataStorage);
-        window.prompt(`${this.dataStorage.length} pre-order syncing done! \n\nE.g.: `, JSON.stringify(this.dataStorage[0]));
-    },
-
-    get: function(id){
-        if (!id) return false;
-        let matchs = this.dataStorage.filter(i => ((i.uid == id) || (i.cid == id) || (i.pid == id)) );
-        return matchs;
-    },
-
-    add: async function(info = {}){
-        try{
-            /***
-            ***/
-            this.dataStorage = this.dataStorage.filter(({cid}) => (cid != info.cid)); // unique filter;
-            this.dataStorage.push(info);
-            GM_setValue(this.storageKey, this.dataStorage);
-
-            let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
-            let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-            let res = await GGSHEET.formSubmit(url);
-            return res;
-
-        } catch(err){
-            alert(err.message);
-        };
-    },
-};
-(isMessPage || isFBpage) && PreOrder_Mng.int();
 
 // FB INFO CARD
 (function() {
@@ -518,7 +366,6 @@ const PreOrder_Mng = {
             if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') card.classList.add('bottom');
 
             this.table = GM_addElement(card, 'table', { style: 'padding-bottom: 5px; color:white;' });
-            //this.table.innerText = 'Loading...';
 
             let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
 
@@ -530,11 +377,6 @@ const PreOrder_Mng = {
 
             let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
             btn_3.innerText = 'Tạo đơn'; btn_3.onclick = _ => this.createOrder();
-
-            /***
-            let btn_4 = GM_addElement(toolBar, 'a', { style: 'color:whitesmoke;', class: 'setPreOrderBtn'});
-            btn_4.innerText = 'Pre-od'; btn_4.onclick = _ => this.preOrder();
-            ***/
 
             GM_addElement(card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
             let quangplus = GM_addElement(card, 'small', {style: 'opacity: .5; position: absolute; top: 5px; right: 5px;'});
@@ -578,7 +420,7 @@ const PreOrder_Mng = {
                 this.viettelDraft = list.filter(od => od.ORDER_STATUS == -100).length;
 
                 await Delay();
-                this.preOd = PreOrder_Mng.get(uid);
+                //this.preOd = PreOrder_Mng.get(uid);
 
                 this.table.innerHTML = `
                 <tr style="display:none;"><td>ID:</td> <td>${uid}</td></tr>
@@ -592,9 +434,8 @@ const PreOrder_Mng = {
                     ${this.viettelPending ? `&nbsp<span style="color:coral"> • có đơn chờ giao</span>` : ''}
                     </a>
                   </td>
-                  <tr> <td>Đơn pre-order: </td> <td>${(this.preOd?.length || 0)}</td> </tr>
                 </tr>
-                <tr style='display:unset;'> <td>e2ee: </td> <td>${e2ee || '---'}</td> </tr>
+                <tr> <td>e2ee: </td> <td>${e2ee || '---'}</td> </tr>
                 <tr> <td>Tags: </td> <td>---</td> </tr>`;
             } catch(e){
 
@@ -780,68 +621,6 @@ const PreOrder_Mng = {
             new InfoCard({uid, name, img}, contain);
         }
     });
-})();
-
-// FB SET COMMENTS INFO
-(function(){
-    if(!isFBpage) return false;
-
-    let listener;
-
-    function clearData(){ GM_removeValueChangeListener(listener); GM_deleteValue("lastestPreOdInfo") }
-
-    function cmtClick(a){
-        if(this.busy_qwe || a.getAttribute('data-uid')) return;
-        this.busy_qwe = setTimeout(_ => delete this.busy_qwe, 1000);
-        clearData();
-
-        let cid = a.getAttribute('data-cid'),
-            text = a.getAttribute('data-text'),
-            pid = FbPost_Mng.current?.pid;
-
-        GM_setValue('lastestPreOdInfo', {cid, text, pid});
-        listener = GM_addValueChangeListener('lastestPreOdInfo', (key, oldValue, newValue, remote) => {
-            let i = {...oldValue, ...newValue};
-            if(!i.uid) return;
-            PreOrder_Mng.add(i);
-            clearData();
-        });
-    }
-
-    function cmtScan(){
-        if(this.delay) return;
-        this.delay = setTimeout(_ => delete this.delay, 500);
-
-        window.document.querySelectorAll('div[role="article"][aria-label*="dưới tên ' + _myFbName + '"]').forEach(a => {
-            let cid = a.getAttribute('data-cid');
-            let uid = a.getAttribute('data-uid');
-
-            if(!cid){
-                let href = a.querySelector('li a[href*="comment_id"]')?.getAttribute('href');
-                let search = href && new URL(href).searchParams;
-                cid = search?.get('reply_comment_id') || search?.get('comment_id');
-                let text = a.querySelector('span[lang]')?.innerText?.replaceAll(/\n/g, ' ');
-
-                if(!cid || !text) return;
-
-                a.setAttribute('data-cid', cid);
-                a.setAttribute('data-text', text);
-
-                a.querySelector('span[lang]')?.addEventListener('mouseup', _ => cmtClick(a));
-
-            } else if(!uid) {
-                let match = PreOrder_Mng.get(cid)?.pop();
-                match && a.setAttribute('data-uid', match.uid);
-            }
-        });
-    };
-    window.document.addEventListener('mousemove', cmtScan );
-
-    GM_addStyle('div[role="article"][aria-label*="dưới tên ' + _myFbName + '"] span[lang]::after { position:absolute; top:0; right:-5px; color:red; }' +
-               // 'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"]:not([data-uid]) span[lang]::after { content:"🌿🍀"; }' +
-              //  'div[role="article"][aria-label*="dưới tên ' + _myFbName + '"][data-uid] span[lang]::after { content:"🌻🌸"; }' +
-                '' );
-
 })();
 
 // MESSENGER SEARCH WHEN FOCUS;
