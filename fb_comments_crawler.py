@@ -211,54 +211,58 @@ options = Options();
 options.add_argument('--headless')  # Bỏ ghi chú nếu bạn muốn chạy ẩn
 service = Service(executable_path="/Users/trinhdacquang/Downloads/geckodriver");
 
-driver = webdriver.Firefox(service=service, options=options);
+try: driver = webdriver.Firefox(service=service);
+except: driver = webdriver.Firefox(service=service, options=options);
 driver.set_window_size(800, 800);
 
-print('Tìm post mới!');
-postsList = getFbPost();
+try:
+    print('Tìm post mới!');
+    postsList = getFbPost();
 
-print('Lọc ra các bài post mới');
-with open (path_posts, 'a') as f:
-    for i, p in enumerate(postsList):
-        
-        pid     = p['pid'];
-        date    = p['date'];
-        text    = p['text'];
-        imgs    = p['imgs'];
+    print('Lọc ra các bài post mới');
+    with open (path_posts, 'a') as f:
+        for i, p in enumerate(postsList):
+            
+            pid     = p['pid'];
+            date    = p['date'];
+            text    = p['text'];
+            imgs    = p['imgs'];
 
-        if pid in saved_posts: continue;
+            if pid in saved_posts: continue;
 
-        print(f"Phát hiện bài post mới: {date} - {pid}");
-        
-        try: status = uploadPost({"pid": pid, "text": text, "imgs": imgs});
-        except: status = 404;
-        
-        if status == 200: print('Đã tải lên google sheet'); saved_posts.append(pid); f.write(pid + "\n");
-
-    f.close();
-
-for pid in reversed(saved_posts[-20:]):
-    print('\n');
-    
-    try: comments = getFbPostComments(f"https://facebook.com/{pid}");
-    except: continue;
-
-    print('Lọc các comment mới!');
-    with open (path_comments, 'a') as f:
-    
-        for j, c in enumerate(comments):
-            cid     = c["cid"];
-            text    = c["text"];
-            date    = c["date"];
-
-            if cid in cids_log: continue;
-
-            print(f"Phát hiện comment mới: {cid} - {date} - {text}");
-            try: status = uploadComment({"cid": cid, "pid": pid, "text": text});
+            print(f"Phát hiện bài post mới: {date} - {pid}");
+            
+            try: status = uploadPost({"pid": pid, "text": text, "imgs": imgs});
             except: status = 404;
+            
+            if status == 200: print('Đã tải lên google sheet'); saved_posts.append(pid); f.write(pid + "\n");
 
-            if status == 200: print('Đã tải lên google sheet!'); cids_log.append(cid);  f.write(cid + "\n");
-                
         f.close();
+
+    for pid in reversed(saved_posts[-20:]):
+        print('\n');
+
+        try: comments = getFbPostComments(f"https://facebook.com/{pid}");
+        except: continue;
+
+        print('Lọc các comment mới!');
+        with open (path_comments, 'a') as f:
+        
+            for j, c in enumerate(comments):
+                cid     = c["cid"];
+                text    = c["text"];
+                date    = c["date"];
+
+                if cid in cids_log: continue;
+
+                print(f"Phát hiện comment mới: {cid} - {date} - {text}");
+                try: status = uploadComment({"cid": cid, "pid": pid, "text": text});
+                except: status = 404;
+
+                if status == 200: print('Đã tải lên google sheet!'); cids_log.append(cid);  f.write(cid + "\n");
+                    
+            f.close();
+
+except: print('driver quit!');
 
 driver.quit();
