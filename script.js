@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.24.0
+// @version      2025.6.26.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -344,6 +344,17 @@ const Customer_Mng = {
 };
 (isMessPage || isFBpage) && Customer_Mng.int();
 
+(function(){
+    $(document).on('click',`div[role="article"][aria-label*="${_myFbName}"]`, function(){
+        console.log(this);
+
+        let url = $(this).find('li a[href*="comment_id"]')?.attr('href');
+        url = new URL(url);
+        let cid = url.searchParams.get('reply_comment_id') || url.searchParams.get('comment_id');
+
+        GM_setValue('lastClickCmtId', cid);
+    });
+})();
 
 // FB INFO CARD
 (function() {
@@ -531,7 +542,14 @@ const Customer_Mng = {
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
-                let orderInfo = { fbid: this.customer.uid, phone: this.customer.phone, name: this.customer.name };
+                let lastClickCid = GM_getValue('lastClickCmtId', '');
+
+                let orderInfo = {
+                    fbid: this.customer.uid,
+                    phone: this.customer.phone,
+                    name: this.customer.name,
+                    cid: lastClickCid,
+                };
 
                 let prices_str = prompt(title + "B1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
@@ -812,27 +830,28 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         if(!info_encode) return false;
 
         let info = JSON.parse(decodeURIComponent(escape(window.atob(info_encode.replaceAll(' ','+')))));
-        let {fbid, phone, addr, name, price, prdName} = info;
+        let {fbid, phone, addr, name, cid, price, prdName} = info;
 
-        if(!fbid) return true;
+        if(!fbid || !phone) return true;
 
-        //window.onbeforeunload = e => window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
+        let productName = window.document.querySelector('input#productName'),
+            productPrice = window.document.querySelector('input#productPrice'),
+            productWeight = window.document.querySelector('input#productWeight'),
+            orderNo = window.document.querySelector('input#orderNo'),
+            fullName = window.document.querySelector('input#fullName'),
+            phoneNo = window.document.querySelector('input#phoneNo');
 
         window.addEventListener('beforeunload', _ => {
             window.opener?.postMessage({fbid: fbid, orderId: null}, '*')
         });
 
         $(document).keyup(function(e) {
-            if (e.key === "Escape") { // escape key maps to keycode `27`
-                $('button.close').click();
-            }
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
                 e.shiftKey ? $('#confirmCreateOrder button.btn.btn-viettel').click() : $('#confirmSaveDraft button.btn.btn-viettel').click();
 
-                // IN TEM
-                if(!phone) return false;
+                let interv = setInterval(_ => {
+                    if(productName.val || phoneNo.val) return true;
 
-                setTimeout(() => {
                     VIETTEL.getListOrders(phone).then(data => {
                         let last_order = data.data.data.LIST_ORDER[0];
                         let order_date = new Date(Date.parse(last_order?.ORDER_SYSTEMDATE || 0)).getDate();
@@ -843,13 +862,15 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                         let link = VIETTEL.getOrderPrint(o);
                         return link;
                     }).then(link => {
-                        window.open(link+'&status=0', '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=960"');
+                        window.open(link+'&status=0', '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=50"');
                         return window.close();
                     }).catch(e => {
                         alert(e.message);
                         window.location.href = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(phone);
                     });
-                }, 1500);
+                }, 500);
+
+                setTimeout(_ => clearInterval(interv), 5000);
             }
         });
 
@@ -860,28 +881,18 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.document.body.classList.add('custom');
         //s.prependTo(p);
 
-        let fullName = window.document.querySelector('input#fullName');
         $(window.document.body).on('click keyup keydown', function(){
             fullName.value = name;
             fullName.dispatchEvent(customEvent('input'));
             fullName.dispatchEvent(customEvent('change'));
         })
 
-        let productName = window.document.querySelector('input#productName');
-        productName.value = prdName
-
-        let productPrice = window.document.querySelector('input#productPrice');
-        productPrice.value = price;
-
-        let productWeight = window.document.querySelector('input#productWeight');
-        productWeight.value = 1000;
-
-        let orderNo = window.document.querySelector('input#orderNo');
-        let d = new Date();
-        orderNo.value = fbid + '-' + d.getFullYear() + d.getMonth() + d.getDay();
-
-        let phoneNo = window.document.querySelector('input#phoneNo');
         phoneNo.value = phone;
+        productName.value = prdName
+        productPrice.value = price;
+        productWeight.value = 1000;
+        let d = new Date();
+        orderNo.value = fbid + '.' + (cid || (d.getFullYear() + d.getMonth() + d.getDay()) );
 
         [productPrice, productName, productWeight, orderNo, phoneNo].forEach(i => {
             i.dispatchEvent(customEvent('click'));
