@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.26.1
+// @version      2025.6.26.2
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -291,7 +291,6 @@ const GGSHEET = {
             })
         })
     },
-
     log: function(type = 'test', data = []){
         let id = '1FAIpQLSdnt9BSiDQEirKx0Q3ucZFxunOgQQxp4SB7B6Gd8nNMFGzEyw';
         let fields = [2075359581, 1542826863, 2077606435, 1093369063, 2124435966, 450302808, 2118396800, 839689225, 2086451399, 1329285789];
@@ -545,7 +544,7 @@ const Customer_Mng = {
                 let lastClickCid = GM_getValue('lastClickCmtId', '');
 
                 let orderInfo = {
-                    fbid: this.customer.uid,
+                    uid: this.customer.uid,
                     phone: this.customer.phone,
                     name: this.customer.name,
                     cid: lastClickCid,
@@ -574,7 +573,10 @@ const Customer_Mng = {
 
                 window.popupWindow?.focus();
                 window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
-                window.addEventListener('message', (ev) => { ev.data.fbid === this.customer.uid && this.refreshInfo() });
+                window.addEventListener('message', (ev) => {
+                    let {uid, oid, cid} = ev.data;
+                    uid == this.customer.uid && (this.refreshInfo(), GGSHEET.log('createOrder', [cid, oid, uid]) );
+                }, {once: true});
 
                 GM_setValue('lastest_prices', prices_str);
             }
@@ -830,19 +832,20 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         if(!info_encode) return false;
 
         let info = JSON.parse(decodeURIComponent(escape(window.atob(info_encode.replaceAll(' ','+')))));
-        let {fbid, phone, addr, name, cid, price, prdName} = info;
+        let {uid, phone, addr, name, cid, price, prdName} = info;
 
-        if(!fbid || !phone) return true;
+        if(!uid || !phone) return true;
 
         let productName = window.document.querySelector('input#productName'),
             productPrice = window.document.querySelector('input#productPrice'),
             productWeight = window.document.querySelector('input#productWeight'),
             orderNo = window.document.querySelector('input#orderNo'),
             fullName = window.document.querySelector('input#fullName'),
-            phoneNo = window.document.querySelector('input#phoneNo');
+            phoneNo = window.document.querySelector('input#phoneNo'),
+            oid = 0;
 
         window.addEventListener('beforeunload', _ => {
-            window.opener?.postMessage({fbid: fbid, orderId: null}, '*')
+            window.opener?.postMessage({uid: uid, oid: oid, cid: cid}, '*')
         });
 
         $(document).keyup(function(e) {
@@ -856,19 +859,22 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                         let last_order = data.data.data.LIST_ORDER[0];
                         let order_date = new Date(Date.parse(last_order?.ORDER_SYSTEMDATE || 0)).getDate();
                         let today_date = new Date().getDate();
-                        if( !last_order || order_date != today_date) throw new Error('Không tìm thấy đơn hàng mới!');
+                        oid = last_order?.ORDER_NUMBER;
 
-                        let o = last_order.ORDER_NUMBER;
-                        let link = VIETTEL.getOrderPrint(o);
-                        return link;
+                        if(!oid || order_date != today_date) throw new Error('Không tìm thấy đơn hàng mới!');
+
+                        return VIETTEL.getOrderPrint(oid);
                     }).then(link => {
                         window.open(link+'&status=0', '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=50"');
                         return window.close();
+                        clearInterval(interv);
                     }).catch(e => {
                         alert(e.message);
                         window.location.href = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(phone);
-                    });
-                }, 500);
+                    }).finally(_=>{
+                        clearInterval(interv);
+                    })
+                }, 1000);
 
                 setTimeout(_ => clearInterval(interv), 5000);
             }
@@ -892,7 +898,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         productPrice.value = price;
         productWeight.value = 1000;
         let d = new Date();
-        orderNo.value = fbid + '.' + (cid || (d.getFullYear() + d.getMonth() + d.getDay()) );
+        orderNo.value = uid + '-' + (cid || (d.getFullYear() + d.getMonth() + d.getDay()) );
 
         [productPrice, productName, productWeight, orderNo, phoneNo].forEach(i => {
             i.dispatchEvent(customEvent('click'));
