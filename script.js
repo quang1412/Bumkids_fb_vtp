@@ -343,18 +343,6 @@ const Customer_Mng = {
 };
 (isMessPage || isFBpage) && Customer_Mng.int();
 
-(function(){
-    $(document).on('click',`div[role="article"][aria-label*="${_myFbName}"]`, function(){
-        console.log(this);
-
-        let url = $(this).find('li a[href*="comment_id"]')?.attr('href');
-        url = new URL(url);
-        let cid = url.searchParams.get('reply_comment_id') || url.searchParams.get('comment_id');
-
-        GM_setValue('lastClickCmtId', cid);
-    });
-})();
-
 // FB INFO CARD
 (function() {
     if(!isFBpage && !isMessPage) return !1;
@@ -513,42 +501,26 @@ const Customer_Mng = {
             Customer_Mng.add(this.customer).catch(err => alert(err.message))
         }
 
-        async preOrder(){
-            let title = `Tạo đơn Pre-order \n\n`;
-
-            let i = GM_getValue('lastestPreOdInfo', null)
-
-            if(!i?.cid) return alert('⚠️ Chọn comment note đơn trước!');
-
-            let uid = this.customer.uid;
-            i.uid = uid;
-
-            title += `Tên FB: ${this.customer.name} \n`;
-            title += `Nội dung: ${i.text} \n`;
-
-            window.confirm(title) && GM_setValue('lastestPreOdInfo', i); this.refreshInfo();
-        }
-
         async createOrder(){
-            if(keyState.ControlLeft ) return (this.preOrder(), delete keyState.ControlLeft);
+            const {uid, phone, name} = this.customer;
+            const orderInfo = { uid, phone, name };
 
-            let title = 'Đang tạo đơn hàng cho: ' + this.customer.name + '\n\n';
+            if(keyState.AltLeft){
+                delete keyState.AltLeft;
+                let cid = GM_getValue('lastClickCid', '');
+                cid && (orderInfo.cid = cid);
+            }
+
+            let title = `Tạo đơn cho ${name}\n\n`;
+
+            orderInfo.cid && (title += `cid: ${orderInfo.cid}\n`);
 
             try{
-                if(!this.customer.phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
+                if(!phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
 
                 if((this.viettelDraft || this.viettelPending) && !window.confirm(title + '❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?')) return false
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
-
-                let lastClickCid = GM_getValue('lastClickCmtId', ''); GM_deleteValue('lastClickCmtId');
-
-                let orderInfo = {
-                    uid: this.customer.uid,
-                    phone: this.customer.phone,
-                    name: this.customer.name,
-                    cid: lastClickCid,
-                };
 
                 let prices_str = prompt(title + "B1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
@@ -573,14 +545,15 @@ const Customer_Mng = {
 
                 window.popupWindow?.focus();
                 window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
-                window.addEventListener('message', (ev) => {
-                    let {uid, oid, cid} = ev.data;
-                    if(uid != this.customer.uid) return;
-                    this.refreshInfo() ;
-                    cid && GGSHEET.log('createOrder', [cid, oid, uid]);
-                }, {once: true});
 
                 GM_setValue('lastest_prices', prices_str);
+                GM_deleteValue('lastClickCid');
+
+                window.addEventListener('message', ({data}) => {
+                    if(uid != data.uid) return;
+                    this.refreshInfo() ;
+                    data.cid && GGSHEET.log('createOrder', [data.cid, data.uid, data.oid, ]);
+                }, {once: true});
             }
             catch(e){ alert(title + e.message) }
         }
@@ -730,6 +703,15 @@ const Customer_Mng = {
 
 })();
 
+isFBpage && (function(){
+    $(document).on('click',`div[role="article"][aria-label*="${_myFbName}"]`, function(){
+        let url = $(this).find('li a[href*="comment_id"]')?.attr('href');
+        url = new URL(url);
+        let cid = url.searchParams.get('reply_comment_id') || url.searchParams.get('comment_id');
+        GM_setValue('lastClickCid', cid);
+    });
+})();
+
 /***
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
@@ -847,7 +829,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             oid = 0;
 
         window.addEventListener('beforeunload', _ => {
-            window.opener?.postMessage({uid: uid, oid: oid, cid: cid}, '*')
+            window.opener?.postMessage({uid: uid, cid: cid}, '*')
         });
 
         $(document).keyup(function(e) {
@@ -864,19 +846,21 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                         oid = last_order?.ORDER_NUMBER;
 
                         if(!oid || order_date != today_date) throw new Error('Không tìm thấy đơn hàng mới!');
-
-                        return VIETTEL.getOrderPrint(oid);
+                        if(!window.confirm('in tem?')) {
+                            throw new Error('');
+                        } else{
+                            return VIETTEL.getOrderPrint(oid);
+                        }
                     }).then(link => {
                         window.open(link+'&status=0', '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=50"');
-                        return window.close();
-                        clearInterval(interv);
                     }).catch(e => {
-                        alert(e.message);
-                        window.location.href = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(phone);
+                        e.message && alert(e.message);
                     }).finally(_=>{
                         clearInterval(interv);
+                        window.opener?.postMessage({uid: uid, cid: cid, oid: oid}, '*')
+                        setTimeout(window.close, 200);
                     })
-                }, 1000);
+                }, 1500);
 
                 setTimeout(_ => clearInterval(interv), 5000);
             }
