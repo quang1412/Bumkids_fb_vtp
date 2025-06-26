@@ -541,7 +541,7 @@ const Customer_Mng = {
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
-                let lastClickCid = GM_getValue('lastClickCmtId', '');
+                let lastClickCid = GM_getValue('lastClickCmtId', ''); GM_deleteValue('lastClickCmtId');
 
                 let orderInfo = {
                     uid: this.customer.uid,
@@ -575,7 +575,9 @@ const Customer_Mng = {
                 window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
                 window.addEventListener('message', (ev) => {
                     let {uid, oid, cid} = ev.data;
-                    uid == this.customer.uid && (this.refreshInfo(), GGSHEET.log('createOrder', [cid, oid, uid]) );
+                    if(uid != this.customer.uid) return;
+                    this.refreshInfo() ;
+                    cid && GGSHEET.log('createOrder', [cid, oid, uid]);
                 }, {once: true});
 
                 GM_setValue('lastest_prices', prices_str);
