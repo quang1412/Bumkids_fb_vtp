@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.26.2
+// @version      2025.6.27.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -504,16 +504,16 @@ const Customer_Mng = {
         async createOrder(){
             const {uid, phone, name} = this.customer;
             const orderInfo = { uid, phone, name };
-
-            if(keyState.AltLeft){
-                delete keyState.AltLeft;
-                let cid = GM_getValue('lastClickCid', '');
-                cid && (orderInfo.cid = cid);
-            }
-
             let title = `Tạo đơn cho ${name}\n\n`;
 
-            orderInfo.cid && (title += `cid: ${orderInfo.cid}\n`);
+            /***
+            if(keyState.AltLeft){
+                delete keyState.AltLeft;
+            }
+            ***/
+
+            let cid = GM_getValue('lastClickCid', '');
+            cid && ( orderInfo.cid = cid, title += `cid: ${orderInfo.cid}\n` );
 
             try{
                 if(!phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
@@ -552,7 +552,7 @@ const Customer_Mng = {
                 window.addEventListener('message', ({data}) => {
                     if(uid != data.uid) return;
                     this.refreshInfo() ;
-                    data.cid && GGSHEET.log('createOrder', [data.cid, data.uid, data.oid, ]);
+                    data.cid && GGSHEET.log('createOrder', [data.cid, data.uid ]);
                 }, {once: true});
             }
             catch(e){ alert(title + e.message) }
@@ -773,14 +773,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         }
 
         $(document).one('click', 'div.vtp-bill-table td.mat-column-select', function(){
-            //$('a').css({cursor:'not-allowed', 'pointer-events': 'none !important'});
             window.onbeforeunload = function (e) {
                 e = e || window.event;
-                // For IE and Firefox prior to version 4
-                if (e) {
-                    e.returnValue = 'Sure?';
-                }
-                // For Safari
+                if (e) { e.returnValue = 'Sure?' }
                 return 'Sure?';
             };
 
@@ -825,8 +820,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             productWeight = window.document.querySelector('input#productWeight'),
             orderNo = window.document.querySelector('input#orderNo'),
             fullName = window.document.querySelector('input#fullName'),
-            phoneNo = window.document.querySelector('input#phoneNo'),
-            oid = 0;
+            phoneNo = window.document.querySelector('input#phoneNo');
 
         window.addEventListener('beforeunload', _ => {
             window.opener?.postMessage({uid: uid, cid: cid}, '*')
@@ -838,31 +832,40 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                 let interv = setInterval(_ => {
                     if(productName.val || phoneNo.val) return true;
+                    clearInterval(interv);
 
                     VIETTEL.getListOrders(phone).then(data => {
                         let last_order = data.data.data.LIST_ORDER[0];
                         let order_date = new Date(Date.parse(last_order?.ORDER_SYSTEMDATE || 0)).getDate();
                         let today_date = new Date().getDate();
-                        oid = last_order?.ORDER_NUMBER;
+                        let oid = last_order?.ORDER_NUMBER;
 
                         if(!oid || order_date != today_date) throw new Error('Không tìm thấy đơn hàng mới!');
+                        /***
                         if(!window.confirm('in tem?')) {
                             throw new Error('');
                         } else{
                             return VIETTEL.getOrderPrint(oid);
                         }
+                        ***/
+                        return VIETTEL.getOrderPrint(oid);
                     }).then(link => {
                         window.open(link+'&status=0', '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=50"');
                     }).catch(e => {
                         e.message && alert(e.message);
                     }).finally(_=>{
-                        clearInterval(interv);
-                        window.opener?.postMessage({uid: uid, cid: cid, oid: oid}, '*')
                         setTimeout(window.close, 200);
                     })
                 }, 1500);
 
-                setTimeout(_ => clearInterval(interv), 5000);
+                setTimeout(_ => clearInterval(interv), 10000);
+/***
+                window.onbeforeunload = function (e) {
+                    e = e || window.event;
+                    if (e) { e.returnValue = 'Sure?' }
+                    return 'Sure?';
+                };
+ ***/
             }
         });
 
