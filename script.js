@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.1.0
+// @version      2025.7.1.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -332,8 +332,12 @@ const Customer_Mng = {
             this.dataStorage.push(info)
             GM_setValue(this.storageKey, this.dataStorage);
 
-            let entry = Object.keys(this.ggFormEntry).map(k => !info[k] ? '' : ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))).join('&');
-            let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
+            let entry = Object.keys(this.ggFormEntry).map(k => {
+                if(!info[k]) return;
+                else return ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))
+            });
+
+            let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry.join('&')}`;
             let res = await GGSHEET.formSubmit(url);
             return res;
         } catch(err){
@@ -827,16 +831,23 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         $(document).keyup(function(e) {
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
-                e.shiftKey ? $('#confirmCreateOrder button.btn.btn-viettel').click() : $('#confirmSaveDraft button.btn.btn-viettel').click();
+                let status = 0;
+                if(e.shiftKey){
+                    $('#confirmCreateOrder button.btn.btn-viettel').click();
+                    status = 1;
+                } else {
+                    $('#confirmSaveDraft button.btn.btn-viettel').click();
+                    status = 0;
+                }
 
-                let tagPrint = window.confirm('in tem?');
+                let doPrint = window.confirm('in tem?');
 
                 let interv = setInterval(_ => {
                     if(productName.value || phoneNo.value) return true;
 
                     clearInterval(interv);
 
-                    if(!tagPrint) return window.close();
+                    if(!doPrint) return window.close();
 
                     VIETTEL.getListOrders(phone, 0, 0).then(data => {
                         let order = data.data.data.LIST_ORDER[0];
@@ -848,7 +859,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                         return VIETTEL.getOrderPrint(oid);
                     }).then(link => {
-                        window.open(link+'&status=0', '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=50"');
+                        window.open(link+'&status='+status , '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=50"');
                     }).catch(e => {
                         e.message && alert(e.message);
                     }).finally(_=>{
