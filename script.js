@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.6.28.0
+// @version      2025.7.1.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -74,10 +74,10 @@ function customEvent(n){
     }
 }
 function getFormatedDate(i = 0) {
-    const today = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
-    const yyyy = today.getFullYear();
-    let mm = today.getMonth() + 1; // Months start at 0!
-    let dd = today.getDate();
+    const date = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
+    const yyyy = date.getFullYear();
+    let mm = date.getMonth() + 1; // Months start at 0!
+    let dd = date.getDate();
     if (dd < 10) dd = '0' + dd;
     if (mm < 10) mm = '0' + mm;
     const formattedToday = dd + '/' + mm + '/' + yyyy;
@@ -201,7 +201,7 @@ const VIETTEL = {
             })
         })
     },
-    getListOrders: function(key){
+    getListOrders: function(key, from = -30, to = 0){
         return new Promise((resolve, reject) => {
             if(!key) return reject(new Error('Chưa có sdt'));
             let url = 'https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2';
@@ -210,8 +210,8 @@ const VIETTEL = {
                 "PAGE_SIZE": 10,
                 "INVENTORY": null,
                 "TYPE": 0,
-                "DATE_FROM": getFormatedDate(-30),
-                "DATE_TO": getFormatedDate(),
+                "DATE_FROM": getFormatedDate(from),
+                "DATE_TO": getFormatedDate(to),
                 "ORDER_PROPERTIES": key,
                 "ORDER_PAYMENT": "",
                 "IS_FAST_DELIVERY": false,
@@ -550,9 +550,8 @@ const Customer_Mng = {
                 GM_deleteValue('lastClickCid');
 
                 window.addEventListener('message', ({data}) => {
-                    if(uid != data.uid) return;
-                    this.refreshInfo() ;
-                    data.cid && GGSHEET.log('createOrder', [data.cid, data.uid ]);
+                    uid == data.uid && this.refreshInfo();
+                    data.uid && data.cid && GGSHEET.log('createOrder', [data.cid, data.uid ]);
                 }, {once: true});
             }
             catch(e){ alert(title + e.message) }
@@ -823,31 +822,30 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             phoneNo = window.document.querySelector('input#phoneNo');
 
         window.addEventListener('beforeunload', _ => {
-            window.opener?.postMessage({uid: uid, cid: cid}, '*')
+            window.opener?.postMessage({uid: uid, cid: cid}, '*');
         });
 
         $(document).keyup(function(e) {
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
                 e.shiftKey ? $('#confirmCreateOrder button.btn.btn-viettel').click() : $('#confirmSaveDraft button.btn.btn-viettel').click();
 
+                let tagPrint = window.confirm('in tem?');
+
                 let interv = setInterval(_ => {
-                    if(productName.val || phoneNo.val) return true;
+                    if(productName.value || phoneNo.value) return true;
+
                     clearInterval(interv);
 
-                    VIETTEL.getListOrders(phone).then(data => {
-                        let last_order = data.data.data.LIST_ORDER[0];
-                        let order_date = new Date(Date.parse(last_order?.ORDER_SYSTEMDATE || 0)).getDate();
-                        let today_date = new Date().getDate();
-                        let oid = last_order?.ORDER_NUMBER;
+                    if(!tagPrint) return window.close();
 
-                        if(!oid || order_date != today_date) throw new Error('Không tìm thấy đơn hàng mới!');
-                        /***
-                        if(!window.confirm('in tem?')) {
-                            throw new Error('');
-                        } else{
-                            return VIETTEL.getOrderPrint(oid);
-                        }
-                        ***/
+                    VIETTEL.getListOrders(phone, 0, 0).then(data => {
+                        let order = data.data.data.LIST_ORDER[0];
+                        //let order_date = new Date(Date.parse(order?.ORDER_SYSTEMDATE || 0)).getDate();
+                        //let today_date = new Date().getDate();
+                        let oid = order?.ORDER_NUMBER;
+
+                        if(!oid) throw new Error('Không tìm thấy đơn hàng mới!');
+
                         return VIETTEL.getOrderPrint(oid);
                     }).then(link => {
                         window.open(link+'&status=0', '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=50"');
