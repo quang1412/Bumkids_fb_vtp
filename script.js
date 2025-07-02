@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.1.1
+// @version      2025.7.2.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -55,7 +55,7 @@ function csvJSON(csv = '{}'){
         for(let j = 0; j < headers.length; j++){
             let label = headers[j].replaceAll('\"','');
             let value = currentline[j]?.replaceAll('\"','');
-            obj[label] = value;
+            if(value) obj[label] = value;
         }
         result.push(obj);
     }
@@ -327,9 +327,15 @@ const Customer_Mng = {
     },
     add: async function(info){
         try{
-            //let img = await uploadimage(info.img);
+            let url = "https://bumluxury.com/wp-content/uploads/fbimg/users/?src="+encodeURIComponent(info.img)+"&name="+info.uid;
+            await GM.xmlHttpRequest({url}).then(r => {
+                info.img = r.responseText;
+            }).catch(e => {
+                alert('Error: '+e.message);
+            });
+
             this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // del old id;
-            this.dataStorage.push(info)
+            this.dataStorage.push(info);
             GM_setValue(this.storageKey, this.dataStorage);
 
             let entry = Object.keys(this.ggFormEntry).map(k => {
@@ -337,13 +343,13 @@ const Customer_Mng = {
                 else return ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))
             });
 
-            let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry.join('&')}`;
-            let res = await GGSHEET.formSubmit(url);
+            let formUrl = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry.join('&')}`;
+            let res = await GGSHEET.formSubmit(formUrl);
             return res;
         } catch(err){
             alert(err.message);
         };
-    },
+    }
 };
 (isMessPage || isFBpage) && Customer_Mng.int();
 
@@ -390,11 +396,17 @@ const Customer_Mng = {
             this.table.innerText = 'Loading customer data...';
             Customer_Mng.get(this.customer.uid).then(res => {
                 let data = res?.pop();
+                let change = {};
 
-                if(!data) Customer_Mng.add(this.customer);
-                else if(data && this.customer.e2ee && !data.e2ee) Customer_Mng.add( {...data, ...this.customer});
+                if(!data) { change = {...this.customer} }
+                else {
+                    if(!data.img?.includes('bumluxury')) change.img = this.customer.img;
+                    if(this.customer.e2ee && !data.e2ee) change.e2ee = this.customer.e2ee;
+                }
 
-                this.customer = {...data, ...this.customer};
+                Object.keys(change).length && Customer_Mng.add({...(data || this.customer), ...change});
+
+                this.customer = {...this.customer, ...data};
             }).then(_ => {
                 this.refreshInfo();
             }).catch(err => {
