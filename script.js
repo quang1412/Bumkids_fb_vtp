@@ -394,8 +394,7 @@ const Customer_Mng = {
 
             // get info from Google sheet
             this.table.innerText = 'Loading customer data...';
-            Customer_Mng.get(this.customer.uid).then(res => {
-                let data = res?.pop();
+            Customer_Mng.get(this.customer.uid).then(res => res?.pop()).then(data => {
                 let change = {};
 
                 if(!data) { change = {...this.customer} }
