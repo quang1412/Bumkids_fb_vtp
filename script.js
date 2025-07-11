@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.2.1
+// @version      2025.7.11.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -327,20 +327,13 @@ const Customer_Mng = {
     },
     add: async function(info){
         try{
-            let url = "https://bumluxury.com/wp-content/uploads/fbimg/users/?src="+encodeURIComponent(info.img)+"&name="+info.uid;
-            await GM.xmlHttpRequest({url}).then(r => {
-                info.img = r.responseText;
-            }).catch(e => {
-                alert('Error: '+e.message);
-            });
-
             this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // del old id;
             this.dataStorage.push(info);
             GM_setValue(this.storageKey, this.dataStorage);
 
             let entry = Object.keys(this.ggFormEntry).map(k => {
-                if(!info[k]) return;
-                else return ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(info[k]))
+                let val = info[k];
+                if(val) return ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(val))
             });
 
             let formUrl = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry.join('&')}`;
@@ -395,17 +388,20 @@ const Customer_Mng = {
             // get info from Google sheet
             this.table.innerText = 'Loading customer data...';
             Customer_Mng.get(this.customer.uid).then(res => res?.pop()).then(data => {
-                let change = {};
+                //let change =
 
-                if(!data) { change = {...this.customer} }
-                else {
-                    if(!data.img?.includes('bumluxury')) change.img = this.customer.img;
-                    if(this.customer.e2ee && !data.e2ee) change.e2ee = this.customer.e2ee;
+                if(!data) {
+                    data = this.customer;
+                    Customer_Mng.add(data);
+                }
+                else if(this.customer.e2ee && !data.e2ee){
+                    //data.e2ee = this.customer.e2ee;
+                    Customer_Mng.add({...data, ...this.customer});
                 }
 
-                Object.keys(change).length && Customer_Mng.add({...(data || this.customer), ...change});
+                //Object.keys(change).length && Customer_Mng.add({...(data || this.customer), ...change});
 
-                this.customer = {...this.customer, ...data};
+                this.customer = data;
             }).then(_ => {
                 this.refreshInfo();
             }).catch(err => {
@@ -870,7 +866,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                         return VIETTEL.getOrderPrint(oid);
                     }).then(link => {
-                        window.open(link+'&status='+status , '_blank', 'toolbar=no, menubar=no, resizable=no, width=800, height=800, top=50, left=50"');
+                        window.open(link+'&status='+status , '_blank', 'toolbar=no, menubar=no, resizable=no, width=1000, height=468, top=50, left=50"');
                     }).catch(e => {
                         e.message && alert(e.message);
                     }).finally(_=>{
