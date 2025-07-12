@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.12.0
+// @version      2025.7.12.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -427,6 +427,7 @@ const Customer_Mng = {
 
                 // get info from Viettel Post
                 let vt = await VIETTEL.getListOrders(phone);
+                if(!vt) throw new Error('Lỗi: không tìm đc đơn hàng viettel!');
                 if(vt.error) throw new Error('Viettel: ' + vt.message);
 
                 let list = vt.data.data.LIST_ORDER;
