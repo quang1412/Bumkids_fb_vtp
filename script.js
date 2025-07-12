@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.11.0
+// @version      2025.7.12.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -33,7 +33,7 @@
 
 // ==/UserScript==
 
-const _myPhone = '0966628989', _myFbName = 'Trịnh Hiền', _myFbUsername = 'hien.trinh.5011',
+const _myPhone = '0966628989', _myFbName = 'Trịnh Hiền', _myFbUsername = 'hien.trinh.5011', _myFbUid = '100003982203068',
       UrlParams = new URLSearchParams(window.location.search),
       $ = (window.$ || window.jQuery);
 
@@ -368,6 +368,11 @@ const Customer_Mng = {
 
             this.table = GM_addElement(card, 'table', { style: 'padding-bottom: 5px; color:white;' });
 
+            if(info.uid == _myFbUid) {
+                this.table.innerText = 'ko tìm thấy UID!';;
+                return false;
+            }
+
             let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
 
             this.btn_1 = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
@@ -387,6 +392,7 @@ const Customer_Mng = {
 
             // get info from Google sheet
             this.table.innerText = 'Loading customer data...';
+
             Customer_Mng.get(this.customer.uid).then(res => res?.pop()).then(data => {
                 //let change =
 
@@ -795,7 +801,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             let price = (window.eval(this.value?.match(/\(.*\)/g)?.shift()?.replaceAll(/[\(\)]/g, '').trim().replaceAll(/\s+/g, " + ")) || 0) * 1000;
             $('input#productPrice')?.val(price).trigger('input').trigger('change');
         });
-        $(document).on('change', 'form.create-order input#productPrice', updateCOD);
+        $(document).on('change', 'form.create-order input#productPrice', _ => setTimeout(updateCOD, 500));
         $(document).on('change', 'form.create-order input#phoneNo', async function(){
             try{
                 this.value = this.value.replaceAll(/\D/g, '');
@@ -858,8 +864,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                     VIETTEL.getListOrders(phone, 0, 0).then(data => {
                         let order = data.data.data.LIST_ORDER[0];
-                        //let order_date = new Date(Date.parse(order?.ORDER_SYSTEMDATE || 0)).getDate();
-                        //let today_date = new Date().getDate();
                         let oid = order?.ORDER_NUMBER;
 
                         if(!oid) throw new Error('Không tìm thấy đơn hàng mới!');
@@ -874,7 +878,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                     })
                 }, 1500);
 
-                setTimeout(_ => clearInterval(interv), 10000);
+                //setTimeout(_ => clearInterval(interv), 10000);
 /***
                 window.onbeforeunload = function (e) {
                     e = e || window.event;
