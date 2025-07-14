@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.12.1
+// @version      2025.7.14.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -928,6 +928,26 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 (function(){
     if(!isViettelPage) return;
 
+    function addHotKeys(){
+
+        $(document).on('keydown', function(e) {
+            let buttons = $('button.vtp-bill-btn-action');
+            if(!buttons.length) return;
+
+            if(e.key == 'i'){
+                alert('in');
+                $.each(buttons, (i, btn) => {
+                    btn.innerText == 'In đơn' && btn.click();
+                });
+            }
+            if(e.key == 'd'){
+                $.each(buttons, (i, btn) => {
+                    btn.innerText == 'Duyệt đơn' && btn.click();
+                });
+            }
+        });
+    }
+    addHotKeys();
     $(window.document).ready(function(){
         // menu quản lý đơn
         $(document).on('contextmenu', 'div.vtp-bill-table > table > tbody > tr', function(e) {
