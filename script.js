@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.14.1
+// @version      2025.7.18.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -139,6 +139,7 @@ Facebook
 
                 'div[aria-label*="dưới tên"]:not([aria-label*="Trịnh Hiền"]):not(:hover) {  opacity: .5; }' +
                 'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }' +
+                'div[aria-label="Xem trước liên kết"] div[role="button"]:not([aria-label="Nhắn tin"]) {display:none;}' +
 
                 /*** Đánh dấu cmt của người đăng ***/
                 // 'div[aria-label*="Bình luận dưới tên Trịnh Hiền"] svg[role="none"] { border: 2px solid red; border-radius: 50%; padding: 0px; }' +
@@ -753,6 +754,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     div.dieukhoan {display:none;}
     .mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray;}
     **/
+    div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:not(:last-child){ display:none; }
+    div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child{ width:100%; }
 
     *:is(.mat-column-SENDER_FULLNAME, .mat-column-PARTNER):is(th, td) {display:none;}
 
@@ -928,26 +931,27 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 (function(){
     if(!isViettelPage) return;
 
-    function addHotKeys(){
-
+    (function addHotKeys(){
         $(document).on('keydown', function(e) {
             let buttons = $('button.vtp-bill-btn-action');
             if(!buttons.length) return;
-
             if(e.key == 'i'){
-                alert('in');
                 $.each(buttons, (i, btn) => {
-                    btn.innerText == 'In đơn' && btn.click();
+                    if(btn.innerText != 'In đơn') return;
+                    btn.click();
+                    setTimeout(_ => $('div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child')?.focus(), 200);
                 });
             }
             if(e.key == 'd'){
                 $.each(buttons, (i, btn) => {
-                    btn.innerText == 'Duyệt đơn' && btn.click();
+                    if(btn.innerText != 'Duyệt đơn') return;
+                    btn.click();
+                    setTimeout(_ => $('div#vtpBillModalOrderApproval.modal.show button.btn-confirm:first-child')?.focus(), 200);
                 });
             }
         });
-    }
-    addHotKeys();
+    })();
+
     $(window.document).ready(function(){
         // menu quản lý đơn
         $(document).on('contextmenu', 'div.vtp-bill-table > table > tbody > tr', function(e) {
