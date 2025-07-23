@@ -730,6 +730,44 @@ isFBpage && (function(){
     });
 })();
 
+
+
+(function(){
+    if(!isFBpage) return;
+    let cssStyle = 'div[role="button"][aria-label*="Yêu thích"]:after { content: "Y"; color: #333; display: block; position: absolute; top: 0; right: 0; background-color: white; border-radius: 5px; padding: 0 3px; font-weight: 700; border: 1px solid; }';
+    cssStyle += 'div[role="button"][aria-label="Thương thương"]:after { content: "T"; color: #333; display: block; position: absolute; top: 0; right: 0; background-color: white; border-radius: 5px; padding: 0 3px; font-weight: 700; border: 1px solid; }';
+    GM_addStyle(cssStyle);
+
+    (function addHotKeys(){
+        $(document).on('keydown', function(e) {
+            console.log(e.key);
+            if(e.key == 'y'){
+                /***
+                let btn = document.querySelector('div[role="button"][aria-label="Yêu thích"]');
+                console.log(btn);
+                btn.dispatchEvent(customEvent('click'));
+                ***/
+                let btn = $('div:has(div[role="button"][aria-label*="Yêu thích"])');
+                console.log(btn);
+                [...btn].map(b => {
+                    console.log(b);
+                    $(b).click();
+                    let event = new Event("click");
+                    b.dispatchEvent(event);
+                })
+            }
+            if(e.key == 't'){
+                let btn = document.querySelector('div[role="button"][aria-label="Thương thương"]');
+                console.log(btn);
+                btn.dispatchEvent(customEvent('click'));
+             //   btn.click();
+            }
+        });
+    })();
+
+})();
+
+
 /***
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
@@ -970,12 +1008,12 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             btn && btn.click();
             row.css('background-color', '#e3f0f0');
         });
-    })
+    });
 })();
 
 
+
 // bắn đơn viettel
-/***
 (function(){
     if(window.location.href != 'https://viettelpost.vn/quan-ly-van-don') return;
 
@@ -989,9 +1027,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         let input = GM_addElement(gridItem, 'input', {class:'form-control', id:'orderIdCheckField', placeholder:'Quét mã - by QuangPlus', title:'Quét mã - by QuangPlus'});
         input.focus();
 
-        $(input).keyup(function(event) {
-            if (event.keyCode !== 13) return;
-
+        $(input).change(function(event) {
             let id = this.value?.trim();
             if(!id) return;
             let link = $('a[href*="thong-tin-don-hang"][href*="orderNumber='+id+'"]:not(.checked)');
@@ -1009,7 +1045,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
     });
 })();
-***/
 
 (function(){
     if(!isViettelPage) return;
