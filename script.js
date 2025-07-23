@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.18.0
+// @version      2025.7.23.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -33,7 +33,7 @@
 
 // ==/UserScript==
 
-const _myPhone = '0966628989', _myFbName = 'Trịnh Hiền', _myFbUsername = 'hien.trinh.5011', _myFbUid = '100003982203068',
+const _myPhone = '0966628989', _myFbName = 'Trịnh Hiền', _myFbUsername = 'hien.trinh.5011', _myFbUid = '100003982203068', _samplePhoneNo = '0900000000',
       UrlParams = new URLSearchParams(window.location.search),
       $ = (window.$ || window.jQuery);
 
@@ -537,7 +537,7 @@ const Customer_Mng = {
             try{
                 if(!phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
 
-                if((this.viettelDraft || this.viettelPending) && !window.confirm(title + '❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?')) return false
+                if(phone != _samplePhoneNo && ( (this.viettelDraft || this.viettelPending) && !window.confirm(title + '❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?') )) return false
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
@@ -810,7 +810,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             try{
                 this.value = this.value.replaceAll(/\D/g, '');
                 this.dispatchEvent(customEvent('input'));
-                if(!isVNPhone(this.value)) return;
+                if(this.value == _samplePhoneNo || !isVNPhone(this.value)) return;
 
                 let res = await VIETTEL.getListOrders(this.value).catch(e => {throw new Error()});
 
@@ -835,11 +835,14 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         if(!uid || !phone) return true;
 
+        let isSample = phone == _samplePhoneNo;
+
         let productName = window.document.querySelector('input#productName'),
             productPrice = window.document.querySelector('input#productPrice'),
             productWeight = window.document.querySelector('input#productWeight'),
             orderNo = window.document.querySelector('input#orderNo'),
             fullName = window.document.querySelector('input#fullName'),
+            autoAddress = window.document.querySelector('input#autoAddress'),
             phoneNo = window.document.querySelector('input#phoneNo');
 
         window.addEventListener('beforeunload', _ => {
@@ -911,9 +914,15 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         productPrice.value = price;
         productWeight.value = 1000;
         let d = new Date();
-        orderNo.value = uid + '-' + (cid || (d.getFullYear() + d.getMonth() + d.getDay()) );
+        //orderNo.value = uid + '-' + (cid || (d.getFullYear() + d.getMonth() + d.getDay()) );
+        orderNo.value = `${uid}-${makeid(5)}`;
 
-        [productPrice, productName, productWeight, orderNo, phoneNo].forEach(i => {
+        if(isSample){
+            productName.value += '  ❌ ❌ ❌';
+            autoAddress.value = 'Đổi địa chỉ ❌❌❌, Ô chợ dừa, đống đa';
+        }
+
+        [productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
             i.dispatchEvent(customEvent('click'));
             i.dispatchEvent(customEvent('input'));
             i.dispatchEvent(customEvent('change'))
