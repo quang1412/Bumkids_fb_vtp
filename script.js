@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.23.1
+// @version      2025.7.25.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -795,7 +795,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:not(:last-child){ display:none; }
     div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child{ width:100%; }
 
-    *:is(.mat-column-SENDER_FULLNAME, .mat-column-PARTNER):is(th, td) {display:none;}
+    div.vtp-bill-table *:is(.mat-column-SENDER_FULLNAME, .mat-column-PARTNER, .mat-column-COD_STATUS ):is(th, td) {display:none;}
+    div.vtp-bill-table {  overflow-y: hidden !important; }
 
     /* ViettelPost custom css */`);
 
@@ -1024,11 +1025,11 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
     $(window.document).ready(function(){
         let gridItem = GM_addElement(document.querySelector('div.grid-action'), 'div', {class:'grid-item', style: 'justify-self: end; position: absolute;'});
-        let input = GM_addElement(gridItem, 'input', {class:'form-control', id:'orderIdCheckField', placeholder:'Quét mã / by QuangPlus', title:'Quét mã / by QuangPlus'});
+        let input = GM_addElement(gridItem, 'input', {class:'form-control', id:'orderIdCheckField', placeholder:'Order scanner • Quang.TD', title:'Order scanner • Quang.TD'});
         input.focus();
 
-        $(input).change(function(event) {
-            let id = this.value?.trim();
+        $(input).change(function(e) {
+            let id = input.value?.trim();
             if(!id) return;
             let link = $('a[href*="thong-tin-don-hang"][href*="orderNumber='+id+'"]:not(.checked)');
             if(link.length){
@@ -1040,7 +1041,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             } else {
                 snd_fail.play();
             }
-            $(input).focus().select();
+
+            $(input).val(id).focus().select();
+            //$(input).focus().val(null);
         });
 
     });
