@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.24.0
+// @version      2025.7.24.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -322,7 +322,7 @@ const Customer_Mng = {
         window.prompt(`${this.dataStorage.length} customers syncing done! \n\nE.g.: `, JSON.stringify(this.dataStorage[0]));
     },
     get: async function(uid){
-        if (!uid) return false;
+        if(!uid || uid == _myFbUid) throw new Error('Uid không hợp lệ');
         let matchs = this.dataStorage.filter(i => (i.uid == uid));
         return matchs;
     },
@@ -360,60 +360,57 @@ const Customer_Mng = {
         constructor(info, container){
             this.container = container;
 
-            this.customer = {"uid":'', ...info};
+            this.customer = {...info};
             let e2ee = (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : '');
             if(e2ee) this.customer.e2ee = e2ee;
 
             let card = GM_addElement(container, 'div', { class: 'infoCard', 'data-fbid': this.customer.id });
+            let bg = GM_addElement(card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
+            let quangplus = GM_addElement(card, 'small', {style: 'opacity: .5; position: absolute; top: 5px; right: 5px;'});
+            quangplus.innerHTML = '<a href="https://fb.com/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>';
+
             if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') card.classList.add('bottom');
 
             this.table = GM_addElement(card, 'table', { style: 'padding-bottom: 5px; color:white;' });
 
-            if(info.uid == _myFbUid) {
-                this.table.innerText = 'ko tìm thấy UID!';;
-                return false;
-            }
-
-            let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
-
-            this.btn_1 = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
-            this.btn_1.innerText = 'Tìm sđt'; this.btn_1.onclick = _ => this.phoneFinder();
-
-            let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
-            btn_2.innerText = 'Sửa sđt'; btn_2.onclick = _ => this.setPhone();
-
-            let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
-            btn_3.innerText = 'Tạo đơn'; btn_3.onclick = _ => this.createOrder();
-
-            GM_addElement(card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
-            let quangplus = GM_addElement(card, 'small', {style: 'opacity: .5; position: absolute; top: 5px; right: 5px;'});
-            quangplus.innerHTML = '<a href="https://fb.com/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>';
-
-            this.eventsListener();
-
-            // get info from Google sheet
+            // get info
             this.table.innerText = 'Loading customer data...';
+            Customer_Mng.get(this.customer.uid).then(res => {
 
-            Customer_Mng.get(this.customer.uid).then(res => res?.pop()).then(data => {
-                //let change =
+                let u = 0;
+                let data = res?.pop() || new Object();
+                let new_data = {...data, ...this.customer};
 
-                if(!data) {
-                    data = this.customer;
-                    Customer_Mng.add(data);
-                }
-                else if(this.customer.e2ee && !data.e2ee){
-                    //data.e2ee = this.customer.e2ee;
-                    Customer_Mng.add({...data, ...this.customer});
-                }
+                /*** check update skip 'img' ***/
+                let keys = [...(Object.keys(data)), ...(Object.keys(new_data))];
+                keys.forEach(k => k != 'img' && data[k] != new_data[k] && u++);
+                u && Customer_Mng.add(new_data);
 
-                //Object.keys(change).length && Customer_Mng.add({...(data || this.customer), ...change});
+                this.customer = new_data;
 
-                this.customer = data;
             }).then(_ => {
+
                 this.refreshInfo();
+
             }).catch(err => {
                 this.table.innerText = '⚠️ ' + err.message;
+                return false;
             });
+
+            if(this.customer.uid != _myFbUid) {
+                let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
+
+                this.btn_1 = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
+                this.btn_1.innerText = 'Tìm sđt'; this.btn_1.onclick = _ => this.phoneFinder();
+
+                let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
+                btn_2.innerText = 'Sửa sđt'; btn_2.onclick = _ => this.setPhone();
+
+                let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
+                btn_3.innerText = 'Tạo đơn'; btn_3.onclick = _ => this.createOrder();
+
+                this.eventsListener();
+            }
         }
 
         async refreshInfo(){
