@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.24.1
+// @version      2025.7.27.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -135,14 +135,18 @@ Facebook
     div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }
     `);
 
+
     GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
 
-                'div[aria-label*="dưới tên"]:not([aria-label*="Trịnh Hiền"]):not(:hover) {  opacity: .5; }' +
+                // 'div[aria-label*="dưới tên"]:not([aria-label*="Trịnh Hiền"]):not(:hover) {  opacity: .5; }' +
+
                 'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }' +
                 'div[aria-label="Xem trước liên kết"] div[role="button"]:not([aria-label="Nhắn tin"]) {display:none;}' +
 
-                /*** Đánh dấu cmt của người đăng ***/
-                // 'div[aria-label*="Bình luận dưới tên Trịnh Hiền"] svg[role="none"] { border: 2px solid red; border-radius: 50%; padding: 0px; }' +
+                'div[role="article"][aria-label*="dưới tên Trịnh Hiền"] span[lang] * {color: palegreen; }' +
+                'div[role="article"][aria-label*="dưới tên Trịnh Hiền"]:has(div[aria-label="Gỡ Yêu thích"]) span[lang] * {color: var(--reaction-love, #DD2334); }' +
+                'div[role="article"][aria-label*="dưới tên Trịnh Hiền"]:has(div[aria-label="Gỡ Thương thương"]) span[lang] * {color: var(--reaction-support, #887000); }' +
+
                 '');
 })();
 
@@ -390,7 +394,7 @@ const Customer_Mng = {
 
             }).then(_ => {
 
-                this.refreshInfo();
+                this.refreshInfo()
 
             }).catch(err => {
                 this.table.innerText = '⚠️ ' + err.message;
