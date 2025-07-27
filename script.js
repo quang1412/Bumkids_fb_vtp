@@ -144,8 +144,8 @@ Facebook
                 'div[aria-label="Xem trước liên kết"] div[role="button"]:not([aria-label="Nhắn tin"]) {display:none;}' +
 
                 'div[role="article"][aria-label*="dưới tên Trịnh Hiền"] span[lang] * {color: palegreen; }' +
-                'div[role="article"][aria-label*="dưới tên Trịnh Hiền"]:has(div[aria-label="Gỡ Yêu thích"]) span[lang] * {color: var(--reaction-love, #DD2334); }' +
-                'div[role="article"][aria-label*="dưới tên Trịnh Hiền"]:has(div[aria-label="Gỡ Thương thương"]) span[lang] * {color: var(--reaction-support, #887000); }' +
+                'div[role="article"]:has(div[aria-label="Gỡ Yêu thích"]) span[lang] * {color: var(--reaction-love, #DD2334); }' +
+                'div[role="article"]:has(div[aria-label="Gỡ Thương thương"]) span[lang] * {color: var(--reaction-support, #887000); }' +
 
                 '');
 })();
