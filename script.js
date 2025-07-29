@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.27.0
+// @version      2025.7.29.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -943,32 +943,37 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.document.body.classList.add('custom');
         //s.prependTo(p);
 
-        $(window.document.body).on('click keyup keydown', function(){
-            fullName.value = name;
-            fullName.dispatchEvent(customEvent('input'));
-            fullName.dispatchEvent(customEvent('change'));
-        })
+        fullName.value = name;
+        fullName.setAttribute('disabled', 'true');
 
         phoneNo.value = phone;
         productName.value = prdName
         productPrice.value = price;
         productWeight.value = 1000;
-        let d = new Date();
+
+        //let d = new Date();
         //orderNo.value = uid + '-' + (cid || (d.getFullYear() + d.getMonth() + d.getDay()) );
         orderNo.value = `${uid}-${makeid(5)}`;
+
+        $(fullName).on('input', function(){
+            fullName.value = name;
+            fullName.dispatchEvent(customEvent('input'));
+            fullName.dispatchEvent(customEvent('change'));
+        });
 
         if(isSample){
             productName.value += '  ❌ ❌ ❌';
             autoAddress.value = 'Đổi địa chỉ ❌❌❌, Ô chợ dừa, đống đa';
         }
 
-        [productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
-            i.dispatchEvent(customEvent('click'));
+        [fullName, productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
+            //i.dispatchEvent(customEvent('click'));
             i.dispatchEvent(customEvent('input'));
             i.dispatchEvent(customEvent('change'))
         });
 
-        phoneNo.click();
+        //phoneNo.click();
+        $(phoneNo).trigger('change');
         phoneNo.focus();
 
         setInterval(updateCOD, 500);
