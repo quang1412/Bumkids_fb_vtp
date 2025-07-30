@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.29.2
+// @version      2025.7.29.3
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -790,7 +790,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         //'body.custom div.box-receiver div.card-body { max-height: 400px; overflow: auto; }' +
 
         //màu số tiền
-        'body.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}' +
+        'body.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}'+
 
         'body.custom button {text-wrap: nowrap; width: auto;}'+
 
@@ -798,8 +798,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         'div.vtp-bill-table {  overflow-y: hidden !important; }'+
 
         'body.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}'+
-        'div.dieukhoan, nav#sidebar {display:none;}'+
-
+        'body.custom div.dieukhoan, body.custom nav#sidebar {display:none;}'+
         'body.custom #content {width: 100vw !important; margin-left: 0;}'+
 
         ''
