@@ -781,33 +781,37 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 (function() {
     if(!isViettelPage) return;
 
-    GM_addStyle(`/* ViettelPost custom css */
-    /**
-    body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
-    body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
-    body.vt-post.custom div.box-receiver div.card-body { max-height: 400px; overflow: auto; }
-    body.vt-post.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}
-    body.vt-post.custom button {text-wrap: nowrap;}
-    body.vt-post.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}
-    body.vt-post.custom #content {width: 100% !important; margin-left: 0;}
-    div.dieukhoan {display:none;}
-    .mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray;}
-    **/
-    div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:not(:last-child){ display:none; }
-    div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child{ width:100%; }
+    let vtpStyle = (
+        'div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:not(:last-child){ display:none; }'+
+        'div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child{ width:100%; }'+
+        '.mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray;}'+
 
-    div.vtp-bill-table *:is(.mat-column-SENDER_FULLNAME, .mat-column-PARTNER, .mat-column-COD_STATUS ):is(th, td) {display:none;}
-    div.vtp-bill-table {  overflow-y: hidden !important; }
+        //'body.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }' +
+        //'body.custom div.box-receiver div.card-body { max-height: 400px; overflow: auto; }' +
 
-    /* ViettelPost custom css */`);
+        //màu số tiền
+        'body.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}' +
 
+        'body.custom button {text-wrap: nowrap; width: auto;}'+
+
+        'div.vtp-bill-table *:is(.mat-column-SENDER_FULLNAME, .mat-column-PARTNER, .mat-column-COD_STATUS ):is(th, td) {display:none;}'+
+        'div.vtp-bill-table {  overflow-y: hidden !important; }'+
+
+        'body.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}'+
+        'div.dieukhoan, nav#sidebar {display:none;}'+
+
+        'body.custom #content {width: 100vw !important; margin-left: 0;}'+
+
+        ''
+    );
+    GM_addStyle(vtpStyle);
 
     $(document).ready( async function(){
         await new Promise(resolve => { setTimeout(resolve, 1000)});
 
         function updateCOD(){
             try{
-                let price = Number($('input#productPrice')?.val().replaceAll(/\D/g, '') || 0),
+                let price = Number($('input#productPrice')?.val()?.replaceAll(/\D/g, '') || 0),
                     fee = Number($('div.text-price-right')?.text()?.replaceAll(/\D/g, '') || 0);
 
                 if(!fee || window.lastPrice == price) return 0;
@@ -881,6 +885,12 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         if(!uid || !phone) return true;
 
+        let col1 = $('div.box-receiver, div.box-sender').parent();
+        $('div.box-sender').appendTo(col1);
+        $('div.box-receiver').prependTo(col1);
+        window.document.body.classList.add('custom');
+        //s.prependTo(p);
+
         let isSample = phone == _samplePhoneNo;
 
         let productName = window.document.querySelector('input#productName'),
@@ -933,13 +943,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             }
         });
 
-        let col1 = $('div.box-receiver, div.box-sender').parent();
-        $('div.box-sender').appendTo(col1);
-        $('div.box-receiver').prependTo(col1);
-
-        window.document.body.classList.add('custom');
-        //s.prependTo(p);
-
         $(window.document).on('click keyup keydown', function(){
             if(fullName.value == name) return;
             fullName.value = name;
@@ -949,20 +952,14 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         fullName.setAttribute('disabled', 'true');
         phoneNo.value = phone;
-        productName.value = prdName
         productPrice.value = price;
         productWeight.value = 1000;
+        productName.value = prdName + (isSample ? '  ❌ ❌ ❌' : '')
+        autoAddress.value = isSample ? 'Đổi địa chỉ ❌❌❌, Ô chợ dừa, đống đa' : '';
         orderNo.value = [uid, makeid(5)].join('-');
 
-        if(isSample){
-            productName.value += '  ❌ ❌ ❌';
-            autoAddress.value = 'Đổi địa chỉ ❌❌❌, Ô chợ dừa, đống đa';
-        }
-
         [productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
-            i.dispatchEvent(customEvent('click'));
-            i.dispatchEvent(customEvent('input'));
-            i.dispatchEvent(customEvent('change'))
+            ['click', 'input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
         });
 
         phoneNo.click();
