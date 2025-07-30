@@ -1007,17 +1007,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 })();
 
 $(window.document).ready(async function(){
-    let datePicker = $('div.datapickerBill input');
-    if(datePicker.length){
-        datePicker.click();
-        await Delay(200)
-         $('div.md-drppicker.shown ul li button:not(.active)').each((i, e) => {
-            e.innerText == '30 ngày trước' && e.click();
-        });
-    }
-
-    await Delay(200);
-
     let pagging = $('div.vtp-bill-tab mat-form-field.mat-paginator-page-size-select div.mat-select-trigger');
     if(pagging.length){
         pagging.click();
@@ -1027,6 +1016,16 @@ $(window.document).ready(async function(){
         });
     }
 
+    await Delay(200);
+
+    let datePicker = $('div.datapickerBill input');
+    if(datePicker.length){
+        datePicker.click();
+        await Delay(200)
+         $('div.md-drppicker.shown ul li button:not(.active)').each((i, e) => {
+            e.innerText == '30 ngày trước' && e.click();
+        });
+    }
 });
 
 // bắn đơn viettel
