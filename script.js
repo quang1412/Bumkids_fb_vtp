@@ -1010,18 +1010,18 @@ $(window.document).ready(async function(){
     let pagging = $('div.vtp-bill-tab mat-form-field.mat-paginator-page-size-select div.mat-select-trigger');
     if(pagging.length){
         pagging.click();
-        await Delay(200)
+        await Delay(500);
         $('mat-option[role="option"]:not(.mat-active)').each((i, e) => {
             e.innerText == 100 && e.click();
         });
     }
 
-    await Delay(200);
+    await Delay(500);
 
     let datePicker = $('div.datapickerBill input');
     if(datePicker.length){
         datePicker.click();
-        await Delay(200)
+        await Delay(500);
          $('div.md-drppicker.shown ul li button:not(.active)').each((i, e) => {
             e.innerText == '30 ngày trước' && e.click();
         });
