@@ -784,7 +784,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     let vtpStyle = (
         'div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:not(:last-child){ display:none; }'+
         'div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child{ width:100%; }'+
-        '.mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray;}'+
+        '.mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray; color: white;}'+
 
         //'body.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }' +
         //'body.custom div.box-receiver div.card-body { max-height: 400px; overflow: auto; }' +
@@ -1006,7 +1006,28 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     });
 })();
 
+$(window.document).ready(async function(){
+    let datePicker = $('div.datapickerBill input');
+    if(datePicker.length){
+        datePicker.click();
+        await Delay(200)
+         $('div.md-drppicker.shown ul li button:not(.active)').each((i, e) => {
+            e.innerText == '30 ngày trước' && e.click();
+        });
+    }
 
+    await Delay(200);
+
+    let pagging = $('div.vtp-bill-tab mat-form-field.mat-paginator-page-size-select div.mat-select-trigger');
+    if(pagging.length){
+        pagging.click();
+        await Delay(200)
+        $('mat-option[role="option"]:not(.mat-active)').each((i, e) => {
+            e.innerText == 100 && e.click();
+        });
+    }
+
+});
 
 // bắn đơn viettel
 (function(){
