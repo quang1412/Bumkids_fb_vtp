@@ -846,6 +846,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             $('input#productPrice')?.val(price).trigger('input').trigger('change');
         });
         $(document).on('change', 'form.create-order input#productPrice', _ => setTimeout(updateCOD, 500));
+
         $(document).on('change', 'form.create-order input#phoneNo', async function(){
             try{
                 this.value = this.value.replaceAll(/\D/g, '');
@@ -858,7 +859,12 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                 let orders = res.data.data.LIST_ORDER.filter(o => !!~([-100, -108,100,102,103,104]).indexOf(o.ORDER_STATUS));
 
-                orders.length && alert('❌ CẢNH BÁO: \n\n SDT có đơn chưa gửi!!!?');
+                let oLength = orders.length
+
+                this.style['border-color'] = oLength ? 'coral' : 'greenyellow';
+
+                oLength && alert('❌ CẢNH BÁO: \n\n SDT có đơn chưa gửi!!!?');
+
             } catch(e){
                 alert('Lỗi check trùng đơn! ❌❌❌');
             }
@@ -924,15 +930,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                         setTimeout(window.close, 200);
                     })
                 }, 1500);
-
-                //setTimeout(_ => clearInterval(interv), 10000);
-/***
-                window.onbeforeunload = function (e) {
-                    e = e || window.event;
-                    if (e) { e.returnValue = 'Sure?' }
-                    return 'Sure?';
-                };
- ***/
             }
         });
 
@@ -943,19 +940,19 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.document.body.classList.add('custom');
         //s.prependTo(p);
 
-        $(window.document.body).on('click keyup keydown', function(){
+        $(window.document).on('click keyup keydown', function(){
+            if(fullName.value == name) return;
             fullName.value = name;
             fullName.dispatchEvent(customEvent('input'));
-            fullName.dispatchEvent(customEvent('change'));
+            //fullName.dispatchEvent(customEvent('change'));
         })
 
+        fullName.setAttribute('disabled', 'true');
         phoneNo.value = phone;
         productName.value = prdName
         productPrice.value = price;
         productWeight.value = 1000;
-        let d = new Date();
-        //orderNo.value = uid + '-' + (cid || (d.getFullYear() + d.getMonth() + d.getDay()) );
-        orderNo.value = `${uid}-${makeid(5)}`;
+        orderNo.value = [uid, makeid(5)].join('-');
 
         if(isSample){
             productName.value += '  ❌ ❌ ❌';
