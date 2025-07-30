@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.29.0
+// @version      2025.7.29.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -377,6 +377,21 @@ const Customer_Mng = {
 
             this.table = GM_addElement(card, 'table', { style: 'padding-bottom: 5px; color:white;' });
 
+            if(this.customer.uid != _myFbUid) {
+                let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
+
+                this.btn_1 = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
+                this.btn_1.innerText = 'Tìm sđt'; this.btn_1.onclick = _ => this.phoneFinder();
+
+                let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
+                btn_2.innerText = 'Sửa sđt'; btn_2.onclick = _ => this.setPhone();
+
+                let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
+                btn_3.innerText = 'Tạo đơn'; btn_3.onclick = _ => this.createOrder();
+
+                this.eventsListener();
+            }
+
             // get info
             this.table.innerText = 'Loading customer data...';
             Customer_Mng.get(this.customer.uid).then(res => {
@@ -400,21 +415,6 @@ const Customer_Mng = {
                 this.table.innerText = '⚠️ ' + err.message;
                 return false;
             });
-
-            if(this.customer.uid != _myFbUid) {
-                let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
-
-                this.btn_1 = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
-                this.btn_1.innerText = 'Tìm sđt'; this.btn_1.onclick = _ => this.phoneFinder();
-
-                let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
-                btn_2.innerText = 'Sửa sđt'; btn_2.onclick = _ => this.setPhone();
-
-                let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
-                btn_3.innerText = 'Tạo đơn'; btn_3.onclick = _ => this.createOrder();
-
-                this.eventsListener();
-            }
         }
 
         async refreshInfo(){
@@ -943,37 +943,32 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.document.body.classList.add('custom');
         //s.prependTo(p);
 
-        fullName.value = name;
-        fullName.setAttribute('disabled', 'true');
+        $(window.document.body).on('click keyup keydown', function(){
+            fullName.value = name;
+            fullName.dispatchEvent(customEvent('input'));
+            fullName.dispatchEvent(customEvent('change'));
+        })
 
         phoneNo.value = phone;
         productName.value = prdName
         productPrice.value = price;
         productWeight.value = 1000;
-
-        //let d = new Date();
+        let d = new Date();
         //orderNo.value = uid + '-' + (cid || (d.getFullYear() + d.getMonth() + d.getDay()) );
         orderNo.value = `${uid}-${makeid(5)}`;
-
-        $(fullName).on('input', function(){
-            fullName.value = name;
-            fullName.dispatchEvent(customEvent('input'));
-            fullName.dispatchEvent(customEvent('change'));
-        });
 
         if(isSample){
             productName.value += '  ❌ ❌ ❌';
             autoAddress.value = 'Đổi địa chỉ ❌❌❌, Ô chợ dừa, đống đa';
         }
 
-        [fullName, productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
-            //i.dispatchEvent(customEvent('click'));
+        [productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
+            i.dispatchEvent(customEvent('click'));
             i.dispatchEvent(customEvent('input'));
             i.dispatchEvent(customEvent('change'))
         });
 
-        //phoneNo.click();
-        $(phoneNo).trigger('change');
+        phoneNo.click();
         phoneNo.focus();
 
         setInterval(updateCOD, 500);
