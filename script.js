@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.31.0
+// @version      2025.7.31.1
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -260,7 +260,7 @@ const GGSHEET = {
         return new Promise((resolve, reject) => {
             let ggsid = '1KAhQCGOIInG3Et77PfY03V_Nn4fWvi0z1ITh1BKFkmk';
             let tq = encodeURIComponent(queryStr);
-            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:csv&sheet=${sheet}&range=${range}&tq=${tq}&time=${new Date().getTime()}`;
+            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:csv&headers=1&sheet=${sheet}&range=${range}&tq=${tq}&time=${new Date().getTime()}`;
 
             console.log(url)
             GM_xmlhttpRequest({
@@ -313,21 +313,29 @@ const GGSHEET = {
 const Customer_Mng = {
     ggFormId: '1FAIpQLScdh4nIuwIG7wvbarsXyystgnSkTcIzgIBBlcA9ya8DDZvwXA',
     ggFormEntry:{ uid: 736845047, name: 64482577, phone: 1863958217, addr: 143609329, img: 1145058745, e2ee: 1693043917, attr1: 1173103552, attr2: 398324750, attr3: 696385383, attr4: 2084291905, attr5: 1174020264, attr6: 1243517720, attr7: 1831851967, attr9: 1146378854 },
-    sheetName: 'customers',
-    sheetRange: 'A:O',
+    //sheetName: 'customers',
+    //sheetRange: 'A:O',
     storageKey: 'GMcustomer',
     int: async function(){
         this.dataStorage = await GM_getValue(this.storageKey, []);
         GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
     },
     sync: async function(){
-        this.dataStorage = await GGSHEET.query(this.sheetName, this.sheetRange, `SELECT * WHERE B <> '' `);
+        this.dataStorage = await GGSHEET.query('customers', 'A:Z', "SELECT A, B, C, D, E, F, G WHERE B <> '' AND Z <> 'duplicate'");
         GM_setValue(this.storageKey, this.dataStorage);
         window.prompt(`${this.dataStorage.length} customers syncing done! \n\nE.g.: `, JSON.stringify(this.dataStorage[0]));
     },
     get: async function(uid){
         if(!uid || uid == _myFbUid) throw new Error('Uid không hợp lệ');
         let matchs = this.dataStorage.filter(i => (i.uid == uid));
+        if(!matchs.length){
+            matchs = await GGSHEET.query('customers', 'A:Z', `SELECT A, B, C, D, E, F, G WHERE B = '${uid}' AND Z <> 'duplicate'`);
+        }
+        return matchs;
+    },
+    getOnline: async function(uid){
+        if(!uid || uid == _myFbUid) throw new Error('Uid không hợp lệ');
+        let matchs = await GGSHEET.query('customers', 'A:Z', `SELECT A, B, C, D, E, F, G WHERE B = '${uid}' AND Z <> 'duplicate'`);
         return matchs;
     },
     add: async function(info){
