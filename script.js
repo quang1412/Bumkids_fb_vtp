@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Quang.TD / Bumkids
+// @name         Bumkids Ext by Quang.TD
 // @author       QuangPlus
-// @version      2025.7.31.1
+// @version      2025.7.31.2
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
