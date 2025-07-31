@@ -1016,19 +1016,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 })();
 
 
-(async function(){
+$(window.document).ready(async function(){
     if(!isViettelPage) return;
-
-    let datePicker = $('div.datapickerBill input#frm_calendar');
-    if(datePicker.length){
-        datePicker.click();
-        await Delay(500);
-        $('div.md-drppicker.show-ranges ul li button:not(.active)').each((i, e) => {
-            e.innerText == '30 ngày trước' && e.click();
-        });
-    }
-
-    await Delay(500);
 
     let paginator = $('mat-select[aria-label="Bản Ghi Mỗi Trang"]');
     if(paginator.length){
@@ -1038,7 +1027,18 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             e.innerText == '100' && e.click();
         });
     }
-})();
+
+    await Delay(500);
+
+    let datePicker = $('div.datapickerBill input#frm_calendar');
+    if(datePicker.length){
+        datePicker.click();
+        await Delay(500);
+        $('div.md-drppicker.show-ranges ul li button:not(.active)').each((i, e) => {
+            e.innerText == '30 ngày trước' && e.click();
+        });
+    }
+});
 
 
 // bắn đơn viettel
