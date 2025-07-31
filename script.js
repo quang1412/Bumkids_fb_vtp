@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Bumkids Tamp new
+// @name         Quang.TD / Bumkids
 // @author       QuangPlus
 // @version      2025.7.31.1
 // @description  try to take over the world!
