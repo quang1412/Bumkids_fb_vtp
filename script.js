@@ -373,8 +373,8 @@ const Customer_Mng = {
             this.container = container;
 
             this.customer = {...info};
-            let e2ee = (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : '');
-            if(e2ee) this.customer.e2ee = e2ee;
+            //let e2ee = (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : '');
+            //if(e2ee) this.customer.e2ee = e2ee;
 
             let card = GM_addElement(container, 'div', { class: 'infoCard', 'data-fbid': this.customer.id });
             let bg = GM_addElement(card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
@@ -408,9 +408,9 @@ const Customer_Mng = {
                 let data = res?.pop() || new Object();
                 let new_data = {...data, ...this.customer};
 
-                /*** check update skip 'img' ***/
+                /*** check update skip 'img' 'e2ee' ***/
                 let keys = [...(Object.keys(data)), ...(Object.keys(new_data))];
-                keys.forEach(k => k != 'img' && data[k] != new_data[k] && u++);
+                keys.forEach(k => k != 'img' && k != 'e2ee' && data[k] != new_data[k] && u++);
                 u && Customer_Mng.add(new_data);
 
                 this.customer = new_data;
@@ -432,7 +432,7 @@ const Customer_Mng = {
             try{
                 this.table.innerText = 'Loading viettel data...';
 
-                let {uid, phone, addr, e2ee} = this.customer;
+                let {uid, phone, addr} = this.customer;
                 if(!phone) throw new Error('chưa có số đt!');
 
                 // get info from Viettel Post
@@ -442,8 +442,8 @@ const Customer_Mng = {
 
                 let list = vt.data.data.LIST_ORDER;
                 let total = vt.data.data.TOTAL;
-                this.viettelPending = list.filter(od => !!~([-108,100,102,103,104]).indexOf(od.ORDER_STATUS)).length;
-                this.viettelDraft = list.filter(od => od.ORDER_STATUS == -100).length;
+                this.penddingOd = list.filter(od => !!~([-108,100,102,103,104]).indexOf(od.ORDER_STATUS)).length;
+                this.draftOd = list.filter(od => od.ORDER_STATUS == -100).length;
 
                 await Delay();
                 //this.preOd = PreOrder_Mng.get(uid);
@@ -456,12 +456,12 @@ const Customer_Mng = {
                   <td>
                     <a href="https://viettelpost.vn/quan-ly-van-don?q=1&p=${btoa(phone)}" target="_blank" style="color:inherit; text-decoration: underline;">
                     ${total} đơn
-                    ${this.viettelDraft ? `&nbsp<span style="color:yellow"> • có đơn nháp</span>` : ''}
-                    ${this.viettelPending ? `&nbsp<span style="color:coral"> • có đơn chờ giao</span>` : ''}
+                    ${this.draftOd ? `&nbsp<span style="color:yellow"> • có đơn nháp <small>(${this.draftOd})</small></span>` : ''}
+                    ${this.penddingOd ? `&nbsp<span style="color:coral"> • có đơn chờ giao <small>(${this.penddingOd})</small></span>` : ''}
                     </a>
                   </td>
                 </tr>
-                <tr> <td>e2ee: </td> <td>${e2ee || '---'}</td> </tr>
+                <tr> <td>Đchi: </td> <td>${addr || '---'}</td> </tr>
                 <tr> <td>Tags: </td> <td>---</td> </tr>`;
             } catch(e){
 
