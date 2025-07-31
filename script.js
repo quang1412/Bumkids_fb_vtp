@@ -952,10 +952,15 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         });
 
         $(window.document).on('click keyup keydown', function(){
-            if(fullName.value == name) return;
-            fullName.value = name;
-            fullName.dispatchEvent(customEvent('input'));
-            //fullName.dispatchEvent(customEvent('change'));
+            if(1){
+                autoAddress.value = autoAddress.value.replace(/\..*/g, '.');
+                autoAddress.dispatchEvent(customEvent('input'));
+            }
+            if(fullName.value != name) {
+                fullName.value = name;
+                fullName.dispatchEvent(customEvent('input'));
+                //fullName.dispatchEvent(customEvent('change'));
+            };
         });
 
         fullName.setAttribute('disabled', 'true');
