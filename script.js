@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Tamp new
 // @author       QuangPlus
-// @version      2025.7.29.3
+// @version      2025.7.31.0
 // @description  try to take over the world!
 // @namespace    Bumkids_fb_vtp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -784,13 +784,13 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     let vtpStyle = (
         'div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:not(:last-child){ display:none; }'+
         'div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child{ width:100%; }'+
-        '.mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray; color: white;}'+
+        '.mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray;}'+
 
         //'body.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }' +
         //'body.custom div.box-receiver div.card-body { max-height: 400px; overflow: auto; }' +
 
         //màu số tiền
-        'body.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}'+
+        'body.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}' +
 
         'body.custom button {text-wrap: nowrap; width: auto;}'+
 
@@ -798,7 +798,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         'div.vtp-bill-table {  overflow-y: hidden !important; }'+
 
         'body.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}'+
-        'body.custom div.dieukhoan, body.custom nav#sidebar {display:none;}'+
+        'div.dieukhoan, body.custom nav#sidebar {display:none;}'+
+
         'body.custom #content {width: 100vw !important; margin-left: 0;}'+
 
         ''
@@ -1006,27 +1007,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     });
 })();
 
-$(window.document).ready(async function(){
-    let pagging = $('div.vtp-bill-tab mat-form-field.mat-paginator-page-size-select div.mat-select-trigger');
-    if(pagging.length){
-        pagging.click();
-        await Delay(500);
-        $('mat-option[role="option"]:not(.mat-active)').each((i, e) => {
-            e.innerText == 100 && e.click();
-        });
-    }
 
-    await Delay(500);
-
-    let datePicker = $('div.datapickerBill input');
-    if(datePicker.length){
-        datePicker.click();
-        await Delay(500);
-         $('div.md-drppicker.shown ul li button:not(.active)').each((i, e) => {
-            e.innerText == '30 ngày trước' && e.click();
-        });
-    }
-});
 
 // bắn đơn viettel
 (function(){
