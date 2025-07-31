@@ -956,13 +956,13 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             fullName.value = name;
             fullName.dispatchEvent(customEvent('input'));
             //fullName.dispatchEvent(customEvent('change'));
-        })
+        });
 
         fullName.setAttribute('disabled', 'true');
         phoneNo.value = phone;
         productPrice.value = price;
         productWeight.value = 1000;
-        productName.value = prdName + (isSample ? '  ❌ ❌ ❌' : '')
+        productName.value = prdName + (isSample ? '  ❌ ❌ ❌' : '');
         autoAddress.value = isSample ? 'Đổi địa chỉ ❌❌❌, Ô chợ dừa, đống đa' : '';
         orderNo.value = [uid, makeid(5)].join('-');
 
@@ -1015,6 +1015,30 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     });
 })();
 
+
+(async function(){
+    if(!isViettelPage) return;
+
+    let datePicker = $('div.datapickerBill input#frm_calendar');
+    if(datePicker.length){
+        datePicker.click();
+        await Delay(500);
+        $('div.md-drppicker.show-ranges ul li button:not(.active)').each((i, e) => {
+            e.innerText == '30 ngày trước' && e.click();
+        });
+    }
+
+    await Delay(500);
+
+    let paginator = $('mat-select[aria-label="Bản Ghi Mỗi Trang"]');
+    if(paginator.length){
+        paginator.click();
+        await Delay(500);
+        $('div.mat-select-panel mat-option:not(.mat-active)').each((i, e) => {
+            e.innerText == '100' && e.click();
+        });
+    }
+})();
 
 
 // bắn đơn viettel
