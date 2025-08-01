@@ -952,10 +952,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         });
 
         $(window.document).on('click keyup keydown', function(){
-            if(1){
-                autoAddress.value = autoAddress.value.replace(/\..*/g, '.');
-                autoAddress.dispatchEvent(customEvent('input'));
-            }
             if(fullName.value != name) {
                 fullName.value = name;
                 fullName.dispatchEvent(customEvent('input'));
@@ -1020,7 +1016,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     });
 })();
 
-
+/***
 $(window.document).ready(async function(){
     if(!isViettelPage) return;
 
@@ -1044,6 +1040,7 @@ $(window.document).ready(async function(){
         });
     }
 });
+***/
 
 
 // bắn đơn viettel
