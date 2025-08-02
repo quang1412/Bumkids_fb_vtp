@@ -622,7 +622,7 @@ const Customer_Mng = {
         }
     }
 
-    window.document.addEventListener('mousemove', _ => {
+    window.document.addEventListener('mousemove', async _ => {
         if(this.delay) return;
         this.delay = 1; setTimeout(_ => {this.delay = 0}, 1000);
 
@@ -636,15 +636,28 @@ const Customer_Mng = {
             let name = e.getAttribute('aria-label') || e.querySelector('h2')?.innerText;
             let img = e.querySelector('img')?.getAttribute('src');
 
-            if(!uid || !name || !img) continue;
             if(uid == _myFbUid && isFBpage && 0) {
-                let chatConfig = document.querySelector('div[aria-label="Cài đặt đoạn chat"]');
-                chatConfig?.click();
+                uid = null;
+                name = null;
 
-                document.querySelector('div[aria-label="Cài đặt đoạn chat"]')?.click();
-                let i = document.querySelector('div[aria-label="Cài đặt tab Chat"][role="menu"] a[role="menuitem"][href]:not([href*="help"], [href*="messages"])')?.getAttribute('href').replaceAll('/', '');
-                uid = i || uid;
+                var containers = document.querySelectorAll('div:not([hidden]) > div[aria-label*="Tin nhắn trong cuộc trò chuyện với"]');
+                containers.forEach(e => {
+                    var img = e.querySelector('div[role="gridcell"] div[role="button"] img');
+                    name = img?.getAttribute('alt');
+                    img?.click();
+                    let prfBtn = document.querySelector(`div[role="menu"][aria-label="Hành động đối với ${name}"] a[role="menuitem"][href]`);
+                    let uid = prfBtn?.getAttribute('href').replaceAll('/', '');
+                    img?.click();
+
+                    if(name && uid){
+                        alert(name + ' ' + uid);
+                    }
+                })
+            } else {
+
             }
+
+            if(!uid || !name || !img || uid == _myFbUid) continue;
 
             e.classList.add('checked');
             let contain = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
