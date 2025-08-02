@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.7.31.2
+// @version      2025.8.2.1
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -637,6 +637,14 @@ const Customer_Mng = {
             let img = e.querySelector('img')?.getAttribute('src');
 
             if(!uid || !name || !img) continue;
+            if(uid == _myFbUid && isFBpage && 0) {
+                let chatConfig = document.querySelector('div[aria-label="Cài đặt đoạn chat"]');
+                chatConfig?.click();
+
+                document.querySelector('div[aria-label="Cài đặt đoạn chat"]')?.click();
+                let i = document.querySelector('div[aria-label="Cài đặt tab Chat"][role="menu"] a[role="menuitem"][href]:not([href*="help"], [href*="messages"])')?.getAttribute('href').replaceAll('/', '');
+                uid = i || uid;
+            }
 
             e.classList.add('checked');
             let contain = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
@@ -792,7 +800,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     let vtpStyle = (
         'div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:not(:last-child){ display:none; }'+
         'div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child{ width:100%; }'+
-        '.mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray;}'+
+        '.mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray; color: white;}'+
 
         //'body.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }' +
         //'body.custom div.box-receiver div.card-body { max-height: 400px; overflow: auto; }' +
@@ -952,6 +960,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         });
 
         $(window.document).on('click keyup keydown', function(){
+            autoAddress.value = autoAddress.value.replace(/(Đ\..*)|(P\..*)|(X\..*)|(TT\..*)/g,'');
+            autoAddress.dispatchEvent(customEvent('input'));
+
             if(fullName.value != name) {
                 fullName.value = name;
                 fullName.dispatchEvent(customEvent('input'));
@@ -1057,23 +1068,24 @@ $(window.document).ready(async function(){
         let input = GM_addElement(gridItem, 'input', {class:'form-control', id:'orderIdCheckField', placeholder:'Order scanner • Quang.TD', title:'Order scanner • Quang.TD'});
         input.focus();
 
-        $(input).keydown(function(e) {
+        $(input).keydown(async function(e) {
             if (e.key !== 'Enter') return;
             let id = input.value?.trim();
-            if(!id) return;
+            if(!id || id.length < 10) return;
             let link = $('a[href*="thong-tin-don-hang"][href*="orderNumber='+id+'"]:not(.checked)');
             if(link.length){
                 link.addClass('checked');
                 let row = link.closest('tr.mat-row[role="row"]');
                 //let checkbox = row.find('label.mat-checkbox-layout');
                 row.find('label.mat-checkbox-layout')?.click();
+                await Delay(100);
                 snd_true.play();
             } else {
+                await Delay(100);
                 snd_fail.play();
             }
 
             $(input).val(id).focus().select();
-            //$(input).focus().val(null);
         });
 
     });
