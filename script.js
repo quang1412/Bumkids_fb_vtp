@@ -960,7 +960,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         });
 
         $(window.document).on('click keyup keydown', function(){
-            autoAddress.value = autoAddress.value.replace(/(Đ\..*)|(P\..*)|(X\..*)|(TT\..*)/g,'');
+            autoAddress.value = autoAddress.value.replace(/(ĐƯỜNG.*)|(P\..*)|(X\..*)|(TT\..*)/g,'');
             autoAddress.dispatchEvent(customEvent('input'));
 
             if(fullName.value != name) {
