@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.2.1
+// @version      2025.8.4.1
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -546,7 +546,7 @@ const Customer_Mng = {
             try{
                 if(!phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
 
-                if(phone != _samplePhoneNo && ( (this.viettelDraft || this.viettelPending) && !window.confirm(title + '❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?') )) return false
+                if(phone != _samplePhoneNo && ( (this.draftOd || this.penddingOd) && !window.confirm(title + '❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?') )) return false
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
