@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.4.1
+// @version      2025.8.5.0
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -522,8 +522,9 @@ const Customer_Mng = {
             }, 500);
         }
 
-        async setPhone(phone = window.prompt("Nhập sđt cho " + this.customer.name, this.customer.phone)){
+        async setPhone(phone = window.prompt("Nhập sđt cho " + this.customer.name, this.customer.phone || '0900000000')){
             if(!phone || !isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone) return;
+
             this.customer.phone = phone;
             this.refreshInfo();
             Customer_Mng.add(this.customer).catch(err => alert(err.message))
@@ -718,6 +719,7 @@ const Customer_Mng = {
 
         scrollBtn.innerText = '✨ Stop ✨';
 
+
         this.scrolling = setInterval(_ => {
             try{
                 scrollTo1(messList.scrollHeight);
@@ -726,8 +728,12 @@ const Customer_Mng = {
                 containers.forEach(container => {
                     let name = container.querySelector('div[aria-label^="Lựa chọn khác cho "]')?.getAttribute('aria-label')?.replace('Lựa chọn khác cho ', '');
                     let href = container.querySelector('a[href][role="link"]')?.getAttribute('href');
+                    let time = container.querySelector('abbr')?.getAttribute('aria-label');
 
-                    if(!href || !name) return;
+                    if(!href || !name || !time) return;
+
+                    container.classList.add('checked');
+                    console.log(name, time, `https://messenger.com/${href}`);
 
                     let top = container.offsetTop;
 
@@ -937,6 +943,10 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         $(document).keyup(function(e) {
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
                 let status = 0;
+
+                autoAddress.value = autoAddress.value.replace(/(ĐƯỜNG.*)|(phường.*)|(xã.*)|(P\..*)|(X\..*)|(TT\..*)/g,'');
+                autoAddress.dispatchEvent(customEvent('input'));
+
                 if(e.shiftKey){
                     $('#confirmCreateOrder button.btn.btn-viettel').click();
                     status = 1;
@@ -973,9 +983,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         });
 
         $(window.document).on('click keyup keydown', function(){
-            autoAddress.value = autoAddress.value.replace(/(ĐƯỜNG.*)|(P\..*)|(X\..*)|(TT\..*)/g,'');
-            autoAddress.dispatchEvent(customEvent('input'));
-
             if(fullName.value != name) {
                 fullName.value = name;
                 fullName.dispatchEvent(customEvent('input'));
