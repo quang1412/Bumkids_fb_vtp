@@ -486,15 +486,14 @@ const Customer_Mng = {
         async phoneFinder(isRun = !this.isRunning){
             this.isRunning = isRun;
 
+            this.btn_1.innerText = this.isRunning ? "Dừng" : "Tìm sđt";
+
             if(!isRun){
-                this.btn_1.innerText = "Tìm sđt";
                 clearInterval(this.loop);
                 return false;
             }
 
             clearInterval(this.loop2);
-
-            this.btn_1.innerText = "Dừng";
 
             let scrollElm = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
             let timeout = 0;
@@ -519,7 +518,7 @@ const Customer_Mng = {
                     });
 
                     if(phone){
-                        this.loop2 = setInterval(_ => span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" }), 300);
+                        this.loop2 = setInterval(_ => span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" }), 500);
                         document.addEventListener('mousemove', _ => clearInterval(this.loop2), { once: true });
 
                         let p = span.closest('div[role="presentation"]');
