@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.1111
+// @version      2025.8.1111112
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -362,8 +362,9 @@ const Customer_Mng = {
         'div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}'+
         'div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}'+
 
-        'div.__fb-dark-mode div[role="row"].scanned.has-phone0 div { color: coral !important; }'+
-        'div.__fb-dark-mode div[role="row"].scanned.has-phone1 div { color: cyan !important; }'
+        'div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"].scanned.has-phone div { font-weight: 500 !important; }'+
+        'div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"].scanned.has-phone.not-match div { color: coral !important; }'+
+        'div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"].scanned.has-phone.match div { color: cyan !important; }'
     );
 
     class InfoCard{
@@ -383,20 +384,18 @@ const Customer_Mng = {
 
             this.table = GM_addElement(card, 'table', { style: 'padding-bottom: 5px; color:white;' });
 
-            if(this.customer.uid != _myFbUid) {
-                let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
+            let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
 
-                this.btn_1 = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
-                this.btn_1.innerText = 'Tìm sđt'; this.btn_1.onclick = _ => this.phoneFinder();
+            this.btn_1 = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
+            this.btn_1.innerText = 'Tìm sđt'; this.btn_1.onclick = _ => this.phoneFinder();
 
-                let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
-                btn_2.innerText = 'Sửa sđt'; btn_2.onclick = _ => this.setPhone();
+            let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
+            btn_2.innerText = 'Sửa sđt'; btn_2.onclick = _ => this.setPhone();
 
-                let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
-                btn_3.innerText = 'Tạo đơn'; btn_3.onclick = _ => this.createOrder();
+            let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
+            btn_3.innerText = 'Tạo đơn'; btn_3.onclick = _ => this.createOrder();
 
-                this.eventsListener();
-            }
+            this.eventsListener();
 
             // get info
             this.table.innerText = 'Loading customer data...';
@@ -490,41 +489,29 @@ const Customer_Mng = {
 
                 let rows = scrollElm.querySelectorAll('div[role="row"]:not(.scanned):not(:has(div[data-scope="date_break"]))');
 
-                if(rows.length) {
-                    count = 0;
-                }
-                else {
-                    count++; scrollElm.scrollTop = 0;
-                }
+                if(rows.length) count = 0;
+                else scrollElm.scrollTop = 0; count++;
+
                 if(count == 100) return this.phoneFinder('stop'); /*** timeout ***/
 
-                for(let i = rows.length - 1; i > -1; i-- ){
+                for(let i = (rows.length - 1); i > -1; i-- ){
                     let row = rows[i];
 
                     row.classList.add('scanned');
-                    row.scrollIntoView({ behavior: "auto", block: "center", inline: "center" });
+                    row.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
 
-                    let content = row.querySelector('div[data-scope="messages_table"]');
-                    if(!content) return false;
+                    await Delay(100);
 
                     let phone = await new Promise(resolve => {
-                        let txt = content.innerText.replaceAll(/[^\w\d]/g, '');
+                        let txt = row.querySelector('div[data-scope="messages_table"]')?.innerText.replaceAll(/[^\w\d]/g, '');
                         let num = txt && txt.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
                         return resolve( !num ? false : num == _myPhone ? false : num );
                     });
 
                     if(phone){
-                        row.classList.add(phone == this.customer.phone ? 'has-phone1': 'has-phone0');
-                        try{
-                            row.style['--chat-outgoing-message-background-gradient'] = 'red';
-                            //let p = row.querySelector('div[role="presentation"] > span > div')?.closest('div[role="presentation"]');
-                            //console.log(p)
-                            //row.style.border = '1px solid red !important';
-                        } catch (error) { console.error(error) }
-
-                        row.scrollIntoView({ behavior: "auto", block: "center", inline: "center" });
-                        //row.querySelector('div[aria-label="Chi tiết và hành động"]')?.click();
-
+                        row.classList.add('has-phone', (phone == this.customer.phone ? 'match': 'not-match') );
+                        row.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+                        row.querySelector('div[aria-label="Chi tiết và hành động"]')?.click();
                         this.phoneFinder('stop');
                         break;
                     }
@@ -544,12 +531,6 @@ const Customer_Mng = {
             const {uid, phone, name} = this.customer;
             const orderInfo = { uid, phone, name };
             let title = `Tạo đơn cho ${name}\n\n`;
-
-            /***
-            if(keyState.AltLeft){
-                delete keyState.AltLeft;
-            }
-            ***/
 
             let cid = GM_getValue('lastClickCid', '');
             cid && ( orderInfo.cid = cid, title += `cid: ${orderInfo.cid}\n` );
@@ -646,27 +627,6 @@ const Customer_Mng = {
             let uid = e.getAttribute('href')?.match(/\d+/g)?.pop();
             let name = e.getAttribute('aria-label') || e.querySelector('h2')?.innerText;
             let img = e.querySelector('img')?.getAttribute('src');
-
-            if(uid == _myFbUid && isFBpage && 0) {
-                uid = null;
-                name = null;
-
-                var containers = document.querySelectorAll('div:not([hidden]) > div[aria-label*="Tin nhắn trong cuộc trò chuyện với"]');
-                containers.forEach(e => {
-                    var img = e.querySelector('div[role="gridcell"] div[role="button"] img');
-                    name = img?.getAttribute('alt');
-                    img?.click();
-                    let prfBtn = document.querySelector(`div[role="menu"][aria-label="Hành động đối với ${name}"] a[role="menuitem"][href]`);
-                    let uid = prfBtn?.getAttribute('href').replaceAll('/', '');
-                    img?.click();
-
-                    if(name && uid){
-                        alert(name + ' ' + uid);
-                    }
-                })
-            } else {
-
-            }
 
             if(!uid || !name || !img || uid == _myFbUid) continue;
 
