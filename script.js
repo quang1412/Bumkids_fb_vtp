@@ -121,20 +121,25 @@ Facebook
 
     GM_addStyle('div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}');
 
-    GM_addStyle(`/* CSS START */
-    div.infoCard {--border-color: lightgray;--bg-brightness: 1.5;--bg-toolBar: rgb(231 231 231 / 60%);--text-color: #000;min-height: 115px;display: flex;flex-direction: column;justify-content: space-between;color: var(--text-color);backdrop-filter: brightness(var(--bg-brightness)) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 8px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid var(--border-color);border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}
+    GM_addStyle(
+        'div.infoCard                     { --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgb(231 231 231 / 60%); --ifc-text-color: #333;}'+
+        'html.__fb-dark-mode div.infoCard { --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgb(79 79 79 / 60%);--ifc-text-color: #fff;}'+
 
-    html.__fb-dark-mode div.infoCard { --border-color: gray; --bg-brightness: 0.5; --bg-toolBar: rgb(79 79 79 / 60%); --text-color: whitesmoke; }
-    div.infoCard ::selection { color: red; background: yellow;}
-    div.infoCard.bottom { left: 10px; top: 64px; right: unset; bottom: unset;}
-    div.infoCard div.toolBar { text-align: center; background-color: var(--bg-toolBar); border-radius: 6px; display: flex; justify-content: space-around; }
-    div.infoCard div.toolBar a { padding: 5px; flex: 1; opacity: 1; transition: all 0.5s ease-in-out; }
-    div.infoCard div.card-bg { background: #bdc3c7; background: -webkit-linear-gradient(to right, #2c3e50, #bdc3c7); background: linear-gradient(to right, #2c3e50, #bdc3c7); z-index: -1; opacity: 0.5; }
+        'div.infoCard {min-height: 115px;display: flex;flex-direction: column;justify-content: space-between;color: var(--ifc-text-color);backdrop-filter: brightness(1.5) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 8px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid #d3d3d32b;border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}'+
 
-    div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }
-    div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }
-    `);
+        'div.infoCard div.cardBg { background: var(--ifc-bg-gradient); z-index: -1; opacity: 0.5; }'+
 
+        'div.infoCard ::selection { color: red; background: yellow;}'+
+        'div.infoCard.bottom { left: 10px; top: 64px; right: unset; bottom: unset;}'+
+
+        'div.infoCard td { color: initial }'+
+
+        'div.infoCard div.toolBar { text-align: center; background-color: var(--ifc-toolbar-bg); border-radius: 6px; display: flex; justify-content: space-around; }'+
+        'div.infoCard div.toolBar a { padding: 5px; flex: 1; opacity: 1; transition: all 0.5s ease-in-out; }'+
+
+        'div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }'+
+        'div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }'
+    );
 
     GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
 
@@ -382,14 +387,14 @@ const Customer_Mng = {
             let e2ee = (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : '');
             if(e2ee) this.customer.e2ee = e2ee;
 
-            let card = GM_addElement(container, 'div', { class: 'infoCard', 'data-fbid': this.customer.id });
-            let bg = GM_addElement(card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
+            let card = GM_addElement(container, 'div', { class: 'infoCard', 'data-uid': this.customer.uid });
+            let bg = GM_addElement(card, 'div', { class: 'cardBg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
             let quangplus = GM_addElement(card, 'small', {style: 'opacity: .5; position: absolute; top: 5px; right: 5px;'});
             quangplus.innerHTML = '<a href="https://fb.com/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>';
 
             if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') card.classList.add('bottom');
 
-            this.table = GM_addElement(card, 'table', { style: 'padding-bottom: 5px; color:white;' });
+            this.table = GM_addElement(card, 'table', { style: 'padding-bottom: 5px;' });
 
             let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
 
@@ -450,7 +455,6 @@ const Customer_Mng = {
                 this.draftOd = list.filter(od => od.ORDER_STATUS == -100).length;
 
                 await Delay();
-                //this.preOd = PreOrder_Mng.get(uid);
 
                 this.table.innerHTML = `
                 <tr style="display:none;"><td>ID:</td> <td>${uid}</td></tr>
@@ -481,14 +485,14 @@ const Customer_Mng = {
 
         async phoneFinder(isRun = !this.isRunning){
             this.isRunning = isRun;
-            let phone = 0;
 
             if(!isRun){
                 this.btn_1.innerText = "Tìm sđt";
                 clearInterval(this.loop);
-                delete this.loop;
                 return false;
             }
+
+            clearInterval(this.loop2);
 
             this.btn_1.innerText = "Dừng";
 
@@ -515,11 +519,11 @@ const Customer_Mng = {
                     });
 
                     if(phone){
-                        span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+                        this.loop2 = setInterval(_ => span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" }), 300);
+                        document.addEventListener('mousemove', _ => clearInterval(this.loop2), { once: true });
+
                         let p = span.closest('div[role="presentation"]');
                         p.style.border = '1.5px dashed ' + ( phone == this.customer.phone ? 'aqua' : 'coral');
-
-                        //await Delay(100);
 
                         this.phoneFinder(false);
                         break;
