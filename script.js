@@ -121,26 +121,6 @@ Facebook
 
     GM_addStyle('div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}');
 
-    GM_addStyle(
-        'div.infoCard                     { --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgb(231 231 231 / 60%); --ifc-text-color: #333;}'+
-        'html.__fb-dark-mode div.infoCard { --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgb(79 79 79 / 60%);--ifc-text-color: #fff;}'+
-
-        'div.infoCard {min-height: 115px;display: flex;flex-direction: column;justify-content: space-between;color: var(--ifc-text-color);backdrop-filter: brightness(1.5) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 8px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid #d3d3d32b;border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}'+
-
-        'div.infoCard div.cardBg { background: var(--ifc-bg-gradient); z-index: -1; opacity: 0.5; }'+
-
-        'div.infoCard ::selection { color: red; background: yellow;}'+
-        'div.infoCard.bottom { left: 10px; top: 64px; right: unset; bottom: unset;}'+
-
-        'div.infoCard td { color: initial }'+
-
-        'div.infoCard div.toolBar { text-align: center; background-color: var(--ifc-toolbar-bg); border-radius: 6px; display: flex; justify-content: space-around; }'+
-        'div.infoCard div.toolBar a { padding: 5px; flex: 1; opacity: 1; transition: all 0.5s ease-in-out; }'+
-
-        'div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }'+
-        'div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }'
-    );
-
     GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
 
                 // 'div[aria-label*="dưới tên"]:not([aria-label*="Trịnh Hiền"]):not(:hover) {  opacity: .5; }' +
@@ -364,13 +344,26 @@ const Customer_Mng = {
     if(!isFBpage && !isMessPage) return !1;
 
     GM_addStyle(
+        'div.infoCard                     { --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgb(231 231 231 / 60%); --ifc-text-color: #333;}'+
+        'html.__fb-dark-mode div.infoCard { --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgb(79 79 79 / 60%);--ifc-text-color: #fff;}'+
+
+        'div.infoCard {min-height: 115px;display: flex;flex-direction: column;justify-content: space-between;color: var(--ifc-text-color);backdrop-filter: brightness(1.5) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 8px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid #d3d3d32b;border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}'+
+
+        'div.infoCard div.cardBg { background: var(--ifc-bg-gradient); z-index: -1; opacity: 0.5; }'+
+
         'div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}'+
         'div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}'+
 
-        'div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"].scanned.has-phone div { text-decoration: underline cyan dashed; text-decoration-skip-ink: none;  }'+
-        'div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"].scanned.has-phone.not-match div { text-decoration-color: orange; text-decoration-style: wavy; }'+
-//        'div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"].scanned.has-phone.match div {  }'
-        ''
+        'div.infoCard ::selection { color: red; background: yellow;}'+
+        'div.infoCard.bottom { left: 10px; top: 64px; right: unset; bottom: unset;}'+
+
+        'div.infoCard td { color: initial }'+
+
+        'div.infoCard div.toolBar { text-align: center; background-color: var(--ifc-toolbar-bg); border-radius: 6px; display: flex; justify-content: space-around; }'+
+        'div.infoCard div.toolBar a { padding: 5px; flex: 1; opacity: 1; transition: all 0.5s ease-in-out; }'+
+
+        'div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }'+
+        'div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }'
     );
 
 })();
