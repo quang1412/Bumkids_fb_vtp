@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.1111112
+// @version      2025.8.1114
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -354,18 +354,25 @@ const Customer_Mng = {
 };
 (isMessPage || isFBpage) && Customer_Mng.int();
 
-// FB INFO CARD
-(function() {
+// FACEBOOK CUSTOM CSS
+(function(){
     if(!isFBpage && !isMessPage) return !1;
 
     GM_addStyle(
         'div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}'+
         'div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}'+
 
-        'div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"].scanned.has-phone div { font-weight: 500 !important; }'+
-        'div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"].scanned.has-phone.not-match div { color: coral !important; }'+
-        'div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"].scanned.has-phone.match div { color: cyan !important; }'
+        'div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"].scanned.has-phone div { text-decoration: underline cyan dashed; text-decoration-skip-ink: none;  }'+
+        'div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"].scanned.has-phone.not-match div { text-decoration-color: orange; text-decoration-style: wavy; }'+
+//        'div[aria-label^="Tin nhắn trong cuộc trò chuyện"] div[role="row"].scanned.has-phone.match div {  }'
+        ''
     );
+
+})();
+
+// FB INFO CARD
+(function() {
+    if(!isFBpage && !isMessPage) return !1;
 
     class InfoCard{
         constructor(info, container){
@@ -472,50 +479,55 @@ const Customer_Mng = {
             }
         }
 
-        async phoneFinder(isStop){
-            if(this.scanner || isStop){
+        async phoneFinder(isRun = !this.isRunning){
+            this.isRunning = isRun;
+            let phone = 0;
+
+            if(!isRun){
                 this.btn_1.innerText = "Tìm sđt";
-                clearInterval(this.scanner);
-                delete this.scanner;
+                clearInterval(this.loop);
+                delete this.loop;
+
                 return false;
             }
 
             this.btn_1.innerText = "Dừng";
 
             let scrollElm = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
-            let count = 0;
+            let timeout = 0;
 
-            this.scanner = setInterval(async _ => {
+            this.loop = setInterval(async _ => {
 
-                let rows = scrollElm.querySelectorAll('div[role="row"]:not(.scanned):not(:has(div[data-scope="date_break"]))');
+                let spans = scrollElm.querySelectorAll('div[role="row"] span[dir="auto"]:has(div):not(.scanned)');
 
-                if(rows.length) count = 0;
-                else scrollElm.scrollTop = 0; count++;
+                for(let i = spans.length; i > 0; i-- ){
+                    let span = spans[i-1];
 
-                if(count == 100) return this.phoneFinder('stop'); /*** timeout ***/
-
-                for(let i = (rows.length - 1); i > -1; i-- ){
-                    let row = rows[i];
-
-                    row.classList.add('scanned');
-                    row.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-
-                    await Delay(100);
+                    span.classList.add('scanned');
 
                     let phone = await new Promise(resolve => {
-                        let txt = row.querySelector('div[data-scope="messages_table"]')?.innerText.replaceAll(/[^\w\d]/g, '');
+                        let txt = span.innerText.replaceAll(/[^\w\d]/g, '');
                         let num = txt && txt.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
                         return resolve( !num ? false : num == _myPhone ? false : num );
                     });
 
                     if(phone){
-                        row.classList.add('has-phone', (phone == this.customer.phone ? 'match': 'not-match') );
-                        row.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-                        row.querySelector('div[aria-label="Chi tiết và hành động"]')?.click();
-                        this.phoneFinder('stop');
+                        span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+                        let p = span.closest('div[role="presentation"]');
+                        p.style.border = '1px dashed ' + ( phone == this.customer.phone ? 'aqua' : 'coral');
+
+                        //await Delay(100);
+
+                        this.phoneFinder(false);
                         break;
                     }
                 }
+
+                if(spans.length) timeout = 0;
+                else scrollElm.scrollTo({ top: 0, behavior: 'smooth' }); timeout++;
+
+                if(timeout == 100) return this.phoneFinder(false); // timeout
+
             }, 500);
         }
 
