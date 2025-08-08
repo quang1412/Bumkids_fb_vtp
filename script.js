@@ -487,7 +487,6 @@ const Customer_Mng = {
                 this.btn_1.innerText = "Tìm sđt";
                 clearInterval(this.loop);
                 delete this.loop;
-
                 return false;
             }
 
@@ -497,10 +496,14 @@ const Customer_Mng = {
             let timeout = 0;
 
             this.loop = setInterval(async _ => {
+                if(timeout == 100) return this.phoneFinder(false); // timeout
 
                 let spans = scrollElm.querySelectorAll('div[role="row"] span[dir="auto"]:has(div):not(.scanned)');
 
-                for(let i = spans.length; i > 0; i-- ){
+                if(spans.length) timeout = 0;
+                else scrollElm.scrollTo({ top: 0, behavior: 'smooth' }); timeout++;
+
+                for(let i = spans.length; i > 0; i--){
                     let span = spans[i-1];
 
                     span.classList.add('scanned');
@@ -514,7 +517,7 @@ const Customer_Mng = {
                     if(phone){
                         span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
                         let p = span.closest('div[role="presentation"]');
-                        p.style.border = '1px dashed ' + ( phone == this.customer.phone ? 'aqua' : 'coral');
+                        p.style.border = '1.5px dashed ' + ( phone == this.customer.phone ? 'aqua' : 'coral');
 
                         //await Delay(100);
 
@@ -522,12 +525,6 @@ const Customer_Mng = {
                         break;
                     }
                 }
-
-                if(spans.length) timeout = 0;
-                else scrollElm.scrollTo({ top: 0, behavior: 'smooth' }); timeout++;
-
-                if(timeout == 100) return this.phoneFinder(false); // timeout
-
             }, 500);
         }
 
