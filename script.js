@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.5.111
+// @version      2025.8.1111
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -360,7 +360,10 @@ const Customer_Mng = {
 
     GM_addStyle(
         'div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}'+
-        'div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;'
+        'div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}'+
+
+        'div.__fb-dark-mode div[role="row"].scanned.has-phone0 div { color: coral !important; }'+
+        'div.__fb-dark-mode div[role="row"].scanned.has-phone1 div { color: cyan !important; }'
     );
 
     class InfoCard{
@@ -470,20 +473,6 @@ const Customer_Mng = {
             }
         }
 
-        /***
-        var scrolllll = document.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
-var rows = scrolllll.querySelectorAll('div[role="row"]:not(:has(div[data-scope="date_break"]))');
-
-rows.forEach((row, e) => {
-	var m = row.querySelector('div[data-scope="messages_table"]');
-	var text = m?.innerText.replaceAll(/\n/g, ' ');
-	console.log(m, text);
-
-	var a = row.querySelector('div[aria-label="Chi tiết và hành động"]');
-a?.click();
-})
-        ***/
-
         async phoneFinder(isStop){
             if(this.scanner || isStop){
                 this.btn_1.innerText = "Tìm sđt";
@@ -501,14 +490,19 @@ a?.click();
 
                 let rows = scrollElm.querySelectorAll('div[role="row"]:not(.scanned):not(:has(div[data-scope="date_break"]))');
 
-                if(rows.length) count = 0;
-                else count++; scrollElm.scrollTop = 0;
+                if(rows.length) {
+                    count = 0;
+                }
+                else {
+                    count++; scrollElm.scrollTop = 0;
+                }
                 if(count == 100) return this.phoneFinder('stop'); /*** timeout ***/
 
                 for(let i = rows.length - 1; i > -1; i-- ){
                     let row = rows[i];
 
                     row.classList.add('scanned');
+                    row.scrollIntoView({ behavior: "auto", block: "center", inline: "center" });
 
                     let content = row.querySelector('div[data-scope="messages_table"]');
                     if(!content) return false;
@@ -520,15 +514,16 @@ a?.click();
                     });
 
                     if(phone){
+                        row.classList.add(phone == this.customer.phone ? 'has-phone1': 'has-phone0');
                         try{
-                            let p = row.querySelector('div[role="presentation"] > span > div')?.closest('div[role="presentation"]');
-                            console.log(p)
-                            p.style.border = '1px solid red';
-                        }
-                        catch{};
+                            row.style['--chat-outgoing-message-background-gradient'] = 'red';
+                            //let p = row.querySelector('div[role="presentation"] > span > div')?.closest('div[role="presentation"]');
+                            //console.log(p)
+                            //row.style.border = '1px solid red !important';
+                        } catch (error) { console.error(error) }
 
                         row.scrollIntoView({ behavior: "auto", block: "center", inline: "center" });
-                        row.querySelector('div[aria-label="Chi tiết và hành động"]')?.click();
+                        //row.querySelector('div[aria-label="Chi tiết và hành động"]')?.click();
 
                         this.phoneFinder('stop');
                         break;
