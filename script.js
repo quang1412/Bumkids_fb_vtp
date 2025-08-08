@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.5.0
+// @version      2025.8.5.111
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -333,11 +333,6 @@ const Customer_Mng = {
         }
         return matchs;
     },
-    getOnline: async function(uid){
-        if(!uid || uid == _myFbUid) throw new Error('Uid không hợp lệ');
-        let matchs = await GGSHEET.query('customers', 'A:Z', `SELECT A, B, C, D, E, F, G WHERE B = '${uid}' AND Z <> 'duplicate'`);
-        return matchs;
-    },
     add: async function(info){
         try{
             this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // del old id;
@@ -363,18 +358,18 @@ const Customer_Mng = {
 (function() {
     if(!isFBpage && !isMessPage) return !1;
 
-    GM_addStyle('div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}'+
-                'div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}'+
-                'div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a:is([href*="/t/"], [href*="/messages/"])::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 10px;  color: initial;  opacity: 0.5; }'+
-                'div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a[href*="/e2ee/"]::before {color:red;}');
+    GM_addStyle(
+        'div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}'+
+        'div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;'
+    );
 
     class InfoCard{
         constructor(info, container){
             this.container = container;
 
             this.customer = {...info};
-            //let e2ee = (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : '');
-            //if(e2ee) this.customer.e2ee = e2ee;
+            let e2ee = (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : '');
+            if(e2ee) this.customer.e2ee = e2ee;
 
             let card = GM_addElement(container, 'div', { class: 'infoCard', 'data-fbid': this.customer.id });
             let bg = GM_addElement(card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
@@ -404,16 +399,16 @@ const Customer_Mng = {
             this.table.innerText = 'Loading customer data...';
             Customer_Mng.get(this.customer.uid).then(res => {
 
-                let u = 0;
-                let data = res?.pop() || new Object();
-                let new_data = {...data, ...this.customer};
+                let upd = 0;
+                let data_current = res?.pop() || new Object();
+                let data_new = {...data_current, ...this.customer};
 
-                /*** check update skip 'img' 'e2ee' ***/
-                let keys = [...(Object.keys(data)), ...(Object.keys(new_data))];
-                keys.forEach(k => k != 'img' && k != 'e2ee' && data[k] != new_data[k] && u++);
-                u && Customer_Mng.add(new_data);
+                /*** check update skip 'img' ***/
+                let keys = [...(Object.keys(data_current)), ...(Object.keys(data_new))];
+                keys.forEach(k => k != 'img' && data_current[k] != data_new[k] && upd++);
+                upd && Customer_Mng.add(data_new);
 
-                this.customer = new_data;
+                this.customer = data_new;
 
             }).then(_ => {
 
@@ -475,6 +470,20 @@ const Customer_Mng = {
             }
         }
 
+        /***
+        var scrolllll = document.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
+var rows = scrolllll.querySelectorAll('div[role="row"]:not(:has(div[data-scope="date_break"]))');
+
+rows.forEach((row, e) => {
+	var m = row.querySelector('div[data-scope="messages_table"]');
+	var text = m?.innerText.replaceAll(/\n/g, ' ');
+	console.log(m, text);
+
+	var a = row.querySelector('div[aria-label="Chi tiết và hành động"]');
+a?.click();
+})
+        ***/
+
         async phoneFinder(isStop){
             if(this.scanner || isStop){
                 this.btn_1.innerText = "Tìm sđt";
@@ -482,16 +491,18 @@ const Customer_Mng = {
                 delete this.scanner;
                 return false;
             }
+
             this.btn_1.innerText = "Dừng";
-            let scroll = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
+
+            let scrollElm = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
             let count = 0;
 
             this.scanner = setInterval(async _ => {
 
-                let rows = scroll.querySelectorAll('div[role="row"]:is(.__fb-dark-mode, __fb-light-mode):not(.scanned)');
+                let rows = scrollElm.querySelectorAll('div[role="row"]:not(.scanned):not(:has(div[data-scope="date_break"]))');
 
                 if(rows.length) count = 0;
-                else count++; scroll.scrollTop = 0;
+                else count++; scrollElm.scrollTop = 0;
                 if(count == 100) return this.phoneFinder('stop'); /*** timeout ***/
 
                 for(let i = rows.length - 1; i > -1; i-- ){
@@ -499,21 +510,25 @@ const Customer_Mng = {
 
                     row.classList.add('scanned');
 
-                    let span = row.querySelector('[role="presentation"] span[dir="auto"]:not(:has(span)) ');
-                    if(!span) return false;
+                    let content = row.querySelector('div[data-scope="messages_table"]');
+                    if(!content) return false;
 
                     let phone = await new Promise(resolve => {
-                        let txt = span.innerText.replaceAll(/[^\w\d]/g, '');
+                        let txt = content.innerText.replaceAll(/[^\w\d]/g, '');
                         let num = txt && txt.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
                         return resolve( !num ? false : num == _myPhone ? false : num );
                     });
 
                     if(phone){
-                        let p = span.closest('div[role="presentation"]');
-                        p.style.border = '2px dashed ' + (phone == this.customer.phone ? 'cyan' : 'red');
+                        try{
+                            let p = row.querySelector('div[role="presentation"] > span > div')?.closest('div[role="presentation"]');
+                            console.log(p)
+                            p.style.border = '1px solid red';
+                        }
+                        catch{};
 
                         row.scrollIntoView({ behavior: "auto", block: "center", inline: "center" });
-                        row.querySelector('div[role="gridcell"][data-release-focus-from="CLICK"]')?.focus();
+                        row.querySelector('div[aria-label="Chi tiết và hành động"]')?.click();
 
                         this.phoneFinder('stop');
                         break;
