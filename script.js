@@ -121,6 +121,8 @@ Facebook
 
     GM_addStyle('div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}');
 
+    //GM_addStyle('div[aria-label="Danh sách cuộc trò chuyện"] div[role="grid"] div[role="gridcell"]:has(a[href*="/messages/e2ee"]) span{ color: coral; }')
+
     GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
 
                 // 'div[aria-label*="dưới tên"]:not([aria-label*="Trịnh Hiền"]):not(:hover) {  opacity: .5; }' +
@@ -339,7 +341,7 @@ const Customer_Mng = {
 };
 (isMessPage || isFBpage) && Customer_Mng.int();
 
-// FACEBOOK CUSTOM CSS
+// FB CSS
 (function(){
     if(!isFBpage && !isMessPage) return !1;
 
@@ -347,7 +349,7 @@ const Customer_Mng = {
         'div.infoCard { --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgba(220, 220, 220, 0.40); --ifc-text-color: #333;}'+
         'html.__fb-dark-mode div.infoCard { --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgba(0, 0, 0, 0.20); --ifc-text-color: whitesmoke;}'+
 
-        'div.infoCard {min-height: 115px; display: flex;flex-direction: column; justify-content: space-between; color: var(--ifc-text-color); backdrop-filter: brightness(1.5) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 5px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid #d3d3d32b;border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}'+
+        'div.infoCard {min-height: 115px; display: flex;flex-direction: column; justify-content: space-between; color: var(--ifc-text-color); backdrop-filter: brightness(1.5) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 8px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid #d3d3d32b;border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}'+
 
         'div.infoCard div.cardBg { background: var(--ifc-bg-gradient); z-index: -1; opacity: 0.5; }'+
 
@@ -380,7 +382,7 @@ const Customer_Mng = {
             let e2ee = (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : '');
             if(e2ee) this.customer.e2ee = e2ee;
 
-            let card = GM_addElement(container, 'div', { class: 'infoCard', 'data-uid': this.customer.uid });
+            let card = GM_addElement(container, 'div', { class: 'infoCard', 'id': 'ifc'+this.customer.uid });
             let bg = GM_addElement(card, 'div', { class: 'cardBg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
             let quangplus = GM_addElement(card, 'small', {style: 'opacity: .5; position: absolute; top: 5px; right: 5px;'});
             quangplus.innerHTML = '<a href="https://fb.com/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>';
@@ -403,7 +405,7 @@ const Customer_Mng = {
             this.eventsListener();
 
             // get info
-            this.table.innerText = 'Loading customer data...';
+            this.table.innerText = 'Tải thông tin khách hàng...';
             Customer_Mng.get(this.customer.uid).then(res => {
 
                 let upd = 0;
@@ -432,10 +434,10 @@ const Customer_Mng = {
             if(this.delay_kfbs) return;
 
             try{
-                this.table.innerText = 'Loading viettel data...';
+                this.table.innerText = 'Tải thông tin Viettel...';
 
                 let {uid, phone, addr} = this.customer;
-                if(!phone) throw new Error('chưa có số đt!');
+                if(!phone) throw new Error('Chưa có số đt!!');
 
                 // get info from Viettel Post
                 let vt = await VIETTEL.getListOrders(phone);
@@ -480,6 +482,7 @@ const Customer_Mng = {
             this.isRunning = isRun;
 
             this.btn_1.innerText = this.isRunning ? "Dừng" : "Tìm sđt";
+            this.btn_1.style.color = this.isRunning ? "coral" : "";
 
             if(!isRun){
                 clearInterval(this.loop);
@@ -492,7 +495,7 @@ const Customer_Mng = {
             let timeout = 0;
 
             this.loop = setInterval(async _ => {
-                if(timeout == 100) return this.phoneFinder(false); // timeout
+                if(timeout == 20) return this.phoneFinder(false); // timeout
 
                 let spans = scrollElm.querySelectorAll('div[role="row"] span[dir="auto"]:has(div):not(.scanned)');
 
@@ -511,7 +514,9 @@ const Customer_Mng = {
                     });
 
                     if(phone){
-                        this.loop2 = setInterval(_ => span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" }), 500);
+                        let stick = _ => span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+                        stick();
+                        this.loop2 = setInterval(stick, 300);
                         document.addEventListener('mousemove', _ => clearInterval(this.loop2), { once: true });
 
                         let p = span.closest('div[role="presentation"]');
@@ -619,7 +624,7 @@ const Customer_Mng = {
         }
     }
 
-    window.document.addEventListener('mousemove', async _ => {
+    window.document.addEventListener('mousemove', async function() {
         if(this.delay) return;
         this.delay = 1; setTimeout(_ => {this.delay = 0}, 1000);
 
@@ -633,7 +638,9 @@ const Customer_Mng = {
             let name = e.getAttribute('aria-label') || e.querySelector('h2')?.innerText;
             let img = e.querySelector('img')?.getAttribute('src');
 
-            if(!uid || !name || !img || uid == _myFbUid) continue;
+            let hasCard = window.document.querySelector('#ifc'+uid);
+
+            if(!uid || !name || !img || uid == _myFbUid || hasCard) continue;
 
             e.classList.add('checked');
             let contain = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
