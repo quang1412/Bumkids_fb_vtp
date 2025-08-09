@@ -344,10 +344,10 @@ const Customer_Mng = {
     if(!isFBpage && !isMessPage) return !1;
 
     GM_addStyle(
-        'div.infoCard                     { --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgb(231 231 231 / 60%); --ifc-text-color: #333;}'+
-        'html.__fb-dark-mode div.infoCard { --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgb(79 79 79 / 60%);--ifc-text-color: #fff;}'+
+        'div.infoCard { --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgb(255 255 255 / 60%); --ifc-text-color: #333;}'+
+        'html.__fb-dark-mode div.infoCard { --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgba(0, 0, 0, 0.20); --ifc-text-color: whitesmoke;}'+
 
-        'div.infoCard {min-height: 115px;display: flex;flex-direction: column;justify-content: space-between;color: var(--ifc-text-color);backdrop-filter: brightness(1.5) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 8px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid #d3d3d32b;border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}'+
+        'div.infoCard {min-height: 115px; display: flex;flex-direction: column; justify-content: space-between; color: var(--ifc-text-color); backdrop-filter: brightness(1.5) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 5px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid #d3d3d32b;border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}'+
 
         'div.infoCard div.cardBg { background: var(--ifc-bg-gradient); z-index: -1; opacity: 0.5; }'+
 
@@ -360,7 +360,7 @@ const Customer_Mng = {
         'div.infoCard td { color: initial }'+
 
         'div.infoCard div.toolBar { text-align: center; background-color: var(--ifc-toolbar-bg); border-radius: 6px; display: flex; justify-content: space-around; }'+
-        'div.infoCard div.toolBar a { padding: 5px; flex: 1; opacity: 1; transition: all 0.5s ease-in-out; }'+
+        'div.infoCard div.toolBar a { color: initial; padding: 5px; flex: 1; }'+
 
         'div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }'+
         'div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }'
@@ -391,13 +391,13 @@ const Customer_Mng = {
 
             let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
 
-            this.btn_1 = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
+            this.btn_1 = GM_addElement(toolBar, 'a');
             this.btn_1.innerText = 'Tìm sđt'; this.btn_1.onclick = _ => this.phoneFinder();
 
-            let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
+            let btn_2 = GM_addElement(toolBar, 'a');
             btn_2.innerText = 'Sửa sđt'; btn_2.onclick = _ => this.setPhone();
 
-            let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
+            let btn_3 = GM_addElement(toolBar, 'a');
             btn_3.innerText = 'Tạo đơn'; btn_3.onclick = _ => this.createOrder();
 
             this.eventsListener();
