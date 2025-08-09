@@ -120,8 +120,8 @@ Facebook
     if(!isFBpage && !isMessPage) return !1;
 
     GM_addStyle('div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}');
-
-    //GM_addStyle('div[aria-label="Danh sách cuộc trò chuyện"] div[role="grid"] div[role="gridcell"]:has(a[href*="/messages/e2ee"]) span{ color: coral; }')
+    GM_addStyle('div[aria-label="Công cụ soạn cuộc trò chuyện"] > div:first-child >div {display: none; }');
+    GM_addStyle('div[aria-label="Công cụ soạn cuộc trò chuyện"] div[aria-label="Chọn biểu tượng cảm xúc"] {display: none; }');
 
     GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
 
