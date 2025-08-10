@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.1115
+// @version      2025.8.1116
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -520,7 +520,7 @@ const Customer_Mng = {
                         document.addEventListener('mousemove', _ => clearInterval(this.loop2), { once: true });
 
                         let p = span.closest('div[role="presentation"]');
-                        p.style.border = '1.5px dashed ' + ( phone == this.customer.phone ? 'aqua' : 'coral');
+                        p.style.border = '2px dashed ' + ( phone == this.customer.phone ? 'aqua' : 'coral');
 
                         this.phoneFinder(false);
                         break;
@@ -542,13 +542,13 @@ const Customer_Mng = {
             const orderInfo = { uid, phone, name };
             let title = `Tạo đơn cho ${name}\n\n`;
 
-            let cid = GM_getValue('lastClickCid', '');
-            cid && ( orderInfo.cid = cid, title += `cid: ${orderInfo.cid}\n` );
+            //let cid = GM_getValue('lastClickCid', '');
+            //cid && ( orderInfo.cid = cid, title += `cid: ${orderInfo.cid}\n` );
 
             try{
                 if(!phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
 
-                if(phone != _samplePhoneNo && ( (this.draftOd || this.penddingOd) && !window.confirm(title + '❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?') )) return false
+                if(phone != _samplePhoneNo && ( (this.draftOd || this.penddingOd) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
@@ -581,7 +581,7 @@ const Customer_Mng = {
 
                 window.addEventListener('message', ({data}) => {
                     uid == data.uid && this.refreshInfo();
-                    data.uid && data.cid && GGSHEET.log('createOrder', [data.cid, data.uid ]);
+                    //data.uid && data.cid && GGSHEET.log('createOrder', [data.cid, data.uid ]);
                 }, {once: true});
             }
             catch(e){ alert(title + e.message) }
@@ -739,6 +739,7 @@ const Customer_Mng = {
 
 })();
 
+/***
 isFBpage && (function(){
     $(document).on('click',`div[role="article"][aria-label*="${_myFbName}"]`, function(){
         let url = $(this).find('li a[href*="comment_id"]')?.attr('href');
@@ -747,7 +748,7 @@ isFBpage && (function(){
         GM_setValue('lastClickCid', cid);
     });
 })();
-
+***/
 
 
 (function(){
@@ -898,7 +899,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         if(!info_encode) return false;
 
         let info = JSON.parse(decodeURIComponent(escape(window.atob(info_encode.replaceAll(' ','+')))));
-        let {uid, phone, addr, name, cid, price, prdName} = info;
+        let {uid, phone, addr, name, price, prdName} = info;
 
         if(!uid || !phone) return true;
 
@@ -919,7 +920,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             phoneNo = window.document.querySelector('input#phoneNo');
 
         window.addEventListener('beforeunload', _ => {
-            window.opener?.postMessage({uid: uid, cid: cid}, '*');
+            window.opener?.postMessage({uid: uid}, '*');
         });
 
         $(document).keyup(function(e) {
