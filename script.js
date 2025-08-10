@@ -346,8 +346,8 @@ const Customer_Mng = {
     if(!isFBpage && !isMessPage) return !1;
 
     GM_addStyle(
-        'div.infoCard { --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgba(220, 220, 220, 0.40); --ifc-text-color: #333;}'+
-        'html.__fb-dark-mode div.infoCard { --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgba(0, 0, 0, 0.20); --ifc-text-color: whitesmoke;}'+
+        'div.infoCard { --ifc-highlight-color: coral; --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgba(220, 220, 220, 0.40); --ifc-text-color: #333;}'+
+        'html.__fb-dark-mode div.infoCard { --ifc-highlight-color: yellow; --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgba(0, 0, 0, 0.20); --ifc-text-color: whitesmoke;}'+
 
         'div.infoCard {min-height: 115px; display: flex;flex-direction: column; justify-content: space-between; color: var(--ifc-text-color); backdrop-filter: brightness(1.5) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 8px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid #d3d3d32b;border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}'+
 
@@ -478,29 +478,33 @@ const Customer_Mng = {
             }
         }
 
-        async phoneFinder(isRun = !this.isRunning){
-            this.isRunning = isRun;
+        async phoneFinder(isRun = !this.isSearching){
+            this.isSearching = isRun;
 
-            this.btn_1.innerText = this.isRunning ? "Dừng" : "Tìm sđt";
-            this.btn_1.style.color = this.isRunning ? "coral" : "";
+            this.btn_1.innerText = this.isSearching ? "Dừng tìm" : "Tìm sđt";
+            this.btn_1.style.color = this.isSearching ? "var(--ifc-highlight-color)" : "";
 
-            if(!isRun){
-                clearInterval(this.loop);
+            if(!this.isSearching){
+                clearInterval(this.loopSearching);
                 return false;
             }
 
-            clearInterval(this.loop2);
+            clearInterval(this.loopStick);
 
             let scrollElm = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
-            let timeout = 0;
+            let overTime = 0;
 
-            this.loop = setInterval(async _ => {
-                if(timeout == 20) return this.phoneFinder(false); // timeout
+            let loopFn = async _ => {
+                if(overTime >= 50) return this.phoneFinder(false); // overTime
 
                 let spans = scrollElm.querySelectorAll('div[role="row"] span[dir="auto"]:has(div):not(.scanned)');
 
-                if(spans.length) timeout = 0;
-                else scrollElm.scrollTo({ top: 0, behavior: 'smooth' }); timeout++;
+                if(!spans.length) {
+                    overTime++;
+                    return scrollElm.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+
+                overTime = 0;
 
                 for(let i = spans.length; i > 0; i--){
                     let span = spans[i-1];
@@ -516,8 +520,8 @@ const Customer_Mng = {
                     if(phone){
                         let stick = _ => span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
                         stick();
-                        this.loop2 = setInterval(stick, 300);
-                        document.addEventListener('mousemove', _ => clearInterval(this.loop2), { once: true });
+                        this.loopStick = setInterval(stick, 300);
+                        document.addEventListener('mousemove', _ => clearInterval(this.loopStick), { once: true });
 
                         let p = span.closest('div[role="presentation"]');
                         p.style.border = '2px dashed ' + ( phone == this.customer.phone ? 'aqua' : 'coral');
@@ -526,7 +530,11 @@ const Customer_Mng = {
                         break;
                     }
                 }
-            }, 500);
+
+            }
+            loopFn();
+            this.loopSearching = setInterval(loopFn, 200);
+
         }
 
         async setPhone(phone = window.prompt("Nhập sđt cho " + this.customer.name, this.customer.phone || '0900000000')){
