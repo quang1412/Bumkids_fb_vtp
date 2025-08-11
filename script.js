@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.1116
+// @version      2025.8.1117
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -38,9 +38,8 @@ const _myPhone = '0966628989', _myFbName = 'Trịnh Hiền', _myFbUsername = 'hi
       $ = (window.$ || window.jQuery);
 
 const isFBpage = window.location.host === 'www.facebook.com';
-const isMessPage = window.location.host === 'www.messenger.com';
+const isMessPage = window.location.host === 'www.messenger.com' || window.location.pathname.includes('/messages/');
 const isViettelPage = window.location.host === 'viettelpost.vn'
-let allowPreOrder = false;
 
 function Delay(ms = 1000) { return new Promise(resolve => setTimeout(resolve, ms)) }
 //var csv is the CSV file with headers
@@ -353,11 +352,14 @@ const Customer_Mng = {
 
         'div.infoCard div.cardBg { background: var(--ifc-bg-gradient); z-index: -1; opacity: 0.5; }'+
 
-        'div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}'+
-        'div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}'+
+        'div.infoCard table td {white-space: nowrap;  padding-right: 10px;}'+
+        'div.infoCard table td:last-child {white-space: nowrap;  width: 100%;}'+
+        'div.infoCard table td.long_text {  overflow: clip;  direction: rtl;  max-width: 150px;  display: block;  white-space: normal;  text-wrap: nowrap;  text-overflow: ellipsis;  }'+
 
         'div.infoCard ::selection { color: red; background: yellow;}'+
-        'div.infoCard.bottom { left: 10px; top: 64px; right: unset; bottom: unset;}'+
+
+        'div[aria-label^="Biểu ngữ Tin nhắn đã ghim"] > div { flex-direction: row-reverse; text-align: right; }'+
+        'div:has(div[role="main"][aria-label^="Cuộc trò chuyện với"]) div.infoCard { left: 27px; top: 64px; right: unset; bottom: unset; }'+
 
         'div.infoCard div.toolBar { text-align: center; background-color: var(--ifc-toolbar-bg); border-radius: 6px; display: flex; justify-content: space-around; }'+
         'div.infoCard div.toolBar a { color: initial; padding: 5px; flex: 1; }'+
@@ -371,7 +373,7 @@ const Customer_Mng = {
 // FB INFO CARD
 (function() {
     if(!isFBpage && !isMessPage) return !1;
-
+// overflow: clip;  direction: rtl;  max-width: 160px;  display: block;  white-space: normal;  text-wrap: nowrap;  text-overflow: ellipsis;
     class InfoCard{
         constructor(info, container){
             this.container = container;
@@ -385,7 +387,7 @@ const Customer_Mng = {
             let quangplus = GM_addElement(card, 'small', {style: 'opacity: .5; position: absolute; top: 5px; right: 5px;'});
             quangplus.innerHTML = '<a href="https://fb.com/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>';
 
-            if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') card.classList.add('bottom');
+            //if(isMessPage) card.classList.add('bottom');
 
             this.table = GM_addElement(card, 'table', { style: 'padding-bottom: 5px;' });
 
@@ -443,11 +445,12 @@ const Customer_Mng = {
                 if(vt.error) throw new Error('Viettel: ' + vt.message);
 
                 let list = vt.data.data.LIST_ORDER;
+
                 let total = vt.data.data.TOTAL;
                 this.penddingOd = list.filter(od => !!~([-108,100,102,103,104]).indexOf(od.ORDER_STATUS)).length;
                 this.draftOd = list.filter(od => od.ORDER_STATUS == -100).length;
 
-                await Delay();
+                let lastestAddr = list[0]?.RECEIVER_ADDRESS;
 
                 this.table.innerHTML = `
                 <tr style="display:none;"><td>ID:</td> <td>${uid}</td></tr>
@@ -462,7 +465,7 @@ const Customer_Mng = {
                     </a>
                   </td>
                 </tr>
-                <tr> <td>Đchi: </td> <td>${addr || '---'}</td> </tr>
+                <tr> <td>Đchi: </td> <td class="long_text">${lastestAddr || '---'}</td> </tr>
                 <tr> <td>Tags: </td> <td>---</td> </tr>`;
             } catch(e){
 
@@ -478,7 +481,6 @@ const Customer_Mng = {
 
         async phoneFinder(isRun = !this.isSearching){
             this.isSearching = isRun;
-
             this.btn_1.innerText = this.isSearching ? "Dừng tìm" : "Tìm sđt";
             this.btn_1.style.color = this.isSearching ? "var(--ifc-highlight-color)" : "";
 
@@ -488,9 +490,9 @@ const Customer_Mng = {
             }
 
             clearInterval(this.loopStick);
+            let overTime = 0;
 
             let scrollElm = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
-            let overTime = 0;
 
             let loopFn = async _ => {
                 if(overTime >= 50) return this.phoneFinder(false); // overTime
@@ -528,11 +530,9 @@ const Customer_Mng = {
                         break;
                     }
                 }
-
             }
             loopFn();
             this.loopSearching = setInterval(loopFn, 200);
-
         }
 
         async setPhone(phone = window.prompt("Nhập sđt cho " + this.customer.name, this.customer.phone || '0900000000')){
@@ -595,7 +595,7 @@ const Customer_Mng = {
 
         async eventsListener(){
             this.container.addEventListener("click", function(e){
-                let target = e.target.closest('div[aria-label="Trả lời"][role="button"]'); // Or any other selector.
+                let target = e.target.closest('div[aria-label="Trả lời"][role="button"]');
                 target && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
             });
 
@@ -613,9 +613,8 @@ const Customer_Mng = {
             });
 
             // Set phone by mouse selection
+            /***
             this.container.addEventListener('mouseup', _ => {
-
-
                 if(!window.getSelection) return alert('⚠ window.getSelection is undifined');
                 let phone = window.getSelection().toString().replaceAll(/\D/g,``);
 
@@ -627,6 +626,7 @@ const Customer_Mng = {
                     this.setPhone(phone);
                 }
             });
+            ***/
         }
     }
 
@@ -1035,33 +1035,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         });
     });
 })();
-
-/***
-$(window.document).ready(async function(){
-    if(!isViettelPage) return;
-
-    let paginator = $('mat-select[aria-label="Bản Ghi Mỗi Trang"]');
-    if(paginator.length){
-        paginator.click();
-        await Delay(500);
-        $('div.mat-select-panel mat-option:not(.mat-active)').each((i, e) => {
-            e.innerText == '100' && e.click();
-        });
-    }
-
-    await Delay(500);
-
-    let datePicker = $('div.datapickerBill input#frm_calendar');
-    if(datePicker.length){
-        datePicker.click();
-        await Delay(500);
-        $('div.md-drppicker.show-ranges ul li button:not(.active)').each((i, e) => {
-            e.innerText == '30 ngày trước' && e.click();
-        });
-    }
-});
-***/
-
 
 // bắn đơn viettel
 (function(){
