@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.1117
+// @version      2025.8.1118
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -209,22 +209,20 @@ const VIETTEL = {
                 "REASON_RETURN": null,
                 "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,101,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570,516,517",
             };
-            this.getReq(url, json ).then(resolve).catch(e => {
+            this.postReq(url, json ).then(resolve).catch(e => {
                 alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
                 reject(e);
             });
         })
     },
-    /***
     getKyc: function(phone){
         return new Promise((resolve, reject) => {
-            this.postReq('https://io.okd.viettelpost.vn/order/v1.0/kyc/'+phone).then(resolve).catch(e => {
+            this.getReq('https://io.okd.viettelpost.vn/order/v1.0/kyc/'+phone).then(resolve).catch(e => {
                 alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
                 reject(e);
             });
         })
     },
-    ***/
     getOrderPrint: function(id){
         return new Promise((resolve, reject) => {
             if(!id) return reject(new Error('Chưa có sdt'));
@@ -462,8 +460,8 @@ const Customer_Mng = {
 
                 let lastestAddr = list[0]?.RECEIVER_ADDRESS;
 
-               // let kyc = await VIETTEL.getKyc(phone);
-                //console.log(kyc);
+                let kyc = await VIETTEL.getKyc(phone);
+                console.log(kyc);
 
                 this.table.innerHTML = `
                 <tr style="display:none;"><td>ID:</td> <td>${uid}</td></tr>
