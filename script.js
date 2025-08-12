@@ -458,26 +458,28 @@ const Customer_Mng = {
                 this.penddingOd = list.filter(od => !!~([-108,100,102,103,104]).indexOf(od.ORDER_STATUS)).length;
                 this.draftOd = list.filter(od => od.ORDER_STATUS == -100).length;
 
-                let lastestAddr = list[0]?.RECEIVER_ADDRESS;
+                let lastestAddr = list[0]?.RECEIVER_ADDRESS.toLowerCase();
 
                 let kyc = await VIETTEL.getKyc(phone);
-                console.log(kyc);
+                let kycStr = kyc.deliveryRate > -1.0 ? (`${100/kyc.deliveryRate}% • ${kyc.order501}/${kyc.totalOrder}`) : '---';
 
                 this.table.innerHTML = `
                 <tr style="display:none;"><td>ID:</td> <td>${uid}</td></tr>
-                <tr> <td>Số điện thoại: </td> <td>${phone}</td> </tr>
                 <tr>
-                  <td>Đơn viettel 30ng: </td>
+                  <td>Số điện thoại:</td> <td>${phone}</td>
+                </tr>
+                <tr>
+                  <td>Đơn Viettel:</td>
                   <td>
                     <a href="https://viettelpost.vn/quan-ly-van-don?q=1&p=${btoa(phone)}" target="_blank" style="color:inherit; text-decoration: underline;">
-                    ${total} đơn
-                    ${this.draftOd ? `&nbsp<span style="color:yellow"> • có đơn nháp <small>(${this.draftOd})</small></span>` : ''}
-                    ${this.penddingOd ? `&nbsp<span style="color:coral"> • có đơn chờ giao <small>(${this.penddingOd})</small></span>` : ''}
+                      <span>${total} đơn </span>&nbsp
+                      ${this.draftOd ? `<span style="color:yellow"> • có ${this.draftOd} đơn nháp</span>` : ''}
+                      ${this.penddingOd ? `<span style="color:coral"> • có ${this.penddingOd} đơn chờ giao</span>` : ''}
                     </a>
                   </td>
                 </tr>
-                <tr> <td>Đchi: </td> <td class="long_text">${lastestAddr || '---'}</td> </tr>
-                <tr> <td>Tags: </td> <td>---</td> </tr>`;
+                <tr> <td>Kyc:</td> <td>${kycStr}</td> </tr>
+                <tr> <td>Tags:</td> <td>---</td> </tr>`;
             } catch(e){
 
                 this.table.innerText = '⚠️ ' + e.message;
