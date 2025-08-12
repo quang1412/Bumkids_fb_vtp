@@ -415,15 +415,16 @@ const Customer_Mng = {
             // get info
             this.table.innerText = 'Tải thông tin khách hàng...';
             Customer_Mng.get(this.customer.uid).then(res => {
-
-                let upd = 0;
                 let data_current = res?.pop() || new Object();
                 let data_new = {...data_current, ...this.customer};
 
-                /*** check update skip 'img' ***/
+                /***
+                //check update skip 'img'
+                let upd = 0;
                 let keys = [...(Object.keys(data_current)), ...(Object.keys(data_new))];
                 keys.forEach(k => k != 'img' && data_current[k] != data_new[k] && upd++);
                 upd && Customer_Mng.add(data_new);
+                ***/
 
                 this.customer = data_new;
 
@@ -461,7 +462,7 @@ const Customer_Mng = {
                 let lastestAddr = list[0]?.RECEIVER_ADDRESS.toLowerCase();
 
                 let kyc = await VIETTEL.getKyc(phone);
-                let kycStr = kyc.deliveryRate > -1.0 ? (`${100/kyc.deliveryRate}% • ${kyc.order501}/${kyc.totalOrder}`) : '---';
+                let kycStr = kyc.deliveryRate > -1.0 ? (`${(Math.round(kyc.deliveryRate*1000)/10)}% • ${kyc.order501}/${kyc.totalOrder}`) : '---';
 
                 this.table.innerHTML = `
                 <tr style="display:none;"><td>ID:</td> <td>${uid}</td></tr>
