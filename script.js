@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.1118
+// @version      2025.8.02
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -478,7 +478,7 @@ const Customer_Mng = {
                     </a>
                   </td>
                 </tr>
-                <tr> <td>Kyc:</td> <td>${kycStr}</td> </tr>
+                <tr> <td>Tỷ lệ nhận:</td> <td>${kycStr}</td> </tr>
                 <tr> <td>Tags:</td> <td>---</td> </tr>`;
             } catch(e){
 
