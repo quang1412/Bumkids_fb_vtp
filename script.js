@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.02
+// @version      2025.8.03
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -535,7 +535,10 @@ const Customer_Mng = {
                         let stick = _ => span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
                         stick();
                         this.loopStick = setInterval(stick, 300);
-                        document.addEventListener('mousemove', _ => clearInterval(this.loopStick), { once: true });
+
+                        document.addEventListener('mousemove', _ => {
+                            setTimeout(_ => clearInterval(this.loopStick), 1000)
+                        }, { once: true });
 
                         let p = span.closest('div[role="presentation"]');
                         p.style.border = '2px dashed ' + ( phone == this.customer.phone ? 'aqua' : 'coral');
