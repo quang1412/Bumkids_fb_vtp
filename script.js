@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.03
+// @version      2025.8.15
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -948,7 +948,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
                 let status = 0;
 
-                autoAddress.value = autoAddress.value.replace(/(ĐƯỜNG.*)|(phường.*)|(xã.*)|(P\..*)|(X\..*)|(TT\..*)/g,'');
+                autoAddress.value = autoAddress.value.toLowerCase().replace(/((phường)|(xã)|(thị\strấn)|(p\.)|(x\.)|(tt\.)).*/g,'');
                 autoAddress.dispatchEvent(customEvent('input'));
 
                 if(e.shiftKey){
