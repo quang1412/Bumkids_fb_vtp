@@ -1033,7 +1033,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 $.each(buttons, (i, btn) => {
                     if(btn.innerText != 'Duyệt đơn') return;
                     btn.click();
-                    setTimeout(_ => $('div#vtpBillModalOrderApproval.modal.show button.btn-confirm:first-child')?.focus(), 200);
+                    setTimeout(_ => $('div#vtpBillModalOrderApproval.modal.show div.col-6:first-child button')?.focus(), 200);
                 });
             }
         });
