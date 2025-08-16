@@ -454,10 +454,15 @@ const Customer_Mng = {
                 if(vt.error) throw new Error('Viettel: ' + vt.message);
 
                 let list = vt.data.data.LIST_ORDER;
-
                 let total = vt.data.data.TOTAL;
-                this.penddingOd = list.filter(od => !!~([-108,100,102,103,104]).indexOf(od.ORDER_STATUS)).length;
-                this.draftOd = list.filter(od => od.ORDER_STATUS == -100).length;
+
+                let pendding = list.filter(od => !!~([-108,100,102,103,104]).indexOf(od.ORDER_STATUS));
+                this.penddingOrderCount = pendding.length;
+                let draf = list.filter(od => od.ORDER_STATUS == -100);
+                this.draftOrderCount = draf.length;
+
+                let title = pendding.map(o => o.PRODUCT_NAME).join('\n ');
+                title += draf.map(o => o.PRODUCT_NAME).join('\n ');
 
                 let lastestAddr = list[0]?.RECEIVER_ADDRESS.toLowerCase();
 
@@ -472,10 +477,10 @@ const Customer_Mng = {
                 <tr>
                   <td>Đơn Viettel:</td>
                   <td>
-                    <a href="https://viettelpost.vn/quan-ly-van-don?q=1&p=${btoa(phone)}" target="_blank" style="color:inherit; text-decoration: underline;">
+                    <a href="https://viettelpost.vn/quan-ly-van-don?q=1&p=${btoa(phone)}" target="_blank" style="color:inherit; text-decoration: underline;" title="${title}">
                       <span>${total} đơn </span>&nbsp
-                      ${this.draftOd ? `<span style="color:yellow"> • có ${this.draftOd} đơn nháp</span>` : ''}
-                      ${this.penddingOd ? `<span style="color:coral"> • có ${this.penddingOd} đơn chờ giao</span>` : ''}
+                      ${this.draftOrderCount ? `<span style="color:yellow"> • có ${this.draftOrderCount} đơn nháp</span>` : ''}
+                      ${this.penddingOrderCount ? `<span style="color:coral"> • có ${this.penddingOrderCount} đơn chờ giao</span>` : ''}
                     </a>
                   </td>
                 </tr>
@@ -536,9 +541,7 @@ const Customer_Mng = {
                         stick();
                         this.loopStick = setInterval(stick, 300);
 
-                        document.addEventListener('mousemove', _ => {
-                            setTimeout(_ => clearInterval(this.loopStick), 1000)
-                        }, { once: true });
+                        this.container.addEventListener('mousemove', _ => clearInterval(this.loopStick) , { once: true });
 
                         let p = span.closest('div[role="presentation"]');
                         p.style.border = '2px dashed ' + ( phone == this.customer.phone ? 'aqua' : 'coral');
@@ -571,7 +574,7 @@ const Customer_Mng = {
             try{
                 if(!phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
 
-                if(phone != _samplePhoneNo && ( (this.draftOd || this.penddingOd) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
+                if(phone != _samplePhoneNo && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
