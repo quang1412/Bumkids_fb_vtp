@@ -937,8 +937,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         if(!uid || !phone) return true;
 
         let col1 = $('div.box-receiver, div.box-sender').parent();
-        $('div.box-sender').appendTo(col1);
-        $('div.box-receiver').prependTo(col1);
+        //$('div.box-sender').appendTo(col1);
+        //$('div.box-receiver').prependTo(col1);
         window.document.body.classList.add('custom');
         //s.prependTo(p);
 
@@ -1008,7 +1008,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         });
 
         // đặt ngày lấy hàng delay 1 ngày;
-        window.document.querySelector('div.form-group ul li:nth-last-child(2) input[type="radio"][name="day"]')?.click()
+        window.document.querySelector('div.form-group ul li:last-child input[type="radio"][name="day"]')?.click()
 
         let defaultInventory = GM_getValue('defaultInventory', '');
         defaultInventory && inventorySelector.querySelectorAll('option').forEach(e => {
@@ -1030,6 +1030,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         phoneNo.click();
         phoneNo.focus();
+        phoneNo.scrollIntoView({ behavior: 'auto', block: 'center' });
 
         setInterval(updateCOD, 500);
     });
