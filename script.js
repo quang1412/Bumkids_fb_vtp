@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.16
+// @version      2025.8.28
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -100,10 +100,18 @@ function makeid(length = 12) {
 });
 
 (isMessPage || isFBpage) && GM_registerMenuCommand("Đồng bộ lại" , async _ => {
-    await Customer_Mng.sync();
-    // await FbPost_Mng.sync(); await PreOrder_Mng.sync();
+    await Customer_Mng.sync
     GM_setValue('do_reload_page', new Date().getTime());
 })
+
+isViettelPage && GM_registerMenuCommand("Đặt kho lấy mặc định" , async _ => {
+    let current = GM_getValue('defaultInventory', '');
+    let input = window.prompt('Nhập tên người gửi muốn đặt mặc định.'+(current ? ('\nHiện tại đang là: '+current) : ''), current);
+    if (input !== null && input !== "") {
+        GM_setValue('defaultInventory', input);
+    }
+})
+
 
 var keyState = {};
 function keyHandler(e){ keyState[e.code] = e.type === "keydown" }
@@ -942,7 +950,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             orderNo = window.document.querySelector('input#orderNo'),
             fullName = window.document.querySelector('input#fullName'),
             autoAddress = window.document.querySelector('input#autoAddress'),
-            phoneNo = window.document.querySelector('input#phoneNo');
+            phoneNo = window.document.querySelector('input#phoneNo'),
+            inventorySelector = window.document.querySelector('select#selectGroupAddress');
+
 
         window.addEventListener('beforeunload', _ => {
             window.opener?.postMessage({uid: uid}, '*');
@@ -994,9 +1004,17 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             if(fullName.value != name) {
                 fullName.value = name;
                 fullName.dispatchEvent(customEvent('input'));
-                //fullName.dispatchEvent(customEvent('change'));
             };
         });
+
+        // đặt ngày lấy hàng delay 1 ngày;
+        window.document.querySelector('div.form-group ul li:nth-last-child(2) input[type="radio"][name="day"]')?.click()
+
+        let defaultInventory = GM_getValue('defaultInventory', '');
+        defaultInventory && inventorySelector.querySelectorAll('option').forEach(e => {
+            if(!e.innerText.includes(defaultInventory)) return true;
+            inventorySelector.value = e.value;
+        })
 
         fullName.setAttribute('disabled', 'true');
         phoneNo.value = phone;
@@ -1006,7 +1024,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         autoAddress.value = isSample ? 'Đổi địa chỉ ❌❌❌, Ô chợ dừa, đống đa' : '';
         orderNo.value = [uid, makeid(5)].join('-');
 
-        [productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
+        [inventorySelector, productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
             ['click', 'input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
         });
 
