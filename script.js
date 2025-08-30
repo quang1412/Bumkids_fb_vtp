@@ -1007,14 +1007,20 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             };
         });
 
-        // đặt ngày lấy hàng delay 1 ngày;
-        window.document.querySelector('div.form-group ul li:last-child input[type="radio"][name="day"]')?.click()
+        // đặt ngày lấy hàng ;
+        window.document.querySelector('div.form-group ul li:nth-last-child(1) input[type="radio"][name="day"]')?.click()
 
         let defaultInventory = GM_getValue('defaultInventory', '');
-        defaultInventory && inventorySelector.querySelectorAll('option').forEach(e => {
-            if(!e.innerText.includes(defaultInventory)) return true;
-            inventorySelector.value = e.value;
-        })
+        let options = $('select#selectGroupAddress option');
+        defaultInventory && options.each((i, e) => {
+            let text = e.innerText?.trim();
+            if(text.includes(defaultInventory)){
+                alert(e.value);
+                inventorySelector.value = e.value;
+                return false;
+            }
+            (i+1 == options.length) && alert('defaultInventory not found!');
+        });
 
         fullName.setAttribute('disabled', 'true');
         phoneNo.value = phone;
