@@ -121,6 +121,7 @@ Facebook
     GM_addStyle('div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}');
     GM_addStyle('div[aria-label="Công cụ soạn cuộc trò chuyện"] > div:first-child >div {display: none; }');
     GM_addStyle('div[aria-label="Công cụ soạn cuộc trò chuyện"] div[aria-label="Chọn biểu tượng cảm xúc"] {display: none; }');
+    GM_addStyle('input:is([aria-label="Tìm kiếm"], [aria-label="Tìm kiếm trên Messenger"]) ~ span > div[aria-label="Xóa"] {display: none; }');
 
     GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
 
@@ -163,7 +164,7 @@ const VIETTEL = {
                 url: url,
                 method: "GET",
                 synchronous: true,
-                headers: { 'Authorization': 'Bearer ' + this.token },
+                headers: { 'Authorization': 'Bearer ' + this.token, 'token': this.token },
                 onload: function (response) {
                     return resolve(JSON.parse(response.responseText))
                 },
@@ -245,7 +246,15 @@ const VIETTEL = {
                 reject(e);
             });
         })
-    }
+    },
+    getOrderInfo: function(id){
+        return new Promise((resolve, reject) => {
+            this.getReq('https://api.viettelpost.vn/api/setting/getOrderDetailForWeb?OrderNumber='+id).then(resolve).catch(e => {
+                alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
+                reject(e);
+            });
+        })
+    },
 };
 VIETTEL.init();
 
@@ -686,14 +695,14 @@ const Customer_Mng = {
 })();
 
 // MESSENGER SEARCH WHEN FOCUS;
-(function(){
+(function($){
     if(!isMessPage) return false;
 
     window.addEventListener("focus", function (e) {
         let input = document.querySelector('input[type="search"][aria-label="Tìm kiếm trên Messenger"], input[type="text"][aria-label="Tìm kiếm"]');
         input?.focus();
         input?.select();
-    })
+    });
 })();
 
 // MESSENGER AUTO SCROLL BUTTON;
