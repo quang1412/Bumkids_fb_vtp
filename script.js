@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.8.28
+// @version      2025.9.8
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -102,15 +102,7 @@ function makeid(length = 12) {
 (isMessPage || isFBpage) && GM_registerMenuCommand("Đồng bộ lại" , async _ => {
     await Customer_Mng.sync
     GM_setValue('do_reload_page', new Date().getTime());
-})
-
-isViettelPage && GM_registerMenuCommand("Đặt kho lấy mặc định" , async _ => {
-    let current = GM_getValue('defaultInventory', '');
-    let input = window.prompt('Nhập tên người gửi muốn đặt mặc định.'+(current ? ('\nHiện tại đang là: '+current) : ''), current);
-    if (input !== null && input !== "") {
-        GM_setValue('defaultInventory', input);
-    }
-})
+});
 
 
 var keyState = {};
@@ -546,11 +538,22 @@ const Customer_Mng = {
                     });
 
                     if(phone){
-                        let stick = _ => span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+                        let stick = function(){ span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" }) };
                         stick();
-                        this.loopStick = setInterval(stick, 300);
+                        this.loopStick = setInterval( stick , 300 );
+                        //await Delay(100);
+                        setTimeout(() => {
+                            this.container.addEventListener('click', () => {
+                                clearInterval(this.loopStick)
+                            } , { once: true });
+                        }, 100);
 
-                        this.container.addEventListener('mousemove', _ => clearInterval(this.loopStick) , { once: true });
+                        /***
+                        this.container.addEventListener('click', _ => clearInterval(this.loopStick) , { once: true });
+                        setTimeout(_ => {
+                            this.container.addEventListener('mousemove', _ => clearInterval(this.loopStick) , { once: true });
+                        }, 3000);
+                        ***/
 
                         let p = span.closest('div[role="presentation"]');
                         p.style.border = '2px dashed ' + ( phone == this.customer.phone ? 'aqua' : 'coral');
@@ -865,20 +868,21 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 let price = Number($('input#productPrice')?.val()?.replaceAll(/\D/g, '') || 0),
                     fee = Number($('div.text-price-right')?.text()?.replaceAll(/\D/g, '') || 0);
 
-                if(!fee || window.lastPrice == price) return 0;
-
                 let tax = Number((price + fee) / 100 * 1.5);
 
                 let total = (price + fee + tax);
+
                 if(price == 0) total = 0;
-                else if(price == 1000) total = fee;
+                else if(price == 1000) {total = fee;}
+
+                if(!fee || window.lastTotal == total) return 0;
 
                 let input_cod = window.document.querySelector('input#cod');
                 input_cod.value = Math.round(total);
                 input_cod.dispatchEvent(customEvent('input'));
                 input_cod.dispatchEvent(customEvent('change'));
 
-                window.lastPrice = price;
+                window.lastTotal = total;
 
                 return true;
             } catch(e){
@@ -965,6 +969,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 autoAddress.value = autoAddress.value.toLowerCase().replace(/((phường)|(xã)|(thị\strấn)|(p\.)|(x\.)|(tt\.)).*/g,'');
                 autoAddress.dispatchEvent(customEvent('input'));
 
+                let inventoryID = $('select#selectGroupAddress')?.val();
+                inventoryID && GM_setValue('lastInventoryID', inventoryID);
+
                 if(e.shiftKey){
                     $('#confirmCreateOrder button.btn.btn-viettel').click();
                     status = 1;
@@ -1007,20 +1014,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             };
         });
 
-        // đặt ngày lấy hàng ;
-        window.document.querySelector('div.form-group ul li:nth-last-child(1) input[type="radio"][name="day"]')?.click()
-
-        let defaultInventory = GM_getValue('defaultInventory', '');
-        let options = $('select#selectGroupAddress option');
-        defaultInventory && options.each((i, e) => {
-            let text = e.innerText?.trim();
-            if(text.includes(defaultInventory)){
-                alert(e.value);
-                inventorySelector.value = e.value;
-                return false;
-            }
-            (i+1 == options.length) && alert('defaultInventory not found!');
-        });
+        let inventoryID = await GM_getValue('lastInventoryID', '');
+        inventoryID && $(inventorySelector).val(inventoryID);
 
         fullName.setAttribute('disabled', 'true');
         phoneNo.value = phone;
@@ -1031,14 +1026,15 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         orderNo.value = [uid, makeid(5)].join('-');
 
         [inventorySelector, productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
-            ['click', 'input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
+            //['click', 'input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
+            ['input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
         });
 
         phoneNo.click();
         phoneNo.focus();
         phoneNo.scrollIntoView({ behavior: 'auto', block: 'center' });
 
-        setInterval(updateCOD, 500);
+        setInterval(updateCOD, 1000);
     });
 
 })();
