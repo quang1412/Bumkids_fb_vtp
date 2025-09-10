@@ -978,8 +978,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 autoAddress.value = autoAddress.value.toLowerCase().replace(/((phường)|(xã)|(thị\strấn)|(p\.)|(x\.)|(tt\.)).*/g,'');
                 autoAddress.dispatchEvent(customEvent('input'));
 
-                let inventoryID = $('select#selectGroupAddress')?.val();
+                let inventoryID = inventorySelector.value;
                 inventoryID && GM_setValue('lastInventoryID', inventoryID);
+                window.prompt(inventoryID);
 
                 if(e.shiftKey){
                     $('#confirmCreateOrder button.btn.btn-viettel').click();
@@ -1023,20 +1024,23 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             };
         });
 
-        let inventoryID = await GM_getValue('lastInventoryID', '');
-        inventoryID && $(inventorySelector).val(inventoryID);
+        let inventoryId = await GM_getValue('lastInventoryID');
+        if(inventoryId){
+            inventorySelector.value = inventoryId;
+            inventorySelector.dispatchEvent(new Event('change', { bubbles: true }));
+        }
 
         fullName.setAttribute('disabled', 'true');
         phoneNo.value = phone;
         productPrice.value = price;
         productWeight.value = 1000;
-        productName.value = prdName + (isSample ? '  ❌ ❌ ❌' : '');
-        autoAddress.value = isSample ? 'Đổi địa chỉ ❌❌❌, Ô chợ dừa, đống đa' : '';
+        productName.value = (isSample ? '❌ ❌ ❌' : '') + prdName;
+        autoAddress.value = isSample ? ' ❌ Đổi địa chỉ, Ô chợ dừa, đống đa' : '';
         orderNo.value = [uid, makeid(5)].join('-');
 
-        [inventorySelector, productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
-            //['click', 'input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
-            ['input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
+        [ productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
+            ['click', 'input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
+            //['input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
         });
 
         phoneNo.click();
@@ -1052,35 +1056,37 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 (function(){
     if(!isViettelPage) return;
 
-    (function addHotKeys(){
-        $(document).on('keydown', function(e) {
-            let buttons = $('button.vtp-bill-btn-action');
-            if(!buttons.length) return;
-            if(e.key == 'i'){
-                $.each(buttons, (i, btn) => {
-                    if(btn.innerText != 'In đơn') return;
-                    btn.click();
-                    setTimeout(_ => $('div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child')?.focus(), 200);
-                });
-            }
-            if(e.key == 'd'){
-                $.each(buttons, (i, btn) => {
-                    if(btn.innerText != 'Duyệt đơn') return;
-                    btn.click();
-                    setTimeout(_ => $('div#vtpBillModalOrderApproval.modal.show div.col-6:first-child button')?.focus(), 200);
-                });
-            }
-        });
-    })();
+    let onKeyDown = function(e){
+        let buttons = $('div.mat-menu-content button.vtp-bill-btn-action');
+        if(!buttons.length) return;
+        if(e.key == 'i'){
+            e.preventDefault();
+            $.each(buttons, (i, btn) => {
+                if(btn.innerText != 'In đơn') return;
+                btn.click();
+                setTimeout(_ => $('div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child')?.focus(), 200);
+            });
+        }
+        if(e.key == 'd'){
+            e.preventDefault();
+            $.each(buttons, (i, btn) => {
+                if(btn.innerText != 'Duyệt đơn') return;
+                btn.click();
+                setTimeout(_ => $('div#vtpBillModalOrderApproval.modal.show div.col-6:first-child button')?.focus(), 200);
+            });
+        }
+    }
 
     $(window.document).ready(function(){
         // menu quản lý đơn
         $(document).on('contextmenu', 'div.vtp-bill-table > table > tbody > tr', function(e) {
-            event.preventDefault();
+            e.preventDefault();
+            $(document).off("keydown", onKeyDown);
             let row = $(e.currentTarget);
             let btn = row.find('td.mat-column-ACTION label i.fa-bars');
             btn && btn.click();
             row.css('background-color', '#e3f0f0');
+            $(document).on('keydown', onKeyDown);
         });
     });
 })();
