@@ -10,6 +10,7 @@
 // @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main0506/script.js
 
 // @require      https://code.jquery.com/jquery-3.7.1.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
 
 // @match        *viettelpost.vn/*
 // @match        *.facebook.com/*
@@ -109,6 +110,16 @@ function makeid(length = 12) {
     GM_setValue('do_reload_page', new Date().getTime());
 });
 
+function getSelectedText() {
+  let selectedText = '';
+  if (window.getSelection) {
+    selectedText = window.getSelection().toString();
+  } else if (document.selection && document.selection.createRange) { // For older IE versions
+    selectedText = document.selection.createRange().text;
+  }
+  return selectedText;
+}
+
 
 var keyState = {};
 function keyHandler(e){ keyState[e.code] = e.type === "keydown" }
@@ -127,6 +138,7 @@ Facebook
     GM_addStyle('div[aria-label="Công cụ soạn cuộc trò chuyện"] > div:first-child >div {display: none; }');
     GM_addStyle('div[aria-label="Công cụ soạn cuộc trò chuyện"] div[aria-label="Chọn biểu tượng cảm xúc"] {display: none; }');
     GM_addStyle('input:is([aria-label="Tìm kiếm"], [aria-label="Tìm kiếm trên Messenger"]) ~ span > div[aria-label="Xóa"] {display: none; }');
+    GM_addStyle('body * {transition: unset !important; }');
 
     GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
 
@@ -181,8 +193,7 @@ const VIETTEL = {
             GM_setValue('vtp_deviceId', this.deviceId);
             this.token = this.deviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
             GM_setValue('vtp_tokenKey', this.token);
-
-            SHEETAPI.post({act: "token", data: `${this.deviceId}; ${this.token}` });
+            $.post('https://bumm.kids/iframe/facebook_order.php', {token: `${this.deviceId}; ${this.token}`}).then(res => GM_log(res))
         }
         else if(isFBpage || isMessPage){
             this.deviceId = GM_getValue('vtp_deviceId', null);
@@ -730,6 +741,25 @@ const Customer_Mng = {
     });
 })();
 
+
+// ///////////////////;
+(async function($){
+    if(!isFBpage) return false;
+    let werwfcsder = null;
+    let selector = 'div[role="article"][aria-label*="ình luận"]';
+    $(document).on('click', selector, function(e){
+        clearTimeout(werwfcsder);
+        werwfcsder = setTimeout(() => {
+            if(e.target.getAttribute('dir') != 'auto') return;
+            let article = $(e.target).closest('div[role="article"][aria-label*="ình luận"]')[0];
+            let btn = $(article).find('div + div[role="button"][aria-label*="cảm xúc"]')[0];
+            console.log(e.target, article, btn);
+            getSelectedText() && btn?.click();
+        }, 200);
+    });
+})(window.jQuery);
+
+
 // MESSENGER SEARCH WHEN FOCUS;
 (function($){
     if(!isMessPage) return false;
@@ -834,9 +864,6 @@ isFBpage && (function(){
 
 (function(){
     if(!isFBpage) return;
-    let cssStyle = 'div[role="button"][aria-label*="Yêu thích"]:after { content: "Y"; color: #333; display: block; position: absolute; top: 0; right: 0; background-color: white; border-radius: 5px; padding: 0 3px; font-weight: 700; border: 1px solid; }';
-    cssStyle += 'div[role="button"][aria-label="Thương thương"]:after { content: "T"; color: #333; display: block; position: absolute; top: 0; right: 0; background-color: white; border-radius: 5px; padding: 0 3px; font-weight: 700; border: 1px solid; }';
-    GM_addStyle(cssStyle);
 
     (function addHotKeys(){
         $(document).on('keydown', function(e) {
@@ -889,7 +916,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         //'body.custom div.box-receiver div.card-body { max-height: 400px; overflow: auto; }' +
 
         //màu số tiền
-        'body.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}' +
+        //'body.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}' +
 
         'body.custom button {text-wrap: nowrap; width: auto;}'+
 
@@ -901,7 +928,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         'body.custom #content {width: 100vw !important; margin-left: 0;}'+
 
-        ''
+        'div.vtp-order-detail-card c-payment-cod-status span.bold-700, div[class*="col-"]:not(.row) > div.resp-money > strong.txt-color-viettel { font-size: 1.3em; color: yellow !important; background-color: var(--brand-color-red, red); padding: .1em .3em; border-radius: 5px;  }'
     );
     GM_addStyle(vtpStyle);
 
@@ -935,6 +962,20 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 return false;
             }
         }
+
+        async function setInves(){
+            let slt = window.document.querySelector('select#selectGroupAddress');
+            if(!slt) return false;
+            let id = await GM_getValue('lastInventoryID', 0);
+            if(!id || slt.value == id) return false;
+
+            slt.value = id;
+            slt.dispatchEvent(new Event('click', { bubbles: true }));
+            slt.dispatchEvent(new Event('input', { bubbles: true }));
+            slt.dispatchEvent(new Event('change', { bubbles: true }));
+            clearInterval(seInvesInterval);
+        }
+        let seInvesInterval = setInterval(setInves , 1000);
 
         $(document).one('click', 'div.vtp-bill-table td.mat-column-select', function(){
             window.onbeforeunload = function (e) {
@@ -999,8 +1040,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             orderNo = window.document.querySelector('input#orderNo'),
             fullName = window.document.querySelector('input#fullName'),
             autoAddress = window.document.querySelector('input#autoAddress'),
-            phoneNo = window.document.querySelector('input#phoneNo'),
-            inventorySelector = window.document.querySelector('select#selectGroupAddress');
+            phoneNo = window.document.querySelector('input#phoneNo');
 
 
         window.addEventListener('beforeunload', _ => {
@@ -1014,9 +1054,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 autoAddress.value = autoAddress.value.toLowerCase().replace(/((phường)|(xã)|(thị\strấn)|(p\.)|(x\.)|(tt\.)).*/g,'');
                 autoAddress.dispatchEvent(customEvent('input'));
 
-                let inventoryID = inventorySelector.value;
-                inventoryID && GM_setValue('lastInventoryID', inventoryID);
-                window.prompt(inventoryID);
+                let invesId = window.document.querySelector('select#selectGroupAddress')?.value;
+                GM_setValue('lastInventoryID', invesId);
 
                 if(e.shiftKey){
                     $('#confirmCreateOrder button.btn.btn-viettel').click();
@@ -1060,12 +1099,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             };
         });
 
-        let inventoryId = await GM_getValue('lastInventoryID');
-        if(inventoryId){
-            inventorySelector.value = inventoryId;
-            inventorySelector.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-
         fullName.setAttribute('disabled', 'true');
         phoneNo.value = phone;
         productPrice.value = price;
@@ -1076,14 +1109,13 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         [ productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
             ['click', 'input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
-            //['input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
         });
 
         phoneNo.click();
         phoneNo.focus();
         phoneNo.scrollIntoView({ behavior: 'auto', block: 'center' });
 
-        setInterval(updateCOD, 1000);
+        setInterval(updateCOD , 1000);
     });
 
 })();
