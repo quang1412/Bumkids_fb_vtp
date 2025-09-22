@@ -1,20 +1,26 @@
 // ==UserScript==
-// @name         Bum | FB - VTP
-// @author       QuangPlus
-// @version      2025-05-18-1
+// @name         Bumkids Ext by Quang.TD
+// @author       Quang.TD
+// @version      2025.9.20
 // @description  try to take over the world!
-// @namespace    Bumkids_fb_vtp
+// @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
-// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
-// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/script.js
-
-// @match        https://viettelpost.vn/*
-// @match        https://www.facebook.com/*
-// @match        https://www.messenger.com/*
-// @match        https://api.viettelpost.vn/*
+// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main0506/script.js
+// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main0506/script.js
 
 // @require      https://code.jquery.com/jquery-3.7.1.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
+
+// @match        *viettelpost.vn/*
+// @match        *.facebook.com/*
+// @match        *.messenger.com/*
+
+// @connect      bumm.kids
+// @connect      api.viettelpost.vn
+// @connect      io.okd.viettelpost.vn
+// @connect      script.google.com
+// @connect      script.googleusercontent.com
 
 // @grant        GM_log
 // @grant        GM_setValue
@@ -25,6 +31,7 @@
 // @grant        GM_addElement
 // @grant        GM_notification
 // @grant        GM_addValueChangeListener
+// @grant        GM_removeValueChangeListener
 // @grant        GM_webRequest
 // @grant        GM_setClipboard
 // @grant        window.onurlchange
@@ -32,130 +39,212 @@
 
 // ==/UserScript==
 
+const _myPhone = '0966628989', _myFbName = 'Trịnh Hiền', _myFbUsername = 'hien.trinh.5011', _myFbUid = '100003982203068', _samplePhoneNo = '0900000000',
+      UrlParams = new URLSearchParams(window.location.search),
+      $ = (window.$ || window.jQuery);
 
-const myPhone = '0966628989', myFbName = 'Trịnh Hiền', myFbUserName = 'hien.trinh.5011';
+const isFBpage = window.location.host === 'www.facebook.com';
+const isMessPage = window.location.host === 'www.messenger.com' || window.location.pathname.includes('/messages/');
+const isViettelPage = window.location.host === 'viettelpost.vn'
 
-function wait(ms = 1000){
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+function Delay(ms = 1000) { return new Promise(resolve => setTimeout(resolve, ms)) }
 //var csv is the CSV file with headers
-function csvJSON(csv){
-
-  var lines=csv.split("\n");
-
-  var result = [];
-
-  // NOTE: If your columns contain commas in their values, you'll need
-  // to deal with those before doing the next step
-  // (you might convert them to &&& or something, then covert them back later)
-  // jsfiddle showing the issue https://jsfiddle.net/
-  var headers=lines[0].split(",");
-
-  for(var i=1;i<lines.length;i++){
-
-      var obj = {};
-      var currentline=lines[i].split(",");
-
-      for(var j=0;j<headers.length;j++){
-          let label = headers[j].replaceAll('\"','');
-          let value = currentline[j].replaceAll('\"','');
-          obj[label] = value;
-      }
-      result.push(obj);
-
-  }
-
-  //return result; //JavaScript object
-  return JSON.stringify(result); //JSON
+function csvJSON(csv = '{}'){
+    csv = csv.replace('Dấu thời gian', 'time');
+    let lines = csv.split("\n");
+    let result = [];
+    let headers = lines[0].split(",");
+    for(let i = 1; i < lines.length; i++){
+        let obj = {};
+        let currentline = lines[i].split("\",\"");
+        for(let j = 0; j < headers.length; j++){
+            let label = headers[j].replaceAll('\"','');
+            let value = currentline[j]?.replaceAll('\"','');
+            if(value) obj[label] = value;
+        }
+        result.push(obj);
+    }
+    return result;
 }
-const GoogleSheet = {
-    query: function( sheet = 'log', range = 'A:A', queryStr = 'SELECT *'){
-        return new Promise((resolve, reject) => {
-            let ggsid = '1g8XMK5J2zUhFRqHamjyn6tMM-fxnk-M-dpAM7QEB1vs';
-            let tq = encodeURIComponent(queryStr);
-            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:csv&sheet=${sheet}&range=${range}&tq=${tq}`;
-            GM_xmlhttpRequest({
-                url: url,
-                method: "GET",
-                synchronous: true,
-                headers: {"Content-Type": "text/html; charset=utf-8"},
-                onload: function (res) {
-                    let json = csvJSON(res.response);
-                    return resolve(JSON.parse(json));
+function randomInteger(min, max) {return Math.floor(Math.random() * (max - min + 1)) + min};
+function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
+function customEvent(n){
+    if(n == 'mouseover'){
+        let event = new MouseEvent('mouseover', { 'bubbles': true, 'cancelable': true});
+        return event;
+    } else {
+        let event = document.createEvent('Event');
+        event.initEvent(n, true, false);
+        return event;
+    }
+}
+function getFormatedDate(i = 0) {
+    const date = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
+    const yyyy = date.getFullYear();
+    let mm = date.getMonth() + 1; // Months start at 0!
+    let dd = date.getDate();
+    if (dd < 10) dd = '0' + dd;
+    if (mm < 10) mm = '0' + mm;
+    const formattedToday = dd + '/' + mm + '/' + yyyy;
+    return formattedToday;
+}
+function makeid(length = 12) {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const charactersLength = characters.length;
+    let counter = 0;
+    while (counter < length) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+      counter += 1;
+    }
+    return result;
+}
 
-                  //  return GM_log(JSON.parse(json));
+/*** Sync and reload all pages ***/
+(isMessPage || isFBpage) && GM_addValueChangeListener('do_reload_page', function(){
+    window.confirm('Đã cập nhật dữ liệu mới! \nEnter để tải lại trang!') && window.location.reload();
+});
+
+(isMessPage || isFBpage) && GM_registerMenuCommand("Đồng bộ lại" , async _ => {
+    await Customer_Mng.sync
+    GM_setValue('do_reload_page', new Date().getTime());
+});
+
+function getSelectedText() {
+  let selectedText = '';
+  if (window.getSelection) {
+    selectedText = window.getSelection().toString();
+  } else if (document.selection && document.selection.createRange) { // For older IE versions
+    selectedText = document.selection.createRange().text;
+  }
+  return selectedText;
+}
+
+var keyState = {};
+function keyHandler(e){ keyState[e.code] = e.type === "keydown" }
+document.addEventListener("keydown",keyHandler);
+document.addEventListener("keyup",keyHandler);
+
+/***********************************************************************************************************************************
+Facebook
+************************************************************************************************************************************/
+
+// ADD CSS STYLE
+(function(){
+    if(!isFBpage && !isMessPage) return !1;
+
+    GM_addStyle('div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}');
+    GM_addStyle('div[aria-label="Công cụ soạn cuộc trò chuyện"] > div:first-child >div {display: none; }');
+    GM_addStyle('div[aria-label="Công cụ soạn cuộc trò chuyện"] div[aria-label="Chọn biểu tượng cảm xúc"] {display: none; }');
+    GM_addStyle('input:is([aria-label="Tìm kiếm"], [aria-label="Tìm kiếm trên Messenger"]) ~ span > div[aria-label="Xóa"] {display: none; }');
+    GM_addStyle('body * {transition: unset !important; }');
+
+    GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
+
+                'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }' +
+                //'div[aria-label="Xem trước liên kết"] div[role="button"]:not([aria-label="Nhắn tin"]) {display:none;}' +
+                'div[aria-label="Xem trước liên kết"]:has(a[href*="hien.trinh"]){ display:none; }'+
+
+                'div[role="article"][aria-label*="dưới tên Trịnh Hiền"] span[lang] * {color: palegreen; }' +
+                'div[role="article"]:has(div[aria-label="Gỡ Yêu thích"]) span[lang] * {color: var(--reaction-love, #DD2334); }' +
+                'div[role="article"]:has(div[aria-label="Gỡ Thương thương"]) span[lang] * {color: var(--reaction-support, #887000); }' +
+
+                '');
+})();
+
+const SHEETAPI = {
+    url: 'https://script.google.com/macros/s/AKfycbw-DXz_EwNkDlDni_bQjtXgNan9JHlEVOAt0NlB3crMd5RnEu8LgsVX0y_v2P9xsi4_Ug/exec',
+    get: function(json){
+
+    },
+    post: function(json){
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                headers: {"Content-Type": "text/plain" },
+                url: this.url,
+                method: "POST",
+                synchronous: true,
+                data: JSON.stringify(json),
+                onload: res => {
+                    console.log(res);
+                    return res.status == 200 ? resolve(res.responseText) : reject(new Error(res.statusText));
                 },
-                onerror: function(res) {
-                    GM_log("error: ", res.message);
-                    return reject(res.message);
+                onerror: e => {
+                    console.error(e)
+                    alert('Lỗi sheetAPI \nMã lỗi: #166');
+                    return reject(e.message||e.error);
                 }
             });
-        });
-    },
-    submitForm: function(url){
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                url: url,
-                method: "GET",
-                synchronous: false,
-                headers: {"Content-Type": "text/html; charset=utf-8"},
-                onload: function (res) {
-                    if(res.readyState == 4 && res.status == 200) resolve(res);
-                },
-                onerror: function(res) {
-                    GM_log("error: ", res.message);
-                    return reject('GG Log error: ' + res.message);
-                }
-            })
         })
     },
-    log: function(type = 'test', data = []){
-        let form_id = '1FAIpQLSfebo4FeOLJjN7qItNX65z2Gg_MDeAJnUIhPxba8bPwpEMSmQ';
-        let fields = [689021464,354401759,1477078849,2101594477,204892124,1251442348,94653935,814190568,733397838,718607793,570486205];
-        return new Promise((resolve, reject) => {
-            if(!type || !data) { return reject('input is invalid!') };
-            let url = `https://docs.google.com/forms/d/e/${form_id}/formResponse?entry.${fields[0]}=${type}&${data.map((d, i) => (`entry.${fields[i+1]}=${encodeURIComponent(d)}`)).join('&')}`;
-            //GM_log(url);
-            GM_xmlhttpRequest({
-                url: url,
-                method: "GET",
-                synchronous: false,
-                headers: {"Content-Type": "text/html; charset=utf-8"},
-                onload: function (res) {
-//                    resolve(res);
-                    if(res.readyState == 4 && res.status == 200) resolve(res);
-                },
-                onerror: function(res) {
-                    GM_log("error: ", res.message);
-                    return reject('GG Log error: ' + res.message);
-                }
-            })
-        })
+    getCustomerById(id){
+
     },
 }
-const randomInteger = (min, max) => (Math.floor(Math.random() * (max - min + 1)) + min);
 
-const viettel = {
+const APPSHEET = {
+    appid: 'ed72750f-3ae4-4c36-ae94-d785aae9fe73',
+    key: 'V2-HnsQE-zaF8U-JOmZw-SWzSk-US4Cn-CQscn-dmmst-UgkbT',
+    find: function(tableName, json){
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                type: "POST",
+                url: `https://api.appsheet.com/api/v2/apps/${this.appid}/tables/${tableName}/Action?applicationAccessKey=${this.key}`,
+                data: JSON.stringify(json),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function(data){
+                    console.log(data);
+                },
+                error: function(errMsg) {
+                    alert(errMsg);
+                }
+            });
+        })
+    }
+}
+
+/***
+APPSHEET.find('Customer', {
+    "Action": "Find",
+    "Properties": {
+        "Selector": "Filter(Customer, [Phone] = '0778686886')"
+    },
+    "Rows": [
+    ]
+})
+***/
+
+// VIETTEL
+const VIETTEL = {
     init: function(){
-        this.deviceId = GM_getValue('vtp_deviceId', null);
-        GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => {
-            if(remote) this.deviceId = newValue;
-        });
-
-        this.token = GM_getValue('vtp_tokenKey', null);
-        GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
-            if(remote) this.token = newValue;
-        });
+        if(isViettelPage){
+            this.deviceId = window.localStorage.deviceId;
+            GM_setValue('vtp_deviceId', this.deviceId);
+            this.token = this.deviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
+            GM_setValue('vtp_tokenKey', this.token);
+            if(this.deviceId && this.token) {
+                $.post('https://bumm.kids/iframe/facebook_order.php', {token: `${this.deviceId}; ${this.token}`}).then(res => GM_log(res))
+            };
+        }
+        else if(isFBpage || isMessPage){
+            this.deviceId = GM_getValue('vtp_deviceId', null);
+            GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => {
+                if(remote) this.deviceId = newValue;
+            });
+            this.token = GM_getValue('vtp_tokenKey', null);
+            GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
+                if(remote) this.token = newValue;
+            });
+        }
     },
     getReq: function(url){
-       // let i = this.deviceId, t = this.token;
-        let token = this.token;
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 url: url,
                 method: "GET",
                 synchronous: true,
-                headers: { 'Authorization': 'Bearer ' + token },
+                headers: { 'Authorization': 'Bearer ' + this.token, 'token': this.token },
                 onload: function (response) {
                     return resolve(JSON.parse(response.responseText))
                 },
@@ -166,14 +255,14 @@ const viettel = {
         })
     },
     postReq: function(url, json){
-        let deviceId = this.deviceId, token = this.token;
+        //let deviceId = this.deviceId, token = this.token;
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 url:  url,
                 method: "POST",
                 synchronous: true,
-                headers: { "Token": token, "Content-Type": "application/json" },
-                data: JSON.stringify({...json, "deviceId": deviceId}),
+                headers: { "Token": this.token, "Content-Type": "application/json" },
+                data: JSON.stringify({...json, "deviceId": this.deviceId}),
                 onload: (response) => {
                     let res = JSON.parse(response.responseText);
                     return res.status == 200 ? resolve(res) : reject(new Error(res.message));
@@ -185,7 +274,7 @@ const viettel = {
             })
         })
     },
-    getListOrders: function(key){
+    getListOrders: function(key, from = -30, to = 0){
         return new Promise((resolve, reject) => {
             if(!key) return reject(new Error('Chưa có sdt'));
             let url = 'https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2';
@@ -194,8 +283,8 @@ const viettel = {
                 "PAGE_SIZE": 10,
                 "INVENTORY": null,
                 "TYPE": 0,
-                "DATE_FROM": getFormatedDate(-30),
-                "DATE_TO": getFormatedDate(),
+                "DATE_FROM": getFormatedDate(from),
+                "DATE_TO": getFormatedDate(to),
                 "ORDER_PROPERTIES": key,
                 "ORDER_PAYMENT": "",
                 "IS_FAST_DELIVERY": false,
@@ -203,6 +292,14 @@ const viettel = {
                 "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,101,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570,516,517",
             };
             this.postReq(url, json ).then(resolve).catch(e => {
+                alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
+                reject(e);
+            });
+        })
+    },
+    getKyc: function(phone){
+        return new Promise((resolve, reject) => {
+            this.getReq('https://io.okd.viettelpost.vn/order/v1.0/kyc/'+phone).then(resolve).catch(e => {
                 alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
                 reject(e);
             });
@@ -229,624 +326,372 @@ const viettel = {
                 reject(e);
             });
         })
+    },
+    getOrderInfo: function(id){
+        return new Promise((resolve, reject) => {
+            this.getReq('https://api.viettelpost.vn/api/setting/getOrderDetailForWeb?OrderNumber='+id).then(resolve).catch(e => {
+                alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
+                reject(e);
+            });
+        })
+    },
+    getPhoneAddr(phone){
+        return new Promise((resolve, reject) => {
+            this.getReq('https://io.okd.viettelpost.vn/order/v1.0/sender/receivers?ofs=0&size=10&q='+phone).then(resolve).catch(e => {
+                alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
+                reject(e);
+            });
+        })
     }
 };
-viettel.init();
+VIETTEL.init();
 
-function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
-function customEvent(n){
-    if(n == 'mouseover'){
-        let event = new MouseEvent('mouseover', { 'bubbles': true, 'cancelable': true});
-        return event;
-    } else {
-        let event = document.createEvent('Event');
-        event.initEvent(n, true, false);
-        return event;
-    }
-}
-function getFormatedDate(i = 0) {
-    const today = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
-    const yyyy = today.getFullYear();
-    let mm = today.getMonth() + 1; // Months start at 0!
-    let dd = today.getDate();
-    if (dd < 10) dd = '0' + dd;
-    if (mm < 10) mm = '0' + mm;
-    const formattedToday = dd + '/' + mm + '/' + yyyy;
-    return formattedToday;
-}
-function makeid(length = 12) {
-    let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const charactersLength = characters.length;
-    let counter = 0;
-    while (counter < length) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
-      counter += 1;
-    }
-    return result;
-}
-const Imgbb = {
-    key: 'd2c959c2bb733f020987806e60640feb',
-    upload: function(src, name){
+// GOOGLE SHEET
+const GGSHEET = {
+    query: function( sheet = 'log', range = 'A:A', queryStr = 'SELECT *'){
         return new Promise((resolve, reject) => {
-            var data = new FormData();
-            data.append("image", src);
-            data.append("type", "url");
-            data.append("title", name);
-            data.append("description", name);
-
+            let ggsid = '1KAhQCGOIInG3Et77PfY03V_Nn4fWvi0z1ITh1BKFkmk';
+            let tq = encodeURIComponent(queryStr);
+            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:csv&headers=1&sheet=${sheet}&range=${range}&tq=${tq}&time=${new Date().getTime()}`;
+            //console.log(url)
             GM_xmlhttpRequest({
-                url:  'https://api.imgur.com/3/image',
-                method: "POST",
+                url: url,
+                method: "GET",
                 synchronous: true,
-                data: data,
-                headers:  {
-                    "Authorization": "Client-ID 46065c05c1005de"
+                headers: {"Content-Type": "text/html; charset=utf-8"},
+                onload: function (res) {
+                    let json = csvJSON(res.response);
+                    return resolve(json);
                 },
-                onload: (response) => {
-                    let res = JSON.parse(response.responseText);
-                    return res.status == 200 ? resolve(res) : reject(new Error(res.detail));
-                },
-                onerror: (e) => {
-                    return reject(e);
+                onerror: function(res) {
+                    GM_log("error: ", res.message);
+                    return reject(res.message);
                 }
             });
         });
-
-
-        /***
-        let key = this.key;
-        var formData = new FormData();
-        formData.append('image', src);
+    },
+    formSubmit: function(url){
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
-                url:  'https://api.imgbb.com/1/upload?key='+ key + '&name=' + name,
-                method: "POST",
-                synchronous: true,
-                data: formData,
-                onload: (response) => {
-                    let res = JSON.parse(response.responseText);
-                  //GM_log(res);
-                    return res.status == 200 ? resolve(res) : reject(res.message);
+                url: url,
+                method: "GET",
+                synchronous: false,
+                headers: {"Content-Type": "text/html; charset=utf-8"},
+                onload: function (res) {
+                    res.readyState == 4 && res.status == 200 && resolve(res);
                 },
-                onerror: (e) => {
-                    return reject(e.message || 'Lỗi viettelReqPost');
+                onerror: function(res) {
+                    alert('⚠ Google sheet form submit fail!! \nURL:' + url);
+                    return reject('GG Log error: ' + res.message);
                 }
-            });
-        });
-        ***/
-    }
-};
+            })
+        })
+    },
+    log: function(type = 'test', data = []){
+        let id = '1FAIpQLSdnt9BSiDQEirKx0Q3ucZFxunOgQQxp4SB7B6Gd8nNMFGzEyw';
+        let fields = [2075359581, 1542826863, 2077606435, 1093369063, 2124435966, 450302808, 2118396800, 839689225, 2086451399, 1329285789];
+        return new Promise((resolve, reject) => {
+            if(!type || !data.length) { return reject('input is invalid!') };
+            let url = `https://docs.google.com/forms/d/e/${id}/formResponse?entry.${fields[0]}='${type}&${data.map((d, i) => (`entry.${fields[i+1]}='${encodeURIComponent(d)}`)).join('&')}`;
+            this.formSubmit(url)
+                .then(res => resolve(res))
+                .catch(err => reject(err.message));
+        })
+    },
+}
 
-const PhoneBook = {
-    data: [],
-    key: 'fb_phoneBook',
-    ggFormId: '1FAIpQLSdpUDJ_mQvRQqvzYHrFuhPpuCvs9DA7P74s2YLDQDFwOyHXAw',
-    ggFormEntry:{ id: 937098229, phone: 130151803, name: 648384740, img: 549043843,},
-    sheetName: 'PhoneBook',
+// FB CUSTOMER MANAGER
+const Customer_Mng = {
+    ggFormId: '1FAIpQLScdh4nIuwIG7wvbarsXyystgnSkTcIzgIBBlcA9ya8DDZvwXA',
+    ggFormEntry:{ uid: 736845047, name: 64482577, phone: 1863958217, addr: 143609329, img: 1145058745, e2ee: 1693043917, attr1: 1173103552, attr2: 398324750, attr3: 696385383, attr4: 2084291905, attr5: 1174020264, attr6: 1243517720, attr7: 1831851967, attr9: 1146378854 },
+    //sheetName: 'customers',
+    //sheetRange: 'A:O',
+    storageKey: 'GMcustomer',
     int: async function(){
-        this.data = await GM.getValue(this.key, []);
-        GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => {
-            if(remote) this.data = newValue;
-        });
+        this.dataStorage = await GM_getValue(this.storageKey, []);
+        GM_addValueChangeListener(this.storageKey, (key, oldValue, newValue, remote) => { remote && (this.dataStorage = newValue) });
     },
     sync: async function(){
-        GM_log('Đồng bộ danh bạ');
-        return new Promise((resolve, reject) => {
-            this.data = [];
-            GoogleSheet.query(this.sheetName, 'B:F', 'SELECT * WHERE E IS NOT NULL' ).then(json => {
-                this.data = json;
-                GM_setValue(this.key, this.data);
-                GM_log('Đồng bộ thành công ' + this.data.length + ' danh bạ');
-                return resolve()
-            });
-        });
+        this.dataStorage = await GGSHEET.query('customers', 'A:Z', "SELECT A, B, C, D, E, F, G WHERE B <> '' AND Z <> 'duplicate'");
+        GM_setValue(this.storageKey, this.dataStorage);
+        window.prompt(`${this.dataStorage.length} customers syncing done! \n\nE.g.: `, JSON.stringify(this.dataStorage[0]));
     },
-    get: function(id){
-        let matchs = this.data.filter(function(obj){
-            return !!~Object.values(obj).indexOf(id);
-        });
+    get: async function(uid){
+        if(!uid || uid == _myFbUid) throw new Error('Uid không hợp lệ');
+        let matchs = this.dataStorage.filter(i => (i.uid == uid));
+        if(!matchs.length){
+            matchs = await GGSHEET.query('customers', 'A:Z', `SELECT A, B, C, D, E, F, G WHERE B = '${uid}' AND Z <> 'duplicate'`);
+        }
         return matchs;
     },
-    set: function(info){
-        new Promise(resolve => {
-            let matchs = this.get(info.id);
-            let existUser = matchs?.pop();
-            resolve();
-            if(existUser){
-                info.img = existUser?.img;
-                resolve();
-            } else {
-                Imgbb.upload(info.img, info.id).then(r => {
-                    info.img = r.data.link;
-                    resolve();
-                });
-            }
-        }).catch(e => {
-            alert(e.message)
-        }).then(_ => {
-            let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
-            let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-            return GoogleSheet.submitForm(url);
-        }).then(_ => {
-            this.data.push(info);
-            GM_setValue(this.key, this.data);
-            return true;
-        }).catch(e => {
-            alert(e.message);
-        })
-    },
-};
-PhoneBook.int();
+    add: async function(info){
+        try{
+            this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // del old id;
+            this.dataStorage.push(info);
+            GM_setValue(this.storageKey, this.dataStorage);
 
-const OrdersStorage = {
-    key:'storage_5',
-    data: [],
-    ggFormId: '1FAIpQLScGgvVzi2U_2rWLVmuzrOYdFG40tCMnhK1nOG8F0jhWz7MJkw',
-    ggFormEntry:{ post_id: 1429611565, cmt_id: 654208817, user_id: 436883162, user_name: 1981615867, cmt_txt: 21212061, status: 522750528, },
-    sheetName: 'PreOrder',
-    start: function(force){
-        this.data = GM_getValue(this.key, []);
-    },
-    add: function(info, callback){
-        let {cmt_id} = info;
-        let entry = Object.keys(this.ggFormEntry).map(key => `entry.${this.ggFormEntry[key]}=${encodeURIComponent("\'"+info[key])}`).join('&')
-        let url = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-        GoogleSheet.submitForm(url).then(_ => {
-            this.data = this.data.filter(o => o.cmt_id != cmt_id);
-            this.data.push(info);
-            this.save();
-            GM_log(info);
-            return callback();
-        }).catch(error => {
-            alert(error.message);
-        });
-    },
-    get: function(k){
-        let matchs = this.data.filter(function(obj){
-            return !!~Object.values(obj).indexOf(k);
-        });
-        return matchs;
-       // return (this.data.filter(e => (e.user_id == k || e.cmt_id == k || e.post_id == k)));
-    },
-    del: function(k){
-        if(!window.confirm("Bạn có chắc chắn xoá đơn hàng #" + k + "? \nThao tác này không thể hoàn tác!")) return;
-        this.data = this.data.filter(e => e.cmt_id != k);
-        this.save();
-    },
-    save: function(){
-        GM_setValue(this.key, this.data);
-        GM_notification({
-            title: "Order saved",
-            text: " ",
-            timeout: 1000,
-        });
-    },
-    sync: function(){
-        return new Promise((resolve, reject) => {
-            GM_log('Đồng bộ đơn hàng');
-            this.data = [];
-            GoogleSheet.query(this.sheetName, 'B:G', 'SELECT *' ).then(json => {
-                this.data = json;
-                GM_setValue(this.key, this.data);
-                GM_log('Đồng bộ thành công ' + this.data.length + ' đơn hàng');
-                return resolve(true);
+            let entry = Object.keys(this.ggFormEntry).map(k => {
+                let val = info[k];
+                if(val) return ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(val))
             });
-        });
-    },
-};
-OrdersStorage.start();
 
-const PostCollector = {
-    key: 'postList_1',
-    data: [],
-    ggFormId: '1FAIpQLSdfeoPmxxbEvUBdbcpPG4f2RabbslqpbrDCCvfX29WfijGJPA',
-    ggFormEntry:{id: 1370929995, url: 1270605326, txt: 1381764206, img: 1194118624,},
-    sheetName: 'Posts',
-    start: function(){
-        this.data = GM_getValue(this.key, []);
-        this.lopping();
-        setInterval(_ => this.lopping(), 1000);
-    },
-    lopping: function(href = window.location.href){
-
-        if(href == this.lastHref) return true;
-        this.lastHref = href;
-
-        this.showPostInfo?.remove();
-        window.POST_ID = null;
-
-        if(!(/facebook\.com\/.*\/posts\/(\d|\w)+/g).test(href) || !href.includes(myFbUserName)) return true;
-
-        let dialog = Array.from(document.querySelectorAll('div[role="dialog"]')).pop(),
-            url = window.location.pathname.split('/').pop(),
-            txt = dialog?.querySelector('div[data-ad-rendering-role="story_message"]')?.innerText?.replaceAll('\n',' '),
-            id = txt && window.btoa(unescape(encodeURIComponent(txt))).replaceAll(/[^\d\w]/g, '').substr(0, 20),
-            img = dialog?.querySelector('a[role="link"] img[src*="scontent"]')?.getAttribute('src');
-
-        if(!txt || !img) return true;
-
-        this.showPostInfo = GM_addElement(window.document.body, 'div', { style:'background-color: #363636; color: white; padding: 8px; border-radius: 5px; position: absolute; bottom: 5px; left: 5px; opacity: 1;'});
-        this.showPostInfo.innerHTML = `<div>ID bài đăng: ${id}</div> `;
-
-        window.POST_ID = id;
-
-        let match = this.data.filter(p => p.id == id);
-        if(match && match.length) return;
-
-        Imgbb.upload(img, id).then(r => {
-            img = r.data.link;
-        }).catch(e => {
-            console.log(e);
-        }).then(e => {
-            let values = {id, url, txt, img};
-            let entry = Object.keys(this.ggFormEntry).map(k => `entry.${this.ggFormEntry[k]}=${encodeURIComponent("\'"+values[k])}`).join('&')
-            let u = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry}`;
-            return GoogleSheet.submitForm(u);
-        }).then(_ => {
-            this.data.push({url, id, txt, img});
-            GM_setValue(this.key, this.data);
-        }).catch(e => {
-            GM_log('error', e.message)
-            alert('error' + e.message + '\nMã lỗi #0470');
-        });
-    },
-    sync: async function(){
-        return new Promise((resolve, reject) => {
-            GM_log('Đồng bộ bài đăng');
-            this.data = [];
-            GoogleSheet.query(this.sheetName, 'B:F', 'SELECT *' ).then(json => {
-                this.data = json;
-                GM_setValue(this.key, this.data);
-                GM_log('Đồng bộ thành công ' + this.data.length + ' bài đăng');
-                return resolve(true);
-            });
-        })
-    },
-};
-//PostCollector.start();
-
-GM_registerMenuCommand("Đồng bộ Google!", async _ => {
-    try{
-        //await PostCollector.sync();
-        await OrdersStorage.sync();
-        await PhoneBook.sync();
-        confirm('Đã đồng bộ xong, bạn có muốn tải lại trang?') && window.location.reload();
-    } catch(e){
-        alert('Lỗi đồng bộ:/n' + e?.message);
+            let formUrl = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry.join('&')}`;
+            let res = await GGSHEET.formSubmit(formUrl);
+            return res;
+        } catch(err){
+            alert(err.message);
+        };
     }
-});
+};
+(isMessPage || isFBpage) && Customer_Mng.int();
 
-/***
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-Facebook Facebook Facebook
-***/
-
-// CSS STYLE
+// FB CSS
 (function(){
-    if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
+    if(!isFBpage && !isMessPage) return !1;
 
-    GM_addStyle('div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}');
+    GM_addStyle(
+        'div.infoCard { --ifc-highlight-color: coral; --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgba(220, 220, 220, 0.40); --ifc-text-color: #333; }'+
+        'html.__fb-dark-mode div.infoCard { --ifc-highlight-color: yellow; --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgba(0, 0, 0, 0.20); --ifc-text-color: white; }'+
 
-    GM_addStyle(`/* CSS START */
-@keyframes blinker {
-  50% {
-    opacity: 0;
-  }
-}
+        'div.infoCard {min-height: 115px; display: flex;flex-direction: column; justify-content: space-between; color: var(--ifc-text-color); backdrop-filter: brightness(1.5) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 8px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid #d3d3d32b;border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}'+
 
-div.infoCard {
-  --border-color: lightgray;
-  --bg-brightness: 1.5;
-  --bg-toolBar: rgb(231 231 231 / 60%);
-  --text-color: #000;
-  min-height: 115px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  color: var(--text-color);
-  backdrop-filter: brightness(var(--bg-brightness)) blur(10px);
-  box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);
-  font-weight: bolder;
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 10px;
-  width: calc(100% - 30px);
-  max-height: unset;
-  max-width: 350px;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  padding: 8px;
-  filter: blur(0px);
-  transition: all 1.5s ease-in-out;
-  overflow: hidden;
-  opacity: 1;
-}
+        'div.infoCard div.cardBg { background: var(--ifc-bg-gradient); z-index: -1; opacity: 0.5; }'+
 
-html.__fb-dark-mode div.infoCard {
-  --border-color: gray;
-  --bg-brightness: 0.5;
-  --bg-toolBar: rgb(79 79 79 / 60%);
-  --text-color: whitesmoke;
-}
+        'div.infoCard table td {white-space: nowrap;  padding-right: 10px;}'+
+        'div.infoCard table td:last-child {white-space: nowrap;  width: 100%;}'+
+        'div.infoCard table td.long_text {  overflow: clip;  direction: rtl;  max-width: 150px;  display: block;  white-space: normal;  text-wrap: nowrap;  text-overflow: ellipsis;  }'+
 
-div.infoCard ::selection {
-  color: red;
-  background: yellow;
-}
+        'div.infoCard ::selection { color: red; background: yellow;}'+
 
-div.infoCard:after {
-  content: "";
-  position: absolute;
-  left: 4%;
-  top: 101%;
-  width: 0;
-  height: 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-top: 6px solid var(--border-color);
-  clear: both;
-}
+        'div[aria-label^="Biểu ngữ Tin nhắn đã ghim"] > div { flex-direction: row-reverse; text-align: right; }'+
+        'div:has(div[role="main"][aria-label^="Cuộc trò chuyện với"]) div.infoCard { left: 27px; top: 64px; right: unset; bottom: unset; }'+
 
-div.infoCard.bottom {
-  left: 10px;
-  top: 64px;
-  right: unset;
-  bottom: unset;
-}
-div.infoCard.bottom:after {
-  top: -8px;
-  border-top: unset;
-  border-bottom: 6px solid var(--border-color);
-}
+        'div.infoCard div.toolBar { text-align: center; background-color: var(--ifc-toolbar-bg); border-radius: 6px; display: flex; justify-content: space-around; }'+
+        'div.infoCard div.toolBar a { color: initial; padding: 5px; flex: 1; }'+
 
-div.infoCard div.toolBar {
-  text-align: center;
-  background-color: var(--bg-toolBar);
-  border-radius: 6px;
-  display: flex;
-  justify-content: space-around;
-}
-div.infoCard div.toolBar a {
-  padding: 5px;
-  flex: 1;
-  opacity: 1;
-  transition: all 0.5s ease-in-out;
-}
-/* div.infoCard div.toolBar:hover a:not(:hover) { opacity: .3; } */
+        'div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }'+
+        'div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }'
+    );
 
-div.infoCard div.card-bg {
-  background: #bdc3c7;
-  background: -webkit-linear-gradient(to right, #2c3e50, #bdc3c7);
-  background: linear-gradient(to right, #2c3e50, #bdc3c7);
-  z-index: -1;
-  opacity: 0.5;
-}
-
-div.hasPhoneNum {
-  border: 2px dashed red;
-  border-radius: 10px;
-  overflow: hidden;
-  margin-bottom: 5px;
-}
-div[aria-label="Nhắn tin"][role="button"] {
-  border: 2px dashed red;
-  border-radius: 6px;
-}
-div[role="list"] div[role="listitem"] span:hover {
-  -webkit-line-clamp: 10 !important;
-}
-
-/*** Sửa chiều cao khung chat ***/
-div:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {
-  height: 65vh;
-}
-
-/**dsfdgdf**/
-a[href*="/messages/e2ee/t/"]:after {
-  content: "";
-  position: absolute;
-  top: 0px;
-  right: 0px;
-  width: 0.7em;
-  height: 0.7em;
-  background: lightcoral;
-  border-radius: 50%;
-}
-
-/*** Đánh dấu cmt của người đăng ***/
-div[aria-label*="Bình luận dưới tên Trịnh Hiền"] svg[role="none"] {
-    border: 2px solid red;
-    border-radius: 50%;
-    padding: 0px;
-}
-
-/*** comment ***/
-div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
-}
-
-
-    /*** CSS END ***/`);
 })();
 
-// FUNCTIONS
+// FB INFO CARD
 (function() {
-    if((window.location.origin != 'https://www.facebook.com') && (window.location.origin != 'https://www.messenger.com')) return !1;
-    const $ = window.jQuery, myUserName = 'hien.trinh.5011', myDisplayName = 'Trịnh Hiền'
-
-    GM_addStyle(`div.infoCard table tr td {white-space: nowrap;  padding-right: 10px;}`);
-    GM_addStyle(`div.infoCard table tr td:last-child {white-space: nowrap;  width: 100%;}`);
-    //GM_addStyle(`div:is(.__fb-dark-mode, .__fb-light-mode):not(:hover) div.infoCard {  opacity: 0.5; }`);
-    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a:is([href*="/t/"], [href*="/messages/"])::before {  content: attr(href);  position: absolute;  bottom: 0;  left: 10px;  color: initial;  opacity: 0.5; }`);
-    GM_addStyle(`div:is([aria-label="Đoạn chat"], [aria-label="Danh sách cuộc trò chuyện"]) a[href*="/e2ee/"]::before {color:red;}`);
-
+    if(!isFBpage && !isMessPage) return !1;
+// overflow: clip;  direction: rtl;  max-width: 160px;  display: block;  white-space: normal;  text-wrap: nowrap;  text-overflow: ellipsis;
     class InfoCard{
         constructor(info, container){
             this.container = container;
-            this.userData = {...PhoneBook.get(info.id)?.pop(), ...info};
 
-            this.preOrders = 0;
-            this.userData.e2ee = window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : null;
+            this.customer = {...info};
+            let e2ee = (window.location.pathname.includes('e2ee') ? window.location.pathname.match(/\d{3,}/g)?.pop() : '');
+            if(e2ee) this.customer.e2ee = e2ee;
 
-            this.card = GM_addElement(container, 'div', { class: 'infoCard refreshing', 'data-fbid': this.userData.id });
-            if(window.location.pathname.includes('/messages/') || window.location.hostname == 'www.messenger.com') {
-                this.card.classList.add('bottom');
-            }
+            let card = GM_addElement(container, 'div', { class: 'infoCard', 'id': 'ifc'+this.customer.uid });
+            let bg = GM_addElement(card, 'div', { class: 'cardBg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
+            let quangplus = GM_addElement(card, 'small', {style: 'opacity: .5; position: absolute; top: 5px; right: 5px;'});
+            quangplus.innerHTML = '<a href="https://fb.com/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>';
 
-            this.infoList = GM_addElement(this.card, 'table', { style: 'padding-bottom: 5px; color:white;' });
-            let toolBar = GM_addElement(this.card, 'div', { class: 'toolBar' });
+            //if(isMessPage) card.classList.add('bottom');
 
-            this.searchBtn = GM_addElement(toolBar, 'a', { style: 'color:dodgerblue;'});
-            this.searchBtn.innerText = 'Tìm sđt';
-            this.searchBtn.onclick = _ => this.phoneScanning();
+            this.table = GM_addElement(card, 'table', { style: 'padding-bottom: 5px;' });
 
-            let btn_2 = GM_addElement(toolBar, 'a', { style: 'color:red;'});
-            btn_2.innerText = 'Sửa sđt';
-            btn_2.onclick = _ => this.setPhone();
+            let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
 
-            let btn_3 = GM_addElement(toolBar, 'a', { style: 'color:limegreen;'});
-            btn_3.innerText = 'Tạo đơn';
-            btn_3.onclick = _ => this.createOrder();
+            this.btn_1 = GM_addElement(toolBar, 'a');
+            this.btn_1.innerText = 'Tìm sđt'; this.btn_1.onclick = _ => this.phoneFinder();
+
+            let btn_2 = GM_addElement(toolBar, 'a');
+            btn_2.innerText = 'Sửa sđt'; btn_2.onclick = _ => this.setPhone();
+
+            let btn_3 = GM_addElement(toolBar, 'a');
+            btn_3.innerText = 'Tạo đơn'; btn_3.onclick = _ => this.createOrder();
 
             this.eventsListener();
-            this.refreshInfo();
 
-            let bg = GM_addElement(this.card, 'div', { class: 'card-bg', style: 'position: absolute; top: 0; right: 0; bottom: 0; left: 0; ' });
-            let copyright = GM_addElement(this.card, 'small', {style: 'opacity: .5; position: absolute; top: 8px; right: 8px;'});
-            copyright.innerHTML = '<a href="https://fb.com/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>'
-        }
-        async refreshInfo(){
-            if(this.isBusy) return;
-            this.isBusy = 1;
-            let i = {total: 0, pending: 0, draft: 0, preOrder: 0, totalCOD: 0};
-            this.infoList.innerHTML = '</tr><tr><td style=" ">Đang tải...</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr> <tr><td>&nbsp</td></tr>';
-            this.card.classList.add('refreshing');
-            try{
-                //this.preOrders = OrdersStorage.get(this.userData.id);
-                let data = await viettel.getListOrders(this.userData.phone);
-                if(data.error) throw new Error('Viettel: ' + data.message);
-                let orderList = data.data.data.LIST_ORDER;
-                let totalOrders = data.data.data.TOTAL,
-                    pendingOrders = orderList.filter(o => !!~([-108,100,102,103,104]).indexOf(o.ORDER_STATUS)).length,
-                    draftOrders = orderList.filter(o => o.ORDER_STATUS == -100).length;
+            // get info
+            this.table.innerText = 'Tải thông tin khách hàng...';
+            Customer_Mng.get(this.customer.uid).then(res => {
+                let data_current = res?.pop() || new Object();
+                let data_new = {...data_current, ...this.customer};
 
-                this.waitingOrders = (draftOrders + pendingOrders);
-                //let totalCOD = data.data.data.TOTAL_COLLECTION.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+                /***
+                //check update skip 'img'
+                let upd = 0;
+                let keys = [...(Object.keys(data_current)), ...(Object.keys(data_new))];
+                keys.forEach(k => k != 'img' && data_current[k] != data_new[k] && upd++);
+                upd && Customer_Mng.add(data_new);
+                ***/
 
-                let vtlink = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(this.userData.phone);
-                this.infoList.innerHTML = `
-                <tr style="display:none;"><td>ID:</td> <td>${this.userData.id}</td></tr>
-                <tr>
-                  <td>SĐT: </td> <td>${this.userData.phone}</td>
-                </tr>
-                <tr>
-                  <td>Đơn hàng: </td>
-                  <td><a href="${vtlink}" target="_blank" style="color:inherit; text-decoration: underline;">${totalOrders} đơn&nbsp
-                     ${pendingOrders ? `<span style="color:coral"> • có đơn chờ giao</span>` : draftOrders ? `<span style="color:yellow"> • có đơn nháp</span>` : ''}
-                  </a></td>
-                </tr>
-                <tr>
-                  <td>e2ee: </td> <td>${this.userData.e2ee}</td>
-                </tr>
-                <tr>
-                  <td>Tags: </td> <td>${'---'}</td>
-                </tr>`;
+                this.customer = data_new;
 
+            }).then(_ => {
 
-            } catch(e){
-                console.log(e)
-                this.infoList.innerHTML = `<tr style="color:orangered; text-align: center;"><td>${e.message}</td></tr>`;
-            } finally{
-                this.isBusy = 0;
-                this.card.classList.remove('refreshing');
-            }
-        }
-        async phoneScanning(){
-            if(this.looping_1){
-                clearInterval(this.looping_1);
-                this.looping_1 = null;
-                this.searchBtn.innerText = "Tìm sđt";
+                this.refreshInfo()
+
+            }).catch(err => {
+                this.table.innerText = '⚠️ ' + err.message;
                 return false;
-            }
-            this.searchBtn.innerText = "Dừng";
+            });
+        }
 
-            let count = 0;
-            this.looping_1 = setInterval(() => {
-                this.container.querySelector('div[role="grid"] > div > div').scroll({ top: 0, behavior: 'smooth' });
-                let rows = this.container.querySelectorAll('div[role="gridcell"] div[role="presentation"] span[dir="auto"] > div:not(.scanned)');
+        async refreshInfo(){
 
-                count = rows.length ? 0 : count + 1;
-                if(count == 10) return this.phoneScanning();
+            if(this.delay_kfbs) return;
 
-                for (let i = (rows.length - 1); i >= 0; i --) {
-                    let row = rows[i];
-                    row.classList.add('scanned');
+            try{
+                this.table.innerText = 'Tải thông tin Viettel...';
 
-                    let text = row.innerText;
-                    let t = text.replaceAll(/[^\w\d]/g, '');
-                    let phone = t.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
-                    if(!phone || phone == myPhone) continue;
+                let {uid, phone, addr} = this.customer;
+                if(!phone) throw new Error('Chưa có số đt!!');
 
-                    this.phoneScanning();
-                    let d = row.closest('div[role="presentation"]');
-                    d.style.border = '2px dashed ' + (phone == this.userData.phone ? 'cyan' : 'red');
+                // get info from Viettel Post
+                let vt = await VIETTEL.getListOrders(phone);
+                if(!vt) throw new Error('Lỗi: không tìm đc đơn hàng viettel!');
+                if(vt.error) throw new Error('Viettel: ' + vt.message);
 
-                    let func1 = function(){
-                        row.scrollIntoView({block: "center", inline: "nearest", behavior: 'smooth'});
-                        row.closest('div[role="gridcell"]')?.focus();
-                    };
-                    func1();
-                    let interv = setInterval(func1 , 200);
-                    setTimeout(_ => clearInterval(interv), 5000);
-                    document.body.addEventListener("click", _ => clearInterval(interv), {once : true});
+                let list = (vt.data.data.LIST_ORDER || new Array());
+                let total = vt.data.data.TOTAL;
 
-                    break;
+                let pendding = list.filter(od => !!~([-108,100,102,103,104]).indexOf(od.ORDER_STATUS));
+                this.penddingOrderCount = pendding.length;
+                let draf = list.filter(od => od.ORDER_STATUS == -100);
+                this.draftOrderCount = draf.length;
+
+                let title = pendding.map(o => o.PRODUCT_NAME).join('\n ');
+                title += draf.map(o => o.PRODUCT_NAME).join('\n ');
+
+                let lastestAddr = list[0]?.RECEIVER_ADDRESS.toLowerCase();
+                if(lastestAddr){
+                    if(lastestAddr != addr){
+                        this.customer.addr = lastestAddr;
+                        Customer_Mng.add(this.customer).catch(err => alert(err.message));
+                        //alert(lastestAddr)
+                    }
                 }
 
-            }, 500);
+                let kyc = await VIETTEL.getKyc(phone);
+                let kycStr = kyc.deliveryRate > -1.0 ? (`${(Math.round(kyc.deliveryRate*1000)/10)}% • ${kyc.order501}/${kyc.totalOrder}`) : '---';
+
+                this.table.innerHTML = `
+                <tr style="display:none;"><td>ID:</td> <td>${uid}</td></tr>
+                <tr>
+                  <td>Số điện thoại:</td> <td>${phone}</td>
+                </tr>
+                <tr>
+                  <td>Đơn Viettel:</td>
+                  <td>
+                    <a href="https://viettelpost.vn/quan-ly-van-don?q=1&p=${btoa(phone)}" target="_blank" style="color:inherit; text-decoration: underline;" title="${title}">
+                      <span>${total} đơn </span>&nbsp
+                      ${this.draftOrderCount ? `<span style="color:yellow"> • có ${this.draftOrderCount} đơn nháp</span>` : ''}
+                      ${this.penddingOrderCount ? `<span style="color:coral"> • có ${this.penddingOrderCount} đơn chờ giao</span>` : ''}
+                    </a>
+                  </td>
+                </tr>
+                <tr> <td>Tỷ lệ nhận:</td> <td>${kycStr}</td> </tr>
+                <tr> <td>Tags:</td> <td>---</td> </tr>`;
+            } catch(e){
+
+                this.table.innerText = '⚠️ ' + e.message;
+
+            } finally{
+
+                delete this.delay_kfbs;
+                console.log(this.customer);
+
+            }
         }
-        async setPhone(phone = window.prompt("Nhập sđt cho " + this.userData.name, this.userData.phone)){
-            if(phone == null || phone == '' || !isVNPhone(phone) || phone == this.userData.phone) return;
-            this.userData.phone = phone;
-            let info = {id: this.userData.id, phone: this.userData.phone.toString(), name:this.userData.name, img:this.userData.img};
-            PhoneBook.set(info);
+
+        async phoneFinder(isRun = !this.isSearching){
+            this.isSearching = isRun;
+            this.btn_1.innerText = this.isSearching ? "Dừng tìm" : "Tìm sđt";
+            this.btn_1.style.color = this.isSearching ? "var(--ifc-highlight-color)" : "";
+
+            if(!this.isSearching){
+                clearInterval(this.loopSearching);
+                return false;
+            }
+
+            clearInterval(this.loopStick);
+            let overTime = 0;
+
+            let scrollElm = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
+
+            let loopFn = async _ => {
+                if(overTime >= 50) return this.phoneFinder(false); // overTime
+
+                let spans = scrollElm.querySelectorAll('div[role="row"] span[dir="auto"]:has(div):not(.scanned)');
+
+                if(!spans.length) {
+                    overTime++;
+                    return scrollElm.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+
+                overTime = 0;
+
+                for(let i = spans.length; i > 0; i--){
+                    let span = spans[i-1];
+
+                    span.classList.add('scanned');
+
+                    let phone = await new Promise(resolve => {
+                        let txt = span.innerText.replaceAll(/[^\w\d]/g, '');
+                        let num = txt && txt.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
+                        return resolve( !num ? false : num == _myPhone ? false : num );
+                    });
+
+                    if(phone){
+                        let stick = function(){ span.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" }) };
+                        stick();
+                        this.loopStick = setInterval( stick , 300 );
+                        //await Delay(100);
+                        setTimeout(() => {
+                            this.container.addEventListener('click', () => {
+                                clearInterval(this.loopStick)
+                            } , { once: true });
+                        }, 100);
+
+                        /***
+                        this.container.addEventListener('click', _ => clearInterval(this.loopStick) , { once: true });
+                        setTimeout(_ => {
+                            this.container.addEventListener('mousemove', _ => clearInterval(this.loopStick) , { once: true });
+                        }, 3000);
+                        ***/
+
+                        let p = span.closest('div[role="presentation"]');
+                        p.style.border = '2px dashed ' + ( phone == this.customer.phone ? 'aqua' : 'coral');
+
+                        this.phoneFinder(false);
+                        break;
+                    }
+                }
+            }
+            loopFn();
+            this.loopSearching = setInterval(loopFn, 200);
+        }
+
+        async setPhone(phone = window.prompt("Nhập sđt cho " + this.customer.name, this.customer.phone || '0900000000')){
+            if(!phone || !isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone) return;
+
+            this.customer.phone = phone;
             this.refreshInfo();
+            Customer_Mng.add(this.customer).catch(err => alert(err.message))
         }
+
         async createOrder(){
-            let title = 'Đang tạo đơn hàng cho: ' + this.userData.name + '\n\n';
+            const {uid, phone, name} = this.customer;
+            const orderInfo = { uid, phone, name };
+            let title = `Tạo đơn cho ${name}\n\n`;
+
+            //let cid = GM_getValue('lastClickCid', '');
+            //cid && ( orderInfo.cid = cid, title += `cid: ${orderInfo.cid}\n` );
 
             try{
-                if(!this.userData.phone) throw new Error(title + '❌ Vui lòng cập nhật sđt trước!');
+                if(!phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
 
-                if(this.waitingOrders && !window.confirm(title + '❌ có đơn chưa giao!!! bạn vẫn tiếp tục tạo đơn?')) return false
+                if(phone != _samplePhoneNo && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
-
-                let orderInfo = { fbid: this.userData.id, phone: this.userData.phone, name: this.userData.name };
 
                 let prices_str = prompt(title + "B1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
@@ -865,211 +710,239 @@ div[role="article"][aria-label*="Bình luận"] a[href*="?comment_id="] {
                 GM_setValue('lastest_items_list', itemNameList.slice(0, 10));
 
                 orderInfo.prdName = `${itemName} - (${prices_str})`;
-                //orderInfo.prdName = itemName + ' - \(' + prices_str.replaceAll(' ', ' + ') + '\)';
                 orderInfo.price = (price*1000);
 
                 url += btoa(unescape(encodeURIComponent(JSON.stringify(orderInfo))));
 
                 window.popupWindow?.focus();
                 window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
-                window.addEventListener('message', (ev) => { ev.data.fbid === this.userData.id && this.refreshInfo() });
 
                 GM_setValue('lastest_prices', prices_str);
+                GM_deleteValue('lastClickCid');
+
+                window.addEventListener('message', ({data}) => {
+                    uid == data.uid && this.refreshInfo();
+                    //data.uid && data.cid && GGSHEET.log('createOrder', [data.cid, data.uid ]);
+                }, {once: true});
             }
             catch(e){ alert(title + e.message) }
         }
+
         async eventsListener(){
             this.container.addEventListener("click", function(e){
-                let target = e.target.closest('div[aria-label="Trả lời"][role="button"]'); // Or any other selector.
+                let target = e.target.closest('div[aria-label="Trả lời"][role="button"]');
                 target && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
             });
 
-            this.container.addEventListener("keypress", function(e) {
-                //alert('onkeypress')
-                console.log(e);
-                if (e.charCode == 1111111) {
-                    alert('option3');
+            this.container.addEventListener("keydown", e => {
+                if(e.key === "F2") {
+                    e.preventDefault();
+                    this.preOrder();
                 }
-                if (e.keyCode == 87 && e.ctrlKey == true) {
-                    alert('option2');
-                }
-                if (e.charCode == 339) {
-                    alert('option1');
-                }
+            })
+
+            this.container.addEventListener('contextmenu', function(e) {
+                return;
+                event.preventDefault();
+                alert('contextmenu');
             });
 
             // Set phone by mouse selection
-            this.container.onmouseup = _ => {
-                if(!window.getSelection) return;
-                let phone = window.getSelection().toString().replaceAll(/\D/g,'');
-                if(!isVNPhone(phone) || phone == this.userData.phone || phone == myPhone){
-                    return false;
-                } else if(!this.userData.phone || window.confirm(`Xác nhận đổi số đt cho ${this.userData.name} thành ${phone}?`)){
+            this.container.addEventListener('mouseup', _ => {
+                if(!window.getSelection) return alert('⚠ window.getSelection is undifined');
+                let phone = window.getSelection().toString().replaceAll(/\D/g,``);
+
+                if(!phone || phone.length != 10 || phone == this.customer.phone || phone == _myPhone || !isVNPhone(phone)) return;
+                if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
+                    if(this.delay_xjae) return;
+                    this.delay_xjae = setTimeout(_ => {delete this.delay_xjae}, 1000);
+
                     this.setPhone(phone);
                 }
-            }
+            });
         }
     }
 
-    window.document.addEventListener('mousemove',function(){
-        if(window.xx13e) return;
-        window.xx13e = setTimeout(_ => { clearTimeout(window.xx13e); window.xx13e = 0 }, 1000);
+    window.document.addEventListener('mousemove', async function() {
+        if(this.delay) return;
+        this.delay = 1; setTimeout(_ => {this.delay = 0}, 1000);
 
-        let profiles = window.document.querySelectorAll(`
+        let links = window.document.querySelectorAll(`
           div[role="main"][aria-label^="Cuộc trò chuyện với "] > div > div > div > div:first-child a[role="link"][href]:not(.checked, [aria-label]),
           div:not([hidden]) > div[style*="chat-composer"] a[role="link"][href^="/"][aria-label]:not(.checked, [aria-label="Mở ảnh"])
         `);
-
-        for(let i = 0; i < profiles.length; i++){
-            let e = profiles[i];
-
-            let id = e.getAttribute('href')?.match(/\d+/g)?.pop();
-            let name = e.getAttribute('aria-label') || e.querySelector('h2').innerText;
+        for(let i = 0; i < links.length; i++){
+            let e = links[i];
+            let uid = e.getAttribute('href')?.match(/\d+/g)?.pop();
+            let name = e.getAttribute('aria-label') || e.querySelector('h2')?.innerText;
             let img = e.querySelector('img')?.getAttribute('src');
 
-            if(!id || !name || !img) continue;
+            let hasCard = window.document.querySelector('#ifc'+uid);
+
+            if(!uid || !name || !img || uid == _myFbUid || hasCard) continue;
 
             e.classList.add('checked');
-
-            let info = {id, name, img};
-            let container = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
-            new InfoCard(info, container);
-            console.log(info);
+            let contain = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
+            new InfoCard({uid, name, img}, contain);
         }
     });
-
-    if(window.location.href.includes('/posts/')){
-        let interval = setInterval(_ => {
-            let btn = document.querySelector('div[role="dialog"] div[role="button"][aria-haspopup="menu"]:not([aria-label])');
-            if(!btn) return true;
-            clearInterval(interval);
-            btn.click();
-            btn.scrollIntoView(false);
-        }, 1000);
-    }
-
-    document.addEventListener("keydown", e => {
-        if(e.key === "F1") {
-            // Suppress default behaviour
-            // e.g. F1 in Microsoft Edge on Windows usually opens Windows help
-            e.preventDefault();
-            alert('F1');
-        }
-    })
 })();
 
-(function(){
-    // keyboard shortcuts
-    window.addEventListener("keydown",function (e) {
-        if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70 && e.shiftKey)){
-            let messSearchFields = document.querySelectorAll('input[type="search"][aria-label="Tìm kiếm trên Messenger"][placeholder="Tìm kiếm trên Messenger"], div[style*="translateX(0%)"] input[type="text"][aria-label="Tìm kiếm"][placeholder="Tìm kiếm"]');
-            let messSearchField = [...messSearchFields].pop();
-            if(!messSearchField) return true;
-            e.preventDefault();
-            messSearchField.focus();
-            messSearchField.select();
-        }
-    })
-})();
 
+// ///////////////////;
+(async function($){
+    if(!isFBpage) return false;
+    let werwfcsder = null;
+    let selector = 'div[role="article"][aria-label*="ình luận"]';
+    $(document).on('click', selector, function(e){
+        clearTimeout(werwfcsder);
+        werwfcsder = setTimeout(() => {
+            if(e.target.getAttribute('dir') != 'auto') return;
+            let article = $(e.target).closest('div[role="article"][aria-label*="ình luận"]')[0];
+            let btn = $(article).find('div + div[role="button"][aria-label*="cảm xúc"]')[0];
+            console.log(e.target, article, btn);
+            getSelectedText() && btn?.click();
+        }, 200);
+    });
+})(window.jQuery);
+
+
+// MESSENGER SEARCH WHEN FOCUS;
 (function($){
-    if(window.location.origin != 'https://www.messenger.com') return 0;
+    if(!isMessPage) return false;
 
-    let interval = null;
-
-    let btnScroll = GM_addElement(document.body, 'div', {
-        id:'btnScrollToBottom',
-        style:'position: absolute;  top: 20px;  left: 209px;  background: crimson; color: white;  padding: 5px 15px;  border-radius: 5px;  cursor: pointer; ',
+    window.addEventListener("focus", function (e) {
+        let input = document.querySelector('input[type="search"][aria-label="Tìm kiếm trên Messenger"], input[type="text"][aria-label="Tìm kiếm"]');
+        input?.focus();
+        input?.select();
     });
+})();
 
-    btnScroll.innerHTML = '<span>Load all 💢<span>';
-    btnScroll.onclick = function(){
-        if(interval){
-            clearInterval(interval);
-            interval = null;
-            this.innerHTML = '<span>Load all 💢<span>';
+// MESSENGER AUTO SCROLL BUTTON;
+(function(){
+    if(!isMessPage) return false;
+
+    GM_addStyle('div#aqweasdf div#list p { margin:0; padding:3px; border-radius:3px; overflow:hidden; }'+
+                'div#aqweasdf div#list p:hover { background-color:whitesmoke; color:#333; }'+
+                'div#aqweasdf div#list {background:black; position:absolute; top:30px; border-radius:5px; border:1px solid white; color:white; text-wrap:nowrap; overflow:hidden; }'+
+
+                'div#aqweasdf div#list > div { max-height:492px; padding:10px 0; max-width:200px; width:30px; overflow-x:hidden; }'+
+                'div#aqweasdf div#list > div { -webkit-transition: width .3s ease-in-out !important; -moz-transition: width .3s ease-in-out !important; -o-transition: width .3s ease-in-out !important; transition: width .3s ease-in-out !important; }'+
+                'div#aqweasdf div#list > div:hover{ padding:10px; overflow-y:overlay; width:150px; }'+
+                '');
+
+    let panelContainer = GM_addElement(document.body, 'div', {id:'aqweasdf', style:'position:absolute; top:30px; left:30px; '});
+    let scrollBtn = GM_addElement(panelContainer, 'div', {
+        style:'background:crimson; color:white; padding:5px 15px; border:1px solid; border-radius:5px; cursor:pointer; ',
+    });
+    let userListPanel = GM_addElement(panelContainer, 'div', {id:'list', style:''});
+    let userList = GM_addElement(userListPanel, 'div', {style:''});
+
+    scrollBtn.innerText = '✨ Load all ✨';
+    scrollBtn.onclick = _ => doScroll();
+
+    function scrollTo1(x){
+        let messList = document.querySelector('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode, .__fb-light-mode)');
+        messList.style.height = x + 100;
+        messList.scrollTo(0, x);
+    };
+
+    const doScroll = function(isStop = 0){
+        let messList = document.querySelector('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode, .__fb-light-mode)');
+
+        if(!messList || this.scrolling || isStop){
+            scrollBtn.innerText = '✨ Load all ✨';
+            clearInterval(this.scrolling);
+            delete this.scrolling;
             return false;
         }
-        this.innerHTML = '<span>Stop ✋🤚<span>';
-        interval = setInterval(_ => {
+
+        scrollBtn.innerText = '✨ Stop ✨';
+
+
+        this.scrolling = setInterval(_ => {
             try{
-                let list = Array.from($('div[aria-label="Danh sách cuộc trò chuyện"][aria-hidden="false"] div[aria-label="Đoạn chat"] div:is(.__fb-dark-mode)')).shift();
-                let rows = $(list).find('div[role="row"]:not(.checked)');
-                rows.length && $(list).animate({scrollTop: list.scrollHeight}, "fast");
+                scrollTo1(messList.scrollHeight);
 
-                $.each(rows, (i, r) => {
-                    let time = $(r).find('abbr')[0]?.innerText;
-                    let img = $(r).find('img')[0]?.getAttribute('src');
+                let containers = messList.querySelectorAll('div[data-virtualized="false"]:has(a[href][role="link"]):not(.checked)');
+                containers.forEach(container => {
+                    let name = container.querySelector('div[aria-label^="Lựa chọn khác cho "]')?.getAttribute('aria-label')?.replace('Lựa chọn khác cho ', '');
+                    let href = container.querySelector('a[href][role="link"]')?.getAttribute('href');
+                    let time = container.querySelector('abbr')?.getAttribute('aria-label');
 
-                    let text = r.innerText.replaceAll(/[\r\n]+/g, ' ')
-                    .replace('Tin nhắn và cuộc gọi được bảo mật bằng tính năng mã hóa đầu cuối.', '')
-                    .replace('Đang hoạt động', '').replaceAll('·', '').replace(time, '').trim();
+                    if(!href || !name || !time) return;
 
-                    let link = $(r).find('a[href]')[0]?.getAttribute('href');
+                    container.classList.add('checked');
+                    console.log(name, time, `https://messenger.com/${href}`);
 
-                    if(time && text && img && link){
-                        $(r).addClass('checked')
-                        window.document.title = time + ' - ' + text;
+                    let top = container.offsetTop;
+
+                    userList.querySelector('p[data-href="'+href+'"]')?.remove();
+                    let p = GM_addElement(userList, 'p', {style:'cursor:pointer','data-href':href});
+                    p.innerText = name;
+                    p.onclick = _ => {
+                        doScroll('stop'); // stop scrolling;
+                        scrollTo1(top);
                     }
-                })
-            }catch(e){}
-        }, 200);
 
-    };
-})(window.$ || window.jQuery);
+                    window.document.title = name;
+                    container.classList.add('checked');
+                });
 
-// PREORDER
-// PREORDER
-// PREORDER FACEBOOK
-// PREORDER
-// PREORDER
-
-(function($){
-    if(window.location.host != 'www.facebook.com') return !1
-    function scan(){
-        let cmt_lang = document.querySelectorAll('div[role="article"][aria-label^="Bình luận"] span[lang]:not(.checked)');
-        [...cmt_lang].forEach(elm => {
-            [...elm.querySelectorAll('div[role="button"]')].forEach(b => b.innerText == 'Xem thêm' && b.click());
-
-            let btn = GM_addElement(elm, 'button', {style:'position: absolute;  bottom: 3px;  left: calc(100% - 8px);  cursor: pointer;  text-wrap: nowrap;'});
-            btn.innerHTML = '<span>link</span>';
-            btn.onclick = function(){
-                let article = elm.closest('div[role="article"]');
-                let cmt_id = article.querySelector('li a[href*="comment_id"]')?.getAttribute('href').match(/comment_id\=\d+/g)?.pop()?.replace('comment_id=', '');
-                alert(cmt_id);
+            }catch(e){
+                console.error(e.messages);
             }
-            elm.classList.add('checked');
-        });
-    }
-    window.document.addEventListener('mouseover', scan);
-    window.document.addEventListener('scroll', scan);
+        }, 1000);
+    };
 
+})();
 
-})(window.$ || window.jQuery);
 /***
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
-Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
+isFBpage && (function(){
+    $(document).on('click',`div[role="article"][aria-label*="${_myFbName}"]`, function(){
+        let url = $(this).find('li a[href*="comment_id"]')?.attr('href');
+        url = new URL(url);
+        let cid = url.searchParams.get('reply_comment_id') || url.searchParams.get('comment_id');
+        GM_setValue('lastClickCid', cid);
+    });
+})();
+***/
+
+
+(function(){
+    if(!isFBpage) return;
+
+    (function addHotKeys(){
+        $(document).on('keydown', function(e) {
+            console.log(e.key);
+            if(e.key == 'y'){
+                /***
+                let btn = document.querySelector('div[role="button"][aria-label="Yêu thích"]');
+                console.log(btn);
+                btn.dispatchEvent(customEvent('click'));
+                ***/
+                let btn = $('div:has(div[role="button"][aria-label*="Yêu thích"])');
+                console.log(btn);
+                [...btn].map(b => {
+                    console.log(b);
+                    $(b).click();
+                    let event = new Event("click");
+                    b.dispatchEvent(event);
+                })
+            }
+            if(e.key == 't'){
+                let btn = document.querySelector('div[role="button"][aria-label="Thương thương"]');
+                console.log(btn);
+                btn.dispatchEvent(customEvent('click'));
+             //   btn.click();
+            }
+        });
+    })();
+
+})();
+
+
+/***
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
@@ -1078,51 +951,57 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 ***/
 
 // VIETTEL MAIN //
-(function($) {
-    if(window.location.origin != 'https://viettelpost.vn') return !1;
+(function() {
+    if(!isViettelPage) return;
 
-    GM_addStyle(`/* ViettelPost custom css */
-    body.vt-post.custom nav#sidebar, body.vt-post div.option-setting, body.vt-post mat-tab-header, body.vt-post header-app {display: none;}
-    body.vt-post.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }
-    body.vt-post.custom div.box-receiver div.card-body { max-height: 400px; overflow: auto; }
-    body.vt-post.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}
-    body.vt-post.custom button {text-wrap: nowrap;}
-    body.vt-post.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}
-    body.vt-post.custom #content {width: 100% !important; margin-left: 0;}
-    div.dieukhoan {display:none;}
-    .mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray;}
+    let vtpStyle = (
+        'div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:not(:last-child){ display:none; }'+
+        'div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child{ width:100%; }'+
+        '.mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray; color: white;}'+
 
-    *:is(.mat-column-SENDER_FULLNAME, .mat-column-PARTNER):is(th, td) {display:none;}
+        //'body.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }' +
+        //'body.custom div.box-receiver div.card-body { max-height: 400px; overflow: auto; }' +
 
-    /* ViettelPost custom css */`);
+        //màu số tiền
+        //'body.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}' +
 
-    let i = window.localStorage.deviceId;
-    let t = i && JSON.parse(window.localStorage['vtp-token']).tokenKey;
-    GM_setValue('vtp_deviceId', i);
-    GM_setValue('vtp_tokenKey', t);
+        'body.custom button {text-wrap: nowrap; width: auto;}'+
+
+        'div.vtp-bill-table *:is(.mat-column-SENDER_FULLNAME, .mat-column-PARTNER, .mat-column-COD_STATUS ):is(th, td) {display:none;}'+
+        'div.vtp-bill-table {  overflow-y: hidden !important; }'+
+
+        'body.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}'+
+        'div.dieukhoan, body.custom nav#sidebar {display:none;}'+
+
+        'body.custom #content {width: 100vw !important; margin-left: 0;}'+
+
+        'div.vtp-order-detail-card c-payment-cod-status span.bold-700, div[class*="col-"]:not(.row) > div.resp-money > strong.txt-color-viettel { font-size: 1.3em; color: yellow !important; background-color: var(--brand-color-red, red); padding: .1em .3em; border-radius: 5px;  }'
+    );
+    GM_addStyle(vtpStyle);
 
     $(document).ready( async function(){
         await new Promise(resolve => { setTimeout(resolve, 1000)});
 
         function updateCOD(){
             try{
-                let price = Number($('input#productPrice')?.val().replaceAll(/\D/g, '') || 0),
+                let price = Number($('input#productPrice')?.val()?.replaceAll(/\D/g, '') || 0),
                     fee = Number($('div.text-price-right')?.text()?.replaceAll(/\D/g, '') || 0);
-
-                if(!fee || window.lastPrice == price) return 0;
 
                 let tax = Number((price + fee) / 100 * 1.5);
 
                 let total = (price + fee + tax);
+
                 if(price == 0) total = 0;
-                else if(price == 1000) total = fee;
+                else if(price == 1000) {total = fee;}
+
+                if(!fee || window.lastTotal == total) return 0;
 
                 let input_cod = window.document.querySelector('input#cod');
                 input_cod.value = Math.round(total);
                 input_cod.dispatchEvent(customEvent('input'));
                 input_cod.dispatchEvent(customEvent('change'));
 
-                window.lastPrice = price;
+                window.lastTotal = total;
 
                 return true;
             } catch(e){
@@ -1131,15 +1010,24 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             }
         }
 
+        async function setInves(){
+            let slt = window.document.querySelector('select#selectGroupAddress');
+            if(!slt) return false;
+            let id = await GM_getValue('lastInventoryID', 0);
+            if(!id || slt.value == id) return false;
+
+            slt.value = id;
+            slt.dispatchEvent(new Event('click', { bubbles: true }));
+            slt.dispatchEvent(new Event('input', { bubbles: true }));
+            slt.dispatchEvent(new Event('change', { bubbles: true }));
+            clearInterval(seInvesInterval);
+        }
+        let seInvesInterval = setInterval(setInves , 1000);
+
         $(document).one('click', 'div.vtp-bill-table td.mat-column-select', function(){
-            $('a').css({cursor:'not-allowed', 'pointer-events': 'none !important'});
             window.onbeforeunload = function (e) {
                 e = e || window.event;
-                // For IE and Firefox prior to version 4
-                if (e) {
-                    e.returnValue = 'Sure?';
-                }
-                // For Safari
+                if (e) { e.returnValue = 'Sure?' }
                 return 'Sure?';
             };
 
@@ -1149,203 +1037,236 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             let price = (window.eval(this.value?.match(/\(.*\)/g)?.shift()?.replaceAll(/[\(\)]/g, '').trim().replaceAll(/\s+/g, " + ")) || 0) * 1000;
             $('input#productPrice')?.val(price).trigger('input').trigger('change');
         });
-        $(document).on('change', 'form.create-order input#productPrice', updateCOD);
+        $(document).on('change', 'form.create-order input#productPrice', _ => setTimeout(updateCOD, 500));
+
         $(document).on('change', 'form.create-order input#phoneNo', async function(){
             try{
                 this.value = this.value.replaceAll(/\D/g, '');
                 this.dispatchEvent(customEvent('input'));
-                if(!isVNPhone(this.value)) return;
+                if(this.value == _samplePhoneNo || !isVNPhone(this.value)) return;
 
-                let res = await viettel.getListOrders(this.value).catch(e => {throw new Error()});
-
+                let res = await VIETTEL.getListOrders(this.value).catch(e => {throw new Error()});
+                GM_log(JSON.stringify(res));
                 if(res?.status != 200) throw new Error();
 
-                let orders = res.data.data.LIST_ORDER.filter(o => !!~([-100, -108,100,102,103,104]).indexOf(o.ORDER_STATUS));
+                let orders = (res.data.data.LIST_ORDER || []).filter(o => !!~([-100, -108,100,102,103,104]).indexOf(o.ORDER_STATUS));
 
-                orders.length && alert('❌ CẢNH BÁO: \n\n SDT có đơn chưa gửi!!!?');
+                let oLength = orders.length
+
+                this.style['border-color'] = oLength ? 'coral' : 'greenyellow';
+
+                oLength && alert('❌ CẢNH BÁO: \n\n SDT có đơn chưa gửi!!!?');
+
             } catch(e){
                 alert('Lỗi check trùng đơn! ❌❌❌');
             }
         });
 
-        let urlParams = new URLSearchParams(window.location.search);
-        let info_encode = urlParams.get('query');
+        GM_addElement(window.document.body, 'input', {style:'position:absolute; top:0; right:0;', placeholder:'confirm url', id:'BumConfirmUrl'});
+
+        let info_encode = UrlParams.get('query');
 
         if(!info_encode) return false;
 
         let info = JSON.parse(decodeURIComponent(escape(window.atob(info_encode.replaceAll(' ','+')))));
-        let {fbid, phone, addr, name, price, prdName} = info;
+        let {uid, phone, addr, name, price, prdName} = info;
 
-        if(!fbid) return true;
+        if(!uid || !phone) return true;
 
-        window.onbeforeunload = e => window.opener?.postMessage({fbid: fbid, orderId: null}, '*');
+        let col1 = $('div.box-receiver, div.box-sender').parent();
+        //$('div.box-sender').appendTo(col1);
+        //$('div.box-receiver').prependTo(col1);
+        window.document.body.classList.add('custom');
+        //s.prependTo(p);
+
+        let isSample = phone == _samplePhoneNo;
+
+        let productName = window.document.querySelector('input#productName'),
+            productPrice = window.document.querySelector('input#productPrice'),
+            productWeight = window.document.querySelector('input#productWeight'),
+            orderNo = window.document.querySelector('input#orderNo'),
+            fullName = window.document.querySelector('input#fullName'),
+            autoAddress = window.document.querySelector('input#autoAddress'),
+            phoneNo = window.document.querySelector('input#phoneNo');
+
+
+        window.addEventListener('beforeunload', _ => {
+            window.opener?.postMessage({uid: uid}, '*');
+        });
+
         $(document).keyup(function(e) {
-            if (e.key === "Escape") { // escape key maps to keycode `27`
-                $('button.close').click();
-            }
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
-                e.shiftKey ? $('#confirmCreateOrder button.btn.btn-viettel').click() : $('#confirmSaveDraft button.btn.btn-viettel').click();
+                let status = 0;
 
-                // IN TEM
-                if(!phone) return false;
+                autoAddress.value = autoAddress.value.toLowerCase().replace(/((phường)|(xã)|(thị\strấn)|(p\.)|(x\.)|(tt\.)).*/g,'');
+                autoAddress.dispatchEvent(customEvent('input'));
 
-                setTimeout(() => {
-                    viettel.getListOrders(phone).then(data => {
-                        let last_order = data.data.data.LIST_ORDER[0];
-                        let order_date = new Date(Date.parse(last_order?.ORDER_SYSTEMDATE || 0)).getDate();
-                        let today_date = new Date().getDate();
-                        if( !last_order || order_date != today_date) throw new Error('Không tìm thấy đơn hàng mới!');
+                let invesId = window.document.querySelector('select#selectGroupAddress')?.value;
+                GM_setValue('lastInventoryID', invesId);
 
-                        let o = last_order.ORDER_NUMBER;
-                        let link = viettel.getOrderPrint(o);
-                        return link;
+                if(e.shiftKey){
+                    $('#confirmCreateOrder button.btn.btn-viettel').click();
+                    status = 1;
+                } else {
+                    $('#confirmSaveDraft button.btn.btn-viettel').click();
+                    status = 0;
+                }
+
+                let doPrint = window.confirm('in tem?');
+
+                let interv = setInterval(_ => {
+                    if(productName.value || phoneNo.value) return true;
+
+                    clearInterval(interv);
+
+                    if(!doPrint) return window.close();
+
+                    VIETTEL.getListOrders(phone, 0, 0).then(data => {
+                        let order = data.data.data.LIST_ORDER[0];
+                        let oid = order?.ORDER_NUMBER;
+
+                        if(!oid) throw new Error('Không tìm thấy đơn hàng mới!');
+
+                        return VIETTEL.getOrderPrint(oid);
                     }).then(link => {
-                        window.open(link+'&status=0', '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=960"');
-                        return window.close();
+                        window.open(link+'&status='+status , '_blank', 'toolbar=no, menubar=no, resizable=no, width=1000, height=468, top=50, left=50"');
                     }).catch(e => {
-                        alert(e.message);
-                        window.location.href = 'https://viettelpost.vn/quan-ly-van-don?q=1&p='+btoa(phone);
-                    });
+                        e.message && alert(e.message);
+                    }).finally(_=>{
+                        setTimeout(window.close, 200);
+                    })
                 }, 1500);
             }
         });
 
-        let col1 = $('div.box-receiver, div.box-sender').parent();
-        $('div.box-sender').appendTo(col1);
-        $('div.box-receiver').prependTo(col1);
+        $(window.document).on('click keyup keydown', function(){
+            if(fullName.value != name) {
+                fullName.value = name;
+                fullName.dispatchEvent(customEvent('input'));
+            };
+        });
 
-        window.document.body.classList.add('custom');
-        //s.prependTo(p);
-
-        let fullName = window.document.querySelector('input#fullName');
-        $(window.document.body).on('click keyup keydown', function(){
-            fullName.value = name;
-            fullName.dispatchEvent(customEvent('input'));
-            fullName.dispatchEvent(customEvent('change'));
-        })
-
-        let productName = window.document.querySelector('input#productName');
-        productName.value = prdName
-
-        let productPrice = window.document.querySelector('input#productPrice');
-        productPrice.value = price;
-
-        let productWeight = window.document.querySelector('input#productWeight');
-        productWeight.value = 1000;
-
-        let orderNo = window.document.querySelector('input#orderNo');
-        let d = new Date();
-        orderNo.value = fbid + '-' + d.getFullYear() + d.getMonth() + d.getDay();
-
-        let phoneNo = window.document.querySelector('input#phoneNo');
+        fullName.setAttribute('disabled', 'true');
         phoneNo.value = phone;
+        productPrice.value = price;
+        productWeight.value = 1000;
+        productName.value = prdName + (isSample ? '    ❌ ❌ ❌' : '');
+        autoAddress.value = isSample ? '..., Ô chợ dừa, đống đa' : '';
+        orderNo.value = [uid, makeid(5)].join('-');
 
-        [productPrice, productName, productWeight, orderNo, phoneNo].forEach(i => {
-            i.dispatchEvent(customEvent('click'));
-            i.dispatchEvent(customEvent('input'));
-            i.dispatchEvent(customEvent('change'))
+        [ productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
+            ['click', 'input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
         });
 
         phoneNo.click();
         phoneNo.focus();
+        phoneNo.scrollIntoView({ behavior: 'auto', block: 'center' });
 
-        setInterval(updateCOD, 500);
+        setInterval(updateCOD , 1000);
     });
 
-})(window.$ || window.jQuery);
+})();
 
 
-(function($){
+(function(){
+    if(!isViettelPage) return;
+
+    let onKeyDown = function(e){
+        let buttons = $('div.mat-menu-content button.vtp-bill-btn-action');
+        if(!buttons.length) return;
+        if(e.key == 'i'){
+            e.preventDefault();
+            $.each(buttons, (i, btn) => {
+                if(btn.innerText != 'In đơn') return;
+                btn.click();
+                setTimeout(_ => $('div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child')?.focus(), 200);
+            });
+        }
+        if(e.key == 'd'){
+            e.preventDefault();
+            $.each(buttons, (i, btn) => {
+                if(btn.innerText != 'Duyệt đơn') return;
+                btn.click();
+                setTimeout(_ => $('div#vtpBillModalOrderApproval.modal.show div.col-6:first-child button')?.focus(), 200);
+            });
+        }
+        if(e.key == 'h'){
+            e.preventDefault();
+            $.each(buttons, (i, btn) => {
+                if(btn.innerText != 'Hủy đơn') return;
+                btn.click();
+                setTimeout(_ => $('#vtpBillModalDeleteOrder.modal.show button.btn-confirm:not([data-dismiss])')?.focus(), 200);
+            });
+        }
+        if(e.key == 'x'){
+            e.preventDefault();
+            $.each(buttons, (i, btn) => {
+                if(btn.innerText != 'Xóa đơn') return;
+                btn.click();
+                setTimeout(_ => $('#vtpBillModalDeleteOrder.modal.show button.btn-confirm:not([data-dismiss])')?.focus(), 200);
+            });
+        }
+    }
+
     $(window.document).ready(function(){
-        if(!window.location.href.includes('viettelpost.vn')) return;
         // menu quản lý đơn
-        var mouseX, mouseY;
-        $(document).mousemove(function(e) { mouseX = e.pageX; mouseY = e.pageY; });
-
         $(document).on('contextmenu', 'div.vtp-bill-table > table > tbody > tr', function(e) {
-            event.preventDefault();
+            e.preventDefault();
+            $(document).off("keydown", onKeyDown);
             let row = $(e.currentTarget);
             let btn = row.find('td.mat-column-ACTION label i.fa-bars');
             btn && btn.click();
             row.css('background-color', '#e3f0f0');
-            $('body').css('--left-value', mouseX+'px');
+            $(document).on('keydown', onKeyDown);
         });
-    })
-})(window.$ || window.jQuery);
+    });
+})();
 
-(function($){
-    if(window.location.href != 'https://viettelpost.vn/quan-ly-van-don') return;
+// bắn đơn viettel
+(function(){
+    if(window.location.pathname != '/quan-ly-van-don') return;
 
-    let snd_success = new Audio("data:audio/x-wav;base64, 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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/7ksD/gAAAASwAAAAAAAAlgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/+5LA/4AAAAEsAAAAAAAAJYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSwP+AAAABLAAAAAAAACWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/7ksD/gAAAASwAAAAAAAAlgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/+5LA/4AAAAEsAAAAAAAAJYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSwP+AAAABLAAAAAAAACWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/7ksD/gAAAASwAAAAAAAAlgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAD/+5LA/4AAAAEsAAAAAAAAJYAAAAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAA");
-    snd_success.volume = 1;
-    let snd_fail = new Audio("data:audio/x-wav;base64, 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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/7ksCKgBOhUsgHvM2IAAAlgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/+5LA/4AAAAEsAAAAAAAAJYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSwP+AAAABLAAAAAAAACWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/7ksD/gAAAASwAAAAAAAAlgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/+5LA/4AAAAEsAAAAAAAAJYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uSwP+AAAABLAAAAAAAACWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/7ksD/gAAAASwAAAAAAAAlgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/+5LA/4AAAAEsAAAAAAAAJYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAA//uSwP+AAAABLAAAAAAAACWAAAAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAAA==");
+    let snd_true = new Audio("data:audio/mpeg;base64,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+MCGA2zAXwKIsAMpYAZP/1GVGP+i/nf59AWAGQwGUElMdqJrSwBRlgBkogDi2BoEbgwCCrlj5algtSK4RCARCIGJmIBlSxg1EwRCMLmBNRVCfv/8tMWAaAotlktFnLRYyxyKvLeWCxy1/LcsSz/97//LXyxLP/LJaLEt2LJZ/LZZLPIvTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/70sQAA9JtsQAOftBCaDVfQd/aCCvh/9z//V679z8tN8XxAwWMFgowULTBZUMFKMwBMEKMBGCBTBCxnox9LowNEhHPjBPgv0wHcKZMJpA2jBCgEcDCqDADBgAsDAWAoGAKxCIhpzqJbwiAsIiiAz9z2AwqgwCIC4Ng0BgPgmp7//4C4FgMdISgYBc5zvzk///z3//z//nPnf9XOl/+czv/5d/8////88V0j9H/3fhi79/v/JB0BTAQDA4CzBQFDEcRzHgqjKs3TBlAZQwgMJvMSEHEDZq+9w4oop0MVeKCDDRxV4wZUGVMC8AvAMG4NwMGwNgMG4N+GrCX9X4GDYRY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VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/70sQAA9CBhPQO/rBCNDMeQe/WCCvo/oPov+Hf/4P//LdgACC3ZgkCRiGIZj0PRm2bZgkwMcYQCE0mJEDUxtCvKscUITKGKxFBBhoorEYQCDMmBeAXgGj0KBjgcAY5HJC4uQhfV+ERKBybyhES5ChaWQkf/+S5Kkpkv8l7cf/xc/5C///bkJ/4/7f/6v8fvyE/IXITx+/8fytB36D6e/e3yD/gz5N67RGAYYBgBpgUAUmCKBQYMAIphFg3GBvAb5g54OcYhwMSmw18GZ0IwluYWUS+GDnjEhhJgOeYG+BvAamU4GRSIBkQi8QVGL62vwiKAM+9wGCnEFQvL//x+IT+3H7/8lHJQlvJXJWSmOft//H/tyE/9Y3vkJ/8f/j94/f7kJ/8hExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//vSxAAD0GGq9g7+sEJZM92Bb9YIK79/7//f3/yT/9/VSID0BpYBUwUEYxHHkxGNwwIsExMDcCfjB2Rr0yvLuBMpLIszDJxCEwdgHZMIqANisDdBhgBglBgkBglxWfr/CINAxe7wYBMc4Tl/JclOSklv5LfJX5LfJaRUsf/lj//5LeOf/kv8leS//9X5K5KEp5Lf5L///JYGXLx/IXEFRvx+IQXeAsAYIgZAXAMDAMgYUAMAYhwMgZPAoGEngVZhiwMMYy6DDnLyDLp8RYy6Yy6c9mGUEZJgVYYsYFUDDgZjcQRMYRMWJqJqDAN97cDA4GA2c9AYUcSsBgGxKv+QsfvH6P3IQhOQuLkFycfvsJViaf/3/+Jr9xNf+JV7///8XXGKILf+MSLqMT8Yni6TEFNRTMuMTAwVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV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");
+    let snd_fail = new Audio("data:audio/mpeg;base64,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GGyLtEYau0v0X0Xc2YSG0CP+Vg3////////////////+VgxYBywD////////////////+VgxYBvLAOEHgAASaOVEY3hebPicZoCKZIWGYtieZ+BwZdBGahDeZvjCaYBcYSDADSaBgimIonmEgtmFw9mDItg46docVnTrxwHDAFIx4I0c40gMwe80U4HSzBDwcwGxZjlyehjwQ1dBqUGOBkwgFLC4x44xwIavgwyMGAaPBzMHHQakBqQrBA5kYMcDEqAYzA5AIDDIyCBx4HBwcELAMHBnKGj40eGg0HjR8ZBp9jQQGD1GBoOnqDR8GJ9jR4sD1Eh50gMZEHCg4QWkHQifANBOQNH1E09hgFB40HckGA3KQDwe5KjMHIBBgEMg4OT0GQaiblMkR1ZMqdIBHVUqp02E9lE09FGEAyiafKfCfaiSfKeowDg9RhAL6jCjCfPqMA0FByAeDQaCT0chy0Azlp8QYnp6fCfKiSifqMOUnt7kQc5SQLJ5KyVk6p2Q+qdHdkEnaqjo1Ry09XLUYcpyU94NcqDnIg9ynKchRhRNRJRP////////////////1ElEv////////////////UZQC+gEACTcZSJIJEABBFWNHIcMewuNXy8MvAuMQqRMJQkNhAIMqihNmCFNJwuOMCqNVhoMZEUMMyNM1TUMoBJMAVD/+9LEHwA0lg8xmd2ABj5B5Zc7oALKwcFuIyBJB7GbqoCaEc0HmFMhioqLVRi5QZiNiTEAU8wQhLWChCWCEuSLIRjpcFTkKjoCEjJCUw4BMXBxJ0FRQVCS5BWKFgUFC0ULRUJLkgkhHRYRB5gIePF4MDiwEvgLFJYCEjhYSHBdAIDgMGg4iBh4CHAcSDRIeEgAsACV4sIioS+CSaSQqEptDQmWQVWLfDQgpwqslUYOAJUCQ+lWIw4cAFOEVkCKnCBJFZAh6BIrAB4BbM0wrABIBaUuxSIsICwmWBQuUkiLCSR6Rj5qqoEFV0CaqqjUHoE1G1VYORWQaVgQiQaQIIrqNIEC3aqqAVs6ARpg4Av8oyVgCVahskURTafFnCiCbSbfpIptM6URZym37OEj022cs7Z2m2+aiLO3wURURfJ8xYRSQSPSRSSSRSPZ2kYkazlRFJBNpnb5vm+L4f///////////////vm+T4vn///////////////++b5vgBAAAAAbMUMZjmMbfsIZ2GMWNrMCSgNCAvMJSXNHAvMlx6M4heM4gdMdgJMXxeMCS0AAvGHIcmFw0AN8elKVpTlOAYAMDDAEM4SUbCGShIERsoAZRrzg1xNekGJRZIaunCJhVIYg4AnIDDBBMyQgI5jLlyCsSEJjJiQokLCQKnAggEOBlKMuBgQNcRpM5IQlCCAQSGUkHoMDRAIcgAmFCSqgwcVUCE5YOBUkrCVkiwdUaVjCCQVEqqKrgAkg0EEhpIW9g8ITBBJFQITorlglBo0RRUcsZEQaNECwJcpWMaIFuSwJLcKxlv0VFORokViAgkio5A0TRULAhRtTlFYsCXIKxCjSjblOSioo25Rb1Bly1YUG0CLkIRqxwarGW+g4t2rGgwgRVhViVhg5WNWNFZAi5CBJAgo3B6sKqiq6sSq7lKqoRKqoEXLctVdVWD1YnKcuD3KVXclCBBhAjBqsSsKq6nKsCBFVX1YXJcv0CSBD/////////////////QJ/////////////////6BL0CNUFtAAA01CaIyhNA1DXIyWMYxDpkwIKoyWEMyFEMIRwYGgxUCQygGkKDiYEiEYcDUYWi8YckEYQB//70sQcADIODzC53YAGTMXlgzugAANLphJwAtA1Q5K4I2sIMJJRkuRVBCmZYWApbMADlGB53KzgZQ4NGjoISyyJhISEEwCSBgSLJhBwFBwt0AhFRsBCIVExkJMICSsdMJCAoOFgdcgaEgAJlgSLJhBMWTLcFvSwJFvy3hbxRot4qsECQ0SlvkVkCQ0IDAS5SEaETluSW9GAhVYaEhoRGAlBsrEy36KgQJlvywEIEVOFOFGoPU5UbgxyYMU4Lfor+gTRWLdoqoElYVGkCKKqnKKqDLlIElYVGoNU5VX9WFWBVZRpykCaBBFRTlFRRpThThRtFRTkrCFOS3CBJFcsBCKyK6BAt0o25KsajblKwKNKNqcqNuQqr6sSjUGIE4OUbg+DXLg2D3KUacuDlOPgxRpBpRtWNCJWFRtTlAkqvBqnCK6jajSnCK6jajX///////////////6nCjSjSK3///////////////6nKjajRug3xm2lxsLKxm0qxuVG5lYTBjgL4025gkFxkcKhjiCRggEpiGUI0CJiUIZiGHJg2MxhSE4D6nwJDb04a8qgRU4WNBuSYSWATczp0MdDEMUOizQ0p0YlKwDUkziQIdmcOBDUQkRQyZIMLNjEpRgmYkkEJCwcMQaRUCGwY5Cp1UYoIBxdLpaiDYCJAImABLkjRELnS34CbDJosmEJCEiqcSGoNq3iwBBgtyqsgTLdKxIMgJKWCRYEBhIIIjBMZEiw5byghQHLjQlDnByKqqhYE+rEqoqs5LljRJBpFdWAaIoNKqKcqXKwqrseLorWSKkKsSnKjcGKcKwKNKcqcqrqNQcp5aLlwatdylY3IVgcpyEhnZg9MZKl3WdK2sKhp2VOEG1G1YlYFGoNU5ctVVyVOFGoNcqDXIg1T7kuW5K13KVUg9TzkuRB60mBPvYXMslyI8z1hExE1OoMgdAmgQ/////////////////0CaBFAii7z///////////////omRJPkwFtXzfiTSOHKKRxSin5ZRT8sVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQAAAAIIAADk17WOE1IF2np/zOyXQMWIpl9Mv8yQg+zB/EIq//vSxBGAKlG+7RnugAAAADSDgAAE3P81qnMHaLjz/MGTTNXpLNWBK/HX/5BGpxlwZuAehkpheeOs///NkKBNKDGMYpFNVodM3DIx1njr///MQGZM3lhMdiMMTmPM0FHMYCMzx1njr///8xeZszGTMxGJQxcZkysQswyIgxQXHeOt463////5kscZgMQxjQwJkocJgUQxicr5jMTYXGwxISvHW8db3rf/////5icN5gqMxiMiZhgIpgyKBhUZpekwlDAwWH8LgwYchN+t////////////+YODeBQkMOwcMJBxMAwiMJwQIALMNRoHh3LASGHo6GHIAkoeGGo2ERFf///////////////////ggADEUcAKGZh+bBjeXhiaF4NJYw5GQwTCEwHHYwtFIwJBswFGgwnEgwFBcwFGIwlEIwBBUwFF5UxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=");
+    snd_true.volume = 1;
     snd_fail.volume = 0.7;
 
     $(window.document).ready(function(){
         let gridItem = GM_addElement(document.querySelector('div.grid-action'), 'div', {class:'grid-item', style: 'justify-self: end; position: absolute;'});
-        let input = GM_addElement(gridItem, 'input', {class:'form-control', id:'orderIdCheckField', placeholder:'Quét mã - by QuangPlus', title:'Quét mã - by QuangPlus'});
+        let input = GM_addElement(gridItem, 'input', {class:'form-control', id:'orderIdCheckField', placeholder:'Order scanner • Quang.TD', title:'Order scanner • Quang.TD'});
         input.focus();
 
-        $(input).keyup(function(event) {
-            if (event.keyCode !== 13) return;
-
-            let id = this.value?.trim();
-            if(!id) return;
+        $(input).keydown(async function(e) {
+            if (e.key !== 'Enter') return;
+            let id = input.value?.trim();
+            if(!id || id.length < 10) return;
             let link = $('a[href*="thong-tin-don-hang"][href*="orderNumber='+id+'"]:not(.checked)');
             if(link.length){
                 link.addClass('checked');
                 let row = link.closest('tr.mat-row[role="row"]');
-                let checkbox = row.find('label.mat-checkbox-layout');
-                checkbox.click();
-                snd_success.play();
+                //let checkbox = row.find('label.mat-checkbox-layout');
+                row.find('label.mat-checkbox-layout')?.click();
+                await Delay(100);
+                snd_true.play();
             } else {
+                await Delay(100);
                 snd_fail.play();
             }
-            $(input).focus().select();
+
+            $(input).val(id).focus().select();
         });
 
     });
-})(window.$ || window.jQuery);;
+})();
 
+(function(){
+    if(!isViettelPage) return;
 
-
-
-(function($){
     GM_addStyle('td.mat-column-ORDER_REFERENCE{cursor:pointer;} td.mat-column-ORDER_REFERENCE:hover{font-weight: 700; text-decoration: underline; color: blue !important;}')
     if(window.location.origin != "https://viettelpost.vn") return;
     $(document.body).on('click', 'td.mat-column-ORDER_REFERENCE', function(){
         let fbid = this.innerText.match(/(\d)+/g)?.shift();
         let url = 'https://fb.com/'+fbid;
         window.open(url, '_blank');
-    })
-
-})(window.$ || window.jQuery);
-
-
-/** BOOKMARK LET
-(function() {
-    if (window.intervvv) {
-        clearInterval(window.intervvv);
-        window.intervvv = null;
-        return false;
-    };
-
-    window.intervvv = setInterval(_ => {
-        let objDiv = document.querySelector('div[aria-label="Messenger"] div[aria-label="Đoạn chat"] div.__fb-dark-mode');
-        if (!objDiv) document.querySelector('div[aria-label^="Messenger"][role="button"]')?.click();
-        else {
-            Array.from(objDiv.querySelectorAll('a[href^="/messages"][role="link"]:not(.checked)')).map(e => {
-                e.classList.add('checked');
-                //abbr
-                let name = e.querySelector('span')?.innerText;
-                let href = e.getAttribute('href');
-                let time = e.querySelector('abbr')?.innerText;
-                console.log(name, ' - ', time, 'https://fb.com'+href);
-            })
-            objDiv.scrollTop = objDiv.scrollHeight;
-        }
-    }, 1000)
-})()
-**/
-
-// C6FAE97E8F83FBFDE0D949B3F0D29CE7
+    });
+})();
