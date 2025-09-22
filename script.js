@@ -19,6 +19,7 @@
 // @connect      bumm.kids
 // @connect      api.viettelpost.vn
 // @connect      io.okd.viettelpost.vn
+// @connect      docs.google.com
 // @connect      script.google.com
 // @connect      script.googleusercontent.com
 
@@ -106,7 +107,7 @@ function makeid(length = 12) {
 });
 
 (isMessPage || isFBpage) && GM_registerMenuCommand("Đồng bộ lại" , async _ => {
-    await Customer_Mng.sync
+    await Customer_Mng.sync();
     GM_setValue('do_reload_page', new Date().getTime());
 });
 
@@ -849,51 +850,6 @@ const Customer_Mng = {
     };
 
 })();
-
-/***
-isFBpage && (function(){
-    $(document).on('click',`div[role="article"][aria-label*="${_myFbName}"]`, function(){
-        let url = $(this).find('li a[href*="comment_id"]')?.attr('href');
-        url = new URL(url);
-        let cid = url.searchParams.get('reply_comment_id') || url.searchParams.get('comment_id');
-        GM_setValue('lastClickCid', cid);
-    });
-})();
-***/
-
-
-(function(){
-    if(!isFBpage) return;
-
-    (function addHotKeys(){
-        $(document).on('keydown', function(e) {
-            console.log(e.key);
-            if(e.key == 'y'){
-                /***
-                let btn = document.querySelector('div[role="button"][aria-label="Yêu thích"]');
-                console.log(btn);
-                btn.dispatchEvent(customEvent('click'));
-                ***/
-                let btn = $('div:has(div[role="button"][aria-label*="Yêu thích"])');
-                console.log(btn);
-                [...btn].map(b => {
-                    console.log(b);
-                    $(b).click();
-                    let event = new Event("click");
-                    b.dispatchEvent(event);
-                })
-            }
-            if(e.key == 't'){
-                let btn = document.querySelector('div[role="button"][aria-label="Thương thương"]');
-                console.log(btn);
-                btn.dispatchEvent(customEvent('click'));
-             //   btn.click();
-            }
-        });
-    })();
-
-})();
-
 
 /***
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
