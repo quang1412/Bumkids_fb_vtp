@@ -182,38 +182,6 @@ const SHEETAPI = {
     },
 }
 
-const APPSHEET = {
-    appid: 'ed72750f-3ae4-4c36-ae94-d785aae9fe73',
-    key: 'V2-HnsQE-zaF8U-JOmZw-SWzSk-US4Cn-CQscn-dmmst-UgkbT',
-    find: function(tableName, json){
-        return new Promise((resolve, reject) => {
-            $.ajax({
-                type: "POST",
-                url: `https://api.appsheet.com/api/v2/apps/${this.appid}/tables/${tableName}/Action?applicationAccessKey=${this.key}`,
-                data: JSON.stringify(json),
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-                success: function(data){
-                    console.log(data);
-                },
-                error: function(errMsg) {
-                    alert(errMsg);
-                }
-            });
-        })
-    }
-}
-
-/***
-APPSHEET.find('Customer', {
-    "Action": "Find",
-    "Properties": {
-        "Selector": "Filter(Customer, [Phone] = '0778686886')"
-    },
-    "Rows": [
-    ]
-})
-***/
 
 // VIETTEL
 const VIETTEL = {
