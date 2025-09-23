@@ -152,36 +152,53 @@ Facebook
                 '');
 })();
 
-const SHEETAPI = {
+const SHEET = {
     url: 'https://script.google.com/macros/s/AKfycbw-DXz_EwNkDlDni_bQjtXgNan9JHlEVOAt0NlB3crMd5RnEu8LgsVX0y_v2P9xsi4_Ug/exec',
-    get: function(json){
-
-    },
-    post: function(json){
+    get: function(data){
+        const params = new URLSearchParams(data);
+        const queryString = params.toString();
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
-                headers: {"Content-Type": "text/plain" },
+                url: this.url + '?' + queryString,
+                method: "GET",
+                synchronous: true,
+                dataType: "json",
+                onload: function (res) {
+                    console.log(res)
+                    return resolve(JSON.parse(res.response));
+                },
+                onerror: function(error) {
+                    return reject(error.message || 'Lỗi viettelReqGet');
+                }
+            })
+        })
+    },
+    post: function(data){
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
                 url: this.url,
                 method: "POST",
                 synchronous: true,
-                data: JSON.stringify(json),
-                onload: res => {
-                    console.log(res);
-                    return res.status == 200 ? resolve(res.responseText) : reject(new Error(res.statusText));
+                headers: { },
+                data: JSON.stringify(data),
+                onload: (res) => {
+                    console.log(res.responseText);
+                    return res.status == 200 ? resolve(res.responseText) : reject(new Error(res.responseText));
                 },
-                onerror: e => {
-                    console.error(e)
-                    alert('Lỗi sheetAPI \nMã lỗi: #166');
-                    return reject(e.message||e.error);
+                onerror: (e) => {
+                    alert(e.message || 'Lỗi viettel \nMã lỗi: #178');
+                    return reject(e);
                 }
-            });
+            })
         })
     },
-    getCustomerById(id){
-
+    getCustomer: function(uid){
+        return this.get({act: 'getCustomer', data: uid});
+    },
+    setCustomer: function(data){
+        return this.post({act: 'setCustomer', data: data});
     },
 }
-
 
 // VIETTEL
 const VIETTEL = {
@@ -386,25 +403,20 @@ const Customer_Mng = {
     },
     get: async function(uid){
         if(!uid || uid == _myFbUid) throw new Error('Uid không hợp lệ');
+
         let matchs = this.dataStorage.filter(i => (i.uid == uid));
         if(!matchs.length){
-            matchs = await GGSHEET.query('customers', 'A:Z', `SELECT A, B, C, D, E, F, G WHERE B = '${uid}' AND Z <> 'duplicate'`);
+            matchs = await SHEET.getCustomer(uid);
         }
         return matchs;
     },
-    add: async function(info){
+    set: async function(info){
         try{
             this.dataStorage = this.dataStorage.filter(i => i.uid != info.uid); // del old id;
             this.dataStorage.push(info);
             GM_setValue(this.storageKey, this.dataStorage);
 
-            let entry = Object.keys(this.ggFormEntry).map(k => {
-                let val = info[k];
-                if(val) return ('entry.' + this.ggFormEntry[k] + "=\'" + encodeURIComponent(val))
-            });
-
-            let formUrl = `https://docs.google.com/forms/d/e/${this.ggFormId}/formResponse?${entry.join('&')}`;
-            let res = await GGSHEET.formSubmit(formUrl);
+            let res = await SHEET.setCustomer(info);
             return res;
         } catch(err){
             alert(err.message);
@@ -480,16 +492,9 @@ const Customer_Mng = {
             // get info
             this.table.innerText = 'Tải thông tin khách hàng...';
             Customer_Mng.get(this.customer.uid).then(res => {
+                console.log(res)
                 let data_current = res?.pop() || new Object();
                 let data_new = {...data_current, ...this.customer};
-
-                /***
-                //check update skip 'img'
-                let upd = 0;
-                let keys = [...(Object.keys(data_current)), ...(Object.keys(data_new))];
-                keys.forEach(k => k != 'img' && data_current[k] != data_new[k] && upd++);
-                upd && Customer_Mng.add(data_new);
-                ***/
 
                 this.customer = data_new;
 
@@ -533,8 +538,7 @@ const Customer_Mng = {
                 if(lastestAddr){
                     if(lastestAddr != addr){
                         this.customer.addr = lastestAddr;
-                        Customer_Mng.add(this.customer).catch(err => alert(err.message));
-                        //alert(lastestAddr)
+                        Customer_Mng.set(this.customer).catch(err => alert(err.message));
                     }
                 }
 
@@ -643,7 +647,7 @@ const Customer_Mng = {
 
             this.customer.phone = phone;
             this.refreshInfo();
-            Customer_Mng.add(this.customer).catch(err => alert(err.message))
+            Customer_Mng.set(this.customer).catch(err => alert(err.message))
         }
 
         async createOrder(){
@@ -1097,7 +1101,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                         return VIETTEL.getOrderPrint(oid);
                     }).then(link => {
-                        window.open(link+'&status='+status , '_blank', 'toolbar=no, menubar=no, resizable=no, width=1000, height=468, top=50, left=50"');
+                        window.open(link+'&status='+status , '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=50"');
                     }).catch(e => {
                         e.message && alert(e.message);
                     }).finally(_=>{
