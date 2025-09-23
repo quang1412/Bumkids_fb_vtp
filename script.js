@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.9.15
+// @version      2025.9.20
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -19,7 +19,6 @@
 // @connect      bumm.kids
 // @connect      api.viettelpost.vn
 // @connect      io.okd.viettelpost.vn
-// @connect      docs.google.com
 // @connect      script.google.com
 // @connect      script.googleusercontent.com
 
@@ -107,7 +106,7 @@ function makeid(length = 12) {
 });
 
 (isMessPage || isFBpage) && GM_registerMenuCommand("Đồng bộ lại" , async _ => {
-    await Customer_Mng.sync();
+    await Customer_Mng.sync
     GM_setValue('do_reload_page', new Date().getTime());
 });
 
@@ -120,7 +119,6 @@ function getSelectedText() {
   }
   return selectedText;
 }
-
 
 var keyState = {};
 function keyHandler(e){ keyState[e.code] = e.type === "keydown" }
@@ -142,8 +140,6 @@ Facebook
     GM_addStyle('body * {transition: unset !important; }');
 
     GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
-
-                // 'div[aria-label*="dưới tên"]:not([aria-label*="Trịnh Hiền"]):not(:hover) {  opacity: .5; }' +
 
                 'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }' +
                 //'div[aria-label="Xem trước liên kết"] div[role="button"]:not([aria-label="Nhắn tin"]) {display:none;}' +
@@ -186,6 +182,7 @@ const SHEETAPI = {
     },
 }
 
+
 // VIETTEL
 const VIETTEL = {
     init: function(){
@@ -194,7 +191,9 @@ const VIETTEL = {
             GM_setValue('vtp_deviceId', this.deviceId);
             this.token = this.deviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
             GM_setValue('vtp_tokenKey', this.token);
-            $.post('https://bumm.kids/iframe/facebook_order.php', {token: `${this.deviceId}; ${this.token}`}).then(res => GM_log(res))
+            if(this.deviceId && this.token) {
+                $.post('https://bumm.kids/iframe/facebook_order.php', {token: `${this.deviceId}; ${this.token}`}).then(res => GM_log(res))
+            };
         }
         else if(isFBpage || isMessPage){
             this.deviceId = GM_getValue('vtp_deviceId', null);
@@ -304,6 +303,14 @@ const VIETTEL = {
             });
         })
     },
+    getPhoneAddr(phone){
+        return new Promise((resolve, reject) => {
+            this.getReq('https://io.okd.viettelpost.vn/order/v1.0/sender/receivers?ofs=0&size=10&q='+phone).then(resolve).catch(e => {
+                alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
+                reject(e);
+            });
+        })
+    }
 };
 VIETTEL.init();
 
@@ -511,7 +518,7 @@ const Customer_Mng = {
                 if(!vt) throw new Error('Lỗi: không tìm đc đơn hàng viettel!');
                 if(vt.error) throw new Error('Viettel: ' + vt.message);
 
-                let list = vt.data.data.LIST_ORDER;
+                let list = (vt.data.data.LIST_ORDER || new Array());
                 let total = vt.data.data.TOTAL;
 
                 let pendding = list.filter(od => !!~([-108,100,102,103,104]).indexOf(od.ORDER_STATUS));
@@ -523,6 +530,13 @@ const Customer_Mng = {
                 title += draf.map(o => o.PRODUCT_NAME).join('\n ');
 
                 let lastestAddr = list[0]?.RECEIVER_ADDRESS.toLowerCase();
+                if(lastestAddr){
+                    if(lastestAddr != addr){
+                        this.customer.addr = lastestAddr;
+                        Customer_Mng.add(this.customer).catch(err => alert(err.message));
+                        //alert(lastestAddr)
+                    }
+                }
 
                 let kyc = await VIETTEL.getKyc(phone);
                 let kycStr = kyc.deliveryRate > -1.0 ? (`${(Math.round(kyc.deliveryRate*1000)/10)}% • ${kyc.order501}/${kyc.totalOrder}`) : '---';
@@ -852,6 +866,51 @@ const Customer_Mng = {
 })();
 
 /***
+isFBpage && (function(){
+    $(document).on('click',`div[role="article"][aria-label*="${_myFbName}"]`, function(){
+        let url = $(this).find('li a[href*="comment_id"]')?.attr('href');
+        url = new URL(url);
+        let cid = url.searchParams.get('reply_comment_id') || url.searchParams.get('comment_id');
+        GM_setValue('lastClickCid', cid);
+    });
+})();
+***/
+
+
+(function(){
+    if(!isFBpage) return;
+
+    (function addHotKeys(){
+        $(document).on('keydown', function(e) {
+            console.log(e.key);
+            if(e.key == 'y'){
+                /***
+                let btn = document.querySelector('div[role="button"][aria-label="Yêu thích"]');
+                console.log(btn);
+                btn.dispatchEvent(customEvent('click'));
+                ***/
+                let btn = $('div:has(div[role="button"][aria-label*="Yêu thích"])');
+                console.log(btn);
+                [...btn].map(b => {
+                    console.log(b);
+                    $(b).click();
+                    let event = new Event("click");
+                    b.dispatchEvent(event);
+                })
+            }
+            if(e.key == 't'){
+                let btn = document.querySelector('div[role="button"][aria-label="Thương thương"]');
+                console.log(btn);
+                btn.dispatchEvent(customEvent('click'));
+             //   btn.click();
+            }
+        });
+    })();
+
+})();
+
+
+/***
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
@@ -955,10 +1014,10 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 if(this.value == _samplePhoneNo || !isVNPhone(this.value)) return;
 
                 let res = await VIETTEL.getListOrders(this.value).catch(e => {throw new Error()});
-
+                GM_log(JSON.stringify(res));
                 if(res?.status != 200) throw new Error();
 
-                let orders = res.data.data.LIST_ORDER.filter(o => !!~([-100, -108,100,102,103,104]).indexOf(o.ORDER_STATUS));
+                let orders = (res.data.data.LIST_ORDER || []).filter(o => !!~([-100, -108,100,102,103,104]).indexOf(o.ORDER_STATUS));
 
                 let oLength = orders.length
 
@@ -1059,8 +1118,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         phoneNo.value = phone;
         productPrice.value = price;
         productWeight.value = 1000;
-        productName.value = (isSample ? '❌ ❌ ❌' : '') + prdName;
-        autoAddress.value = isSample ? ' ❌ Đổi địa chỉ, Ô chợ dừa, đống đa' : '';
+        productName.value = prdName + (isSample ? '    ❌ ❌ ❌' : '');
+        autoAddress.value = isSample ? '..., Ô chợ dừa, đống đa' : '';
         orderNo.value = [uid, makeid(5)].join('-');
 
         [ productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
@@ -1097,6 +1156,22 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 if(btn.innerText != 'Duyệt đơn') return;
                 btn.click();
                 setTimeout(_ => $('div#vtpBillModalOrderApproval.modal.show div.col-6:first-child button')?.focus(), 200);
+            });
+        }
+        if(e.key == 'h'){
+            e.preventDefault();
+            $.each(buttons, (i, btn) => {
+                if(btn.innerText != 'Hủy đơn') return;
+                btn.click();
+                setTimeout(_ => $('#vtpBillModalDeleteOrder.modal.show button.btn-confirm:not([data-dismiss])')?.focus(), 200);
+            });
+        }
+        if(e.key == 'x'){
+            e.preventDefault();
+            $.each(buttons, (i, btn) => {
+                if(btn.innerText != 'Xóa đơn') return;
+                btn.click();
+                setTimeout(_ => $('#vtpBillModalDeleteOrder.modal.show button.btn-confirm:not([data-dismiss])')?.focus(), 200);
             });
         }
     }
@@ -1163,8 +1238,3 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.open(url, '_blank');
     });
 })();
-
-
-
-
-
