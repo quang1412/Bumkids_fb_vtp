@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.9.20
+// @version      2025.9.24
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -133,23 +133,47 @@ Facebook
 (function(){
     if(!isFBpage && !isMessPage) return !1;
 
-    GM_addStyle('div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}');
-    GM_addStyle('div[aria-label="Công cụ soạn cuộc trò chuyện"] > div:first-child >div {display: none; }');
-    GM_addStyle('div[aria-label="Công cụ soạn cuộc trò chuyện"] div[aria-label="Chọn biểu tượng cảm xúc"] {display: none; }');
-    GM_addStyle('input:is([aria-label="Tìm kiếm"], [aria-label="Tìm kiếm trên Messenger"]) ~ span > div[aria-label="Xóa"] {display: none; }');
-    GM_addStyle('body * {transition: unset !important; }');
+    GM_addStyle(
+        'body * {transition: unset !important; }'+
+        'div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}'+
+        'div[aria-label="Công cụ soạn cuộc trò chuyện"] > div:first-child >div {display: none; }'+
+        'div[aria-label="Công cụ soạn cuộc trò chuyện"] div[aria-label="Chọn biểu tượng cảm xúc"] {display: none; }'+
+        'input:is([aria-label="Tìm kiếm"], [aria-label="Tìm kiếm trên Messenger"]) ~ span > div[aria-label="Xóa"] {display: none; }'+
 
-    GM_addStyle('@keyframes blinker { 50% { opacity: 0; } }' +
+        //'@keyframes blinker { 50% { opacity: 0; } }' +
 
-                'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }' +
-                //'div[aria-label="Xem trước liên kết"] div[role="button"]:not([aria-label="Nhắn tin"]) {display:none;}' +
-                'div[aria-label="Xem trước liên kết"]:has(a[href*="hien.trinh"]){ display:none; }'+
+        'div[style*="--chat-composer"]:is(.__fb-dark-mode, .__fb-light-mode) > div > div[role="none"] > div {  height: calc(100vh - 200px); }'+
+        //'div[aria-label="Xem trước liên kết"] div[role="button"]:not([aria-label="Nhắn tin"]) {display:none;}' +
+        'div[aria-label="Xem trước liên kết"]:has(a[href*="hien.trinh"]){ display:none; }'+
 
-                'div[role="article"][aria-label*="dưới tên Trịnh Hiền"] span[lang] * {color: palegreen; }' +
-                'div[role="article"]:has(div[aria-label="Gỡ Yêu thích"]) span[lang] * {color: var(--reaction-love, #DD2334); }' +
-                'div[role="article"]:has(div[aria-label="Gỡ Thương thương"]) span[lang] * {color: var(--reaction-support, #887000); }' +
+        'div[role="article"][aria-label*="dưới tên Trịnh Hiền"] span[lang] * {color: palegreen; }'+
+        'div[role="article"]:has(div[aria-label="Gỡ Yêu thích"]) span[lang] * {color: var(--reaction-love, #DD2334); }'+
+        'div[role="article"]:has(div[aria-label="Gỡ Thương thương"]) span[lang] * {color: var(--reaction-support, #887000); }'+
+        '');
 
-                '');
+    GM_addStyle(
+        'div.infoCard { --ifc-highlight-color: coral; --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgba(220, 220, 220, 0.40); --ifc-text-color: #333; }'+
+        'html.__fb-dark-mode div.infoCard { --ifc-highlight-color: yellow; --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgba(0, 0, 0, 0.20); --ifc-text-color: white; }'+
+
+        'div.infoCard {min-height: 115px; display: flex;flex-direction: column; justify-content: space-between; color: var(--ifc-text-color); backdrop-filter: brightness(1.5) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 8px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid #d3d3d32b;border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}'+
+
+        'div.infoCard div.cardBg { background: var(--ifc-bg-gradient); z-index: -1; opacity: 0.5; }'+
+
+        'div.infoCard table td {white-space: nowrap;  padding-right: 10px;}'+
+        'div.infoCard table td:last-child {white-space: nowrap;  width: 100%;}'+
+        'div.infoCard table td.long_text {  overflow: clip;  direction: rtl;  max-width: 150px;  display: block;  white-space: normal;  text-wrap: nowrap;  text-overflow: ellipsis;  }'+
+
+        'div.infoCard ::selection { color: red; background: yellow;}'+
+
+        'div[aria-label^="Biểu ngữ Tin nhắn đã ghim"] > div { flex-direction: row-reverse; text-align: right; }'+
+        'div:has(div[role="main"][aria-label^="Cuộc trò chuyện với"]) div.infoCard { left: 27px; top: 64px; right: unset; bottom: unset; }'+
+
+        'div.infoCard div.toolBar { text-align: center; background-color: var(--ifc-toolbar-bg); border-radius: 6px; display: flex; justify-content: space-around; }'+
+        'div.infoCard div.toolBar a { color: initial; padding: 5px; flex: 1; }'+
+
+        'div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }'+
+        'div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }'+
+    '');
 })();
 
 const SHEET = {
@@ -186,7 +210,7 @@ const SHEET = {
                 data: JSON.stringify(data),
                 onload: (res) => {
                     res = JSON.parse(res.response);
-                    console.log(res);
+                    //console.log(res);
                     return (res.status != 'success') ? reject(res.message) : resolve(res.data);
                 },
                 onerror: (error) => {
@@ -216,7 +240,7 @@ const VIETTEL = {
             this.token = this.deviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
             GM_setValue('vtp_tokenKey', this.token);
             if(this.deviceId && this.token) {
-                $.post('https://bumm.kids/iframe/facebook_order.php', {token: `${this.deviceId}; ${this.token}`}).then(res => GM_log(res))
+                //$.post('https://bumm.kids/iframe/facebook_order.php', {token: `${this.deviceId}; ${this.token}`}).then(res => GM_log(res))
             };
         }
         else if(isFBpage || isMessPage){
@@ -403,62 +427,29 @@ const Customer_mng = {
         GM_setValue(this.key, this.data);
         window.prompt(`${this.data.length} customers syncing done! \n\nE.g.: `, JSON.stringify(this.data[0]));
     },
-    setLocal: function(c){
-        this.data = this.data.filter(i => i.uid != c.uid); // del old id;
-        this.data.push(c);
+    setLocal: function(obj){
+        this.data = this.data.filter(i => i.uid != obj.uid); // del old id;
+        this.data.push(obj);
         GM_setValue(this.key, this.data);
     },
     get: async function(uid){
         if(!uid || uid == _myFbUid) throw new Error('Uid không hợp lệ');
 
-        let info = this.data.find(i => i.uid == uid);
+        let obj = this.data.find(i => i.uid == uid);
 
-        if(!info){
-            info = await SHEET.getCustomer(uid);
-            info && this.setLocal(info);
+        if(!obj){
+            obj = await SHEET.getCustomer(uid);
+            obj && this.setLocal(obj);
         }
 
-        return info || new Object();
+        return obj || {};
     },
-    set: async function(c){
-        SHEET.setCustomer(c).then(_ => {
-            this.setLocal(c);
-        }).catch(e => {
-            alert(e.message);
-        });
+    set: async function(obj){
+        SHEET.setCustomer(obj).then( _ => this.setLocal(obj) ).catch(e => alert(e.message));
     }
 };
 (isMessPage || isFBpage) && Customer_mng.int();
 
-// FB CSS
-(function(){
-    if(!isFBpage && !isMessPage) return !1;
-
-    GM_addStyle(
-        'div.infoCard { --ifc-highlight-color: coral; --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgba(220, 220, 220, 0.40); --ifc-text-color: #333; }'+
-        'html.__fb-dark-mode div.infoCard { --ifc-highlight-color: yellow; --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgba(0, 0, 0, 0.20); --ifc-text-color: white; }'+
-
-        'div.infoCard {min-height: 115px; display: flex;flex-direction: column; justify-content: space-between; color: var(--ifc-text-color); backdrop-filter: brightness(1.5) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 8px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid #d3d3d32b;border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}'+
-
-        'div.infoCard div.cardBg { background: var(--ifc-bg-gradient); z-index: -1; opacity: 0.5; }'+
-
-        'div.infoCard table td {white-space: nowrap;  padding-right: 10px;}'+
-        'div.infoCard table td:last-child {white-space: nowrap;  width: 100%;}'+
-        'div.infoCard table td.long_text {  overflow: clip;  direction: rtl;  max-width: 150px;  display: block;  white-space: normal;  text-wrap: nowrap;  text-overflow: ellipsis;  }'+
-
-        'div.infoCard ::selection { color: red; background: yellow;}'+
-
-        'div[aria-label^="Biểu ngữ Tin nhắn đã ghim"] > div { flex-direction: row-reverse; text-align: right; }'+
-        'div:has(div[role="main"][aria-label^="Cuộc trò chuyện với"]) div.infoCard { left: 27px; top: 64px; right: unset; bottom: unset; }'+
-
-        'div.infoCard div.toolBar { text-align: center; background-color: var(--ifc-toolbar-bg); border-radius: 6px; display: flex; justify-content: space-around; }'+
-        'div.infoCard div.toolBar a { color: initial; padding: 5px; flex: 1; }'+
-
-        'div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }'+
-        'div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }'
-    );
-
-})();
 
 // FB INFO CARD
 (function() {
@@ -483,19 +474,19 @@ const Customer_mng = {
 
             let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
 
-            this.btn_1 = GM_addElement(toolBar, 'a');
-            this.btn_1.innerText = 'Tìm sđt'; this.btn_1.onclick = _ => this.phoneFinder();
+            this.btn_find = GM_addElement(toolBar, 'a');
+            this.btn_find.innerText = 'Tìm sđt'; this.btn_find.onclick = _ => this.phoneFinder();
 
-            let btn_2 = GM_addElement(toolBar, 'a');
-            btn_2.innerText = 'Sửa sđt'; btn_2.onclick = _ => this.setPhone();
+            let btn_od = GM_addElement(toolBar, 'a');
+            btn_od.innerText = 'Tạo đơn'; btn_od.onclick = _ => this.createOrder();
 
-            let btn_3 = GM_addElement(toolBar, 'a');
-            btn_3.innerText = 'Tạo đơn'; btn_3.onclick = _ => this.createOrder();
+            let btn_edit = GM_addElement(toolBar, 'a');
+            btn_edit.innerText = 'Sửa sdt/đchi'; btn_edit.onclick = _ => this.setInfo();
 
             this.eventsListener();
 
-            // get info
-            this.table.innerText = 'Tải thông tin khách hàng...';
+            // get infos
+            this.table.innerText = '🧸 Tải thông tin khách hàng...';
             Customer_mng.get(this.customer.uid).then(info => {
                 this.customer = {...info, ...this.customer};
             }).then(_ => {
@@ -511,7 +502,7 @@ const Customer_mng = {
             if(this.delay_kfbs) return;
 
             try{
-                this.table.innerText = 'Tải thông tin Viettel...';
+                this.table.innerText = '📦 Tải thông tin Viettel...';
 
                 let {uid, phone, addr} = this.customer;
                 if(!phone) throw new Error('Chưa có số đt!!');
@@ -532,12 +523,10 @@ const Customer_mng = {
                 let title = pendding.map(o => o.PRODUCT_NAME).join('\n ');
                 title += draf.map(o => o.PRODUCT_NAME).join('\n ');
 
-                let lastestAddr = list[0]?.RECEIVER_ADDRESS.toLowerCase();
-                if(lastestAddr){
-                    if(lastestAddr != addr){
-                        this.customer.addr = lastestAddr;
-                        Customer_mng.set(this.customer);
-                    }
+                let lastAddr = list[0]?.RECEIVER_ADDRESS.toLowerCase();
+                if(lastAddr && lastAddr != addr){
+                    this.customer.addr = lastAddr;
+                    Customer_mng.set(this.customer);
                 }
 
                 let kyc = await VIETTEL.getKyc(phone);
@@ -574,8 +563,8 @@ const Customer_mng = {
 
         async phoneFinder(isRun = !this.isSearching){
             this.isSearching = isRun;
-            this.btn_1.innerText = this.isSearching ? "Dừng tìm" : "Tìm sđt";
-            this.btn_1.style.color = this.isSearching ? "var(--ifc-highlight-color)" : "";
+            this.btn_find.innerText = this.isSearching ? "Dừng tìm" : "Tìm sđt";
+            this.btn_find.style.color = this.isSearching ? "var(--ifc-highlight-color)" : "";
 
             if(!this.isSearching){
                 clearInterval(this.loopSearching);
@@ -584,20 +573,20 @@ const Customer_mng = {
 
             clearInterval(this.loopStick);
 
-            let overTime = 0;
+            let loopCount = 0;
             let scrollElm = this.container.querySelector('[aria-label^="Tin nhắn trong cuộc trò chuyện"] > div > div');
 
             let loopFn = async _ => {
-                if(overTime >= 50) return this.phoneFinder(false); // overTime
+                if(loopCount >= 33) return this.phoneFinder(false); // loopCount
 
                 let spans = scrollElm.querySelectorAll('div[role="row"] span[dir="auto"]:has(div):not(.scanned)');
 
                 if(!spans.length) {
-                    overTime++;
+                    loopCount++;
                     return scrollElm.scrollTo({ top: 0, behavior: 'smooth' });
                 }
 
-                overTime = 0;
+                loopCount = 0;
 
                 for(let i = spans.length; i > 0; i--){
                     let span = spans[i-1];
@@ -630,13 +619,23 @@ const Customer_mng = {
                 }
             }
             loopFn();
-            this.loopSearching = setInterval(loopFn, 200);
+            this.loopSearching = setInterval(loopFn, 300);
         }
 
-        async setPhone(phone = window.prompt("Nhập sđt cho " + this.customer.name, this.customer.phone || '0900000000')){
-            if(!phone || !isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone) return;
+        async setInfo(p, a){
+            let phone = window.prompt("Lưu sđt của " + this.customer.name, p || this.customer.phone || '0900000000');
+
+            if(phone == null) return;
+
+            //if(phone == null || !phone || !isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone) return;
+
+            let addr = window.prompt("Lưu địa chỉ của " + this.customer.name, a || this.customer.addr);
+
+            if(addr == null) return;
 
             this.customer.phone = phone;
+            this.customer.addr = addr;
+
             this.refreshInfo();
             Customer_mng.set(this.customer);
         }
@@ -653,7 +652,7 @@ const Customer_mng = {
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
-                let prices_str = prompt(title + "B1 - Điền giá \n(đv nghìn đồng, phân tách bằng dấu cách để tính tổng)", GM_getValue('lastest_prices', 0));
+                let prices_str = prompt(title + "B1 - Điền giá:", GM_getValue('lastest_prices', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
                 if(!(/^[\d\s]*$/g).test(prices_str)) throw new Error('❌ Giá sản phẩm không hợp lệ!');
 
@@ -661,7 +660,7 @@ const Customer_mng = {
 
                 let itemNameList = GM_getValue('lastest_items_list', []);
                 let list = itemNameList.map((e, i) => `[${i}] ${e}`).join('\n');
-                let input = prompt(title + 'Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + list, itemNameList[0] || '');
+                let input = prompt(title + 'B2 - Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + list, itemNameList[0] || '');
                 if (input == null || input == undefined) return false;
 
                 let itemName = itemNameList[input] || input
@@ -683,60 +682,78 @@ const Customer_mng = {
 
                 window.addEventListener('message', ({data}) => {
                     uid == data.uid && this.refreshInfo();
-                    //data.uid && data.cid && GGSHEET.log('createOrder', [data.cid, data.uid ]);
                 }, {once: true});
-
-
             }
             catch(e){ alert(title + e.message) }
         }
 
         async eventsListener(){
 
-            this.container.addEventListener("click", function(e){
-                let target = e.target.closest('div[aria-label="Trả lời"][role="button"]');
-                target && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
+            this.container.addEventListener("click", e => {
+                let replBtn = e.target.closest('div[aria-label="Trả lời"][role="button"]');
+                replBtn && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
+
+                let scrollDownBtn = e.target.closest('div[aria-label="Xem tin nhắn mới đây nhất"][role="button"]');
+                scrollDownBtn && this.phoneFinder(false);
             });
 
+
+            /***
             this.container.addEventListener("keydown", e => {
                 if(e.key === "F2") {
                     e.preventDefault();
                     this.preOrder();
                 }
-            })
+            });
 
             this.container.addEventListener('contextmenu', function(e) {
                 return;
                 event.preventDefault();
                 alert('contextmenu');
             });
+            ***/
+            //Xem tin nhắn mới đây nhất
 
             // Set phone by mouse selection
             this.container.addEventListener('mouseup', _ => {
-                if(!window.getSelection) return alert('⚠ window.getSelection is undifined');
-                let phone = window.getSelection().toString().replaceAll(/\D/g,``);
+                if(!window.getSelection) return alert('⚠ window.getSelection is undefined');
 
-                if(!phone || phone.length != 10 || phone == this.customer.phone || phone == _myPhone || !isVNPhone(phone)) return;
-                if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${phone}?`)){
-                    if(this.delay_xjae) return;
-                    this.delay_xjae = setTimeout(_ => {delete this.delay_xjae}, 1000);
+                let selection = window.getSelection();
 
-                    this.setPhone(phone);
-                }
+                if (selection.rangeCount <= 0) return false;
+
+                let selectedText = selection.toString();
+
+                let p = selectedText.replaceAll(/\D/g, '');
+
+                if(!p || p.length != 10 || p == _myPhone || p == this.customer.phone || !isVNPhone(p)) return false;
+
+                let range = selection.getRangeAt(0);
+                let rangeText = range.startContainer.textContent;
+
+                let a = rangeText.replace(selectedText, '').replaceAll('\n', '');
+
+                if(window.delay_xpvs) return false;
+                window.delay_xpvs = setTimeout(_ => {delete window.delay_xpvs}, 1000);
+
+                this.setInfo(p, a);
+
+                //if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${p}?`)){ }
             });
         }
     }
 
     window.document.addEventListener('mousemove', async function() {
-        if(this.delay) return;
-        this.delay = 1; setTimeout(_ => {this.delay = 0}, 1000);
+        if(window.delay_i0mr) return;
+        window.delay_i0mr = 1; setTimeout(_ => {window.delay_i0mr = 0}, 1000);
 
-        let links = window.document.querySelectorAll(`
-          div[role="main"][aria-label^="Cuộc trò chuyện với "] > div > div > div > div:first-child a[role="link"][href]:not(.checked, [aria-label]),
-          div:not([hidden]) > div[style*="chat-composer"] a[role="link"][href^="/"][aria-label]:not(.checked, [aria-label="Mở ảnh"])
-        `);
-        for(let i = 0; i < links.length; i++){
-            let e = links[i];
+        let profiles = window.document.querySelectorAll(`
+        div:not([hidden]) > div[style*="chat-composer"] a[role="link"][href^="/"][aria-label]:not(.checked, [aria-label="Mở ảnh"]),
+        div[role="main"][aria-label^="Cuộc trò chuyện với "] > div > div > div > div:first-child a[role="link"][href]:not(.checked, [aria-label])`);
+
+
+        for(let i = 0; i < profiles.length; i++){
+            let e = profiles[i];
             let uid = e.getAttribute('href')?.match(/\d+/g)?.pop();
             let name = e.getAttribute('aria-label') || e.querySelector('h2')?.innerText;
             let img = e.querySelector('img')?.getAttribute('src');
