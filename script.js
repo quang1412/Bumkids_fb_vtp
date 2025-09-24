@@ -417,7 +417,7 @@ const GGSHEET = {
 
 // FB CUSTOMER MANAGER
 const Customer_mng = {
-    key: 'GMcustomer_1',
+    key: 'GMcustomer',
     int: async function(){
         this.data = await GM_getValue(this.key, []);
         GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => { remote && (this.data = newValue) });
@@ -504,7 +504,7 @@ const Customer_mng = {
             try{
                 this.table.innerText = '📦 Tải thông tin Viettel...';
 
-                let {uid, phone, addr} = this.customer;
+                let {uid, phone} = this.customer;
                 if(!phone) throw new Error('Chưa có số đt!!');
 
                 let vt = await VIETTEL.getListOrders(phone);
@@ -512,7 +512,7 @@ const Customer_mng = {
                 if(vt.error) throw new Error('Viettel: ' + vt.message);
 
                 let list = (vt.data.data.LIST_ORDER || new Array());
-                let total = vt.data.data.TOTAL;
+                this.totalOd = vt.data.data.TOTAL;
 
                 let pendding = list.filter(od => !!~([-108,100,102,103,104]).indexOf(od.ORDER_STATUS));
                 this.penddingOrderCount = pendding.length;
@@ -523,32 +523,26 @@ const Customer_mng = {
                 let title = pendding.map(o => o.PRODUCT_NAME).join('\n ');
                 title += draf.map(o => o.PRODUCT_NAME).join('\n ');
 
-                let lastAddr = list[0]?.RECEIVER_ADDRESS.toLowerCase();
-                if(lastAddr && lastAddr != addr){
-                    this.customer.addr = lastAddr;
-                    Customer_mng.set(this.customer);
-                }
-
                 let kyc = await VIETTEL.getKyc(phone);
-                let kycStr = kyc.deliveryRate > -1.0 ? (`${(Math.round(kyc.deliveryRate*1000)/10)}% • ${kyc.order501}/${kyc.totalOrder}`) : '---';
+                this.kycStr = kyc.deliveryRate > -1.0 ? (`${(Math.round(kyc.deliveryRate*1000)/10)}% • ${kyc.order501}/${kyc.totalOrder}`) : '---';
 
                 this.table.innerHTML = `
-                <tr style="display:none;"><td>ID:</td> <td>${uid}</td></tr>
+                <tr style="display:none;"><td>ID:</td> <td>${this.customer.uid}</td></tr>
                 <tr>
-                  <td>Số điện thoại:</td> <td>${phone}</td>
+                  <td>Số điện thoại:</td> <td>${this.customer.phone}</td>
                 </tr>
                 <tr>
                   <td>Đơn Viettel:</td>
                   <td>
-                    <a href="https://viettelpost.vn/quan-ly-van-don?q=1&p=${btoa(phone)}" target="_blank" style="color:inherit; text-decoration: underline;" title="${title}">
-                      <span>${total} đơn </span>&nbsp
-                      ${this.draftOrderCount ? `<span style="color:yellow"> • có ${this.draftOrderCount} đơn nháp</span>` : ''}
-                      ${this.penddingOrderCount ? `<span style="color:coral"> • có ${this.penddingOrderCount} đơn chờ giao</span>` : ''}
+                    <a href="https://viettelpost.vn/quan-ly-van-don?q=1&p=${btoa(this.customer.phone)}" target="_blank" style="color:inherit; text-decoration: underline;">
+                      <span>${this.totalOd} đơn </span>&nbsp
+                      ${this.draftOrderCount ? `<span style="color:yellow"> • ${this.draftOrderCount} nháp</span>` : ''}
+                      ${this.penddingOrderCount ? `<span style="color:coral"> • ${this.penddingOrderCount} chờ giao</span>` : ''}
                     </a>
                   </td>
                 </tr>
-                <tr> <td>Tỷ lệ nhận:</td> <td>${kycStr}</td> </tr>
-                <tr> <td>Tags:</td> <td>---</td> </tr>`;
+                <tr> <td>Tỷ lệ nhận:</td> <td>${this.kycStr}</td> </tr>
+                <tr> <td>đchi:</td> <td>${this.customer.addr || ''}</td> </tr>`;
             } catch(e){
 
                 this.table.innerText = '⚠️ ' + e.message;
@@ -585,9 +579,7 @@ const Customer_mng = {
                     loopCount++;
                     return scrollElm.scrollTo({ top: 0, behavior: 'smooth' });
                 }
-
                 loopCount = 0;
-
                 for(let i = spans.length; i > 0; i--){
                     let span = spans[i-1];
 
@@ -623,13 +615,11 @@ const Customer_mng = {
         }
 
         async setInfo(p, a){
-            let phone = window.prompt("Lưu sđt của " + this.customer.name, p || this.customer.phone || '0900000000');
+            let phone = window.prompt("Sđt của " + this.customer.name, p || this.customer.phone || '0900000000');
 
             if(phone == null) return;
 
-            //if(phone == null || !phone || !isVNPhone(phone) || phone == this.customer.phone || phone == _myPhone) return;
-
-            let addr = window.prompt("Lưu địa chỉ của " + this.customer.name, a || this.customer.addr);
+            let addr = window.prompt("Địa chỉ của " + this.customer.name, a || this.customer.addr);
 
             if(addr == null) return;
 
@@ -638,6 +628,7 @@ const Customer_mng = {
 
             this.refreshInfo();
             Customer_mng.set(this.customer);
+            GM_setClipboard( phone+"\n"+addr, "text");
         }
 
         async createOrder(){
@@ -646,7 +637,7 @@ const Customer_mng = {
             let title = `Tạo đơn cho ${name}\n\n`;
 
             try{
-                if(!phone) throw new Error('❌ Vui lòng cập nhật sđt trước!');
+                if(!phone) return this.setInfo();
 
                 if(phone != _samplePhoneNo && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
 
@@ -678,8 +669,6 @@ const Customer_mng = {
 
                 GM_setValue('lastest_prices', prices_str);
 
-
-
                 window.addEventListener('message', ({data}) => {
                     uid == data.uid && this.refreshInfo();
                 }, {once: true});
@@ -697,6 +686,35 @@ const Customer_mng = {
                 elm && this.phoneFinder(false);
             });
 
+            // Set phone by mouse selection
+            this.container.querySelector('div[aria-label*="Tin nhắn trong cuộc trò chuyện"]').addEventListener('mouseup', event => {
+                if(!event.ctrlKey) return;
+
+                if(!window.getSelection) return alert('⚠ window.getSelection is undefined');
+
+                let selection = window.getSelection();
+
+                if (selection.rangeCount <= 0) return false;
+
+                let selectedText = selection.toString();
+
+                let p = selectedText.replaceAll(/\D/g, '');
+
+                if(!p || p.length != 10 || p == _myPhone || !isVNPhone(p)) return false;
+
+                let range = selection.getRangeAt(0);
+                let rangeText = range.startContainer.textContent;
+
+                let a = rangeText.replace(selectedText, '').replaceAll('\n', '');
+
+                if(this.customer.phone && this.customer.addr) return;
+
+                if(window.delay_xpvs) return false;
+                window.delay_xpvs = setTimeout(_ => {delete window.delay_xpvs}, 1000);
+
+                this.setInfo(p, a);
+            });
+
 
             /***
             this.container.addEventListener("keydown", e => {
@@ -712,34 +730,6 @@ const Customer_mng = {
                 alert('contextmenu');
             });
             ***/
-            //Xem tin nhắn mới đây nhất
-
-            // Set phone by mouse selection
-            this.container.addEventListener('mouseup', _ => {
-                if(!window.getSelection) return alert('⚠ window.getSelection is undefined');
-
-                let selection = window.getSelection();
-
-                if (selection.rangeCount <= 0) return false;
-
-                let selectedText = selection.toString();
-
-                let p = selectedText.replaceAll(/\D/g, '');
-
-                if(!p || p.length != 10 || p == _myPhone || p == this.customer.phone || !isVNPhone(p)) return false;
-
-                let range = selection.getRangeAt(0);
-                let rangeText = range.startContainer.textContent;
-
-                let a = rangeText.replace(selectedText, '').replaceAll('\n', '');
-
-                if(window.delay_xpvs) return false;
-                window.delay_xpvs = setTimeout(_ => {delete window.delay_xpvs}, 1000);
-
-                this.setInfo(p, a);
-
-                //if(!this.customer.phone || window.confirm(`Xác nhận đổi số đt cho ${this.customer.name} thành ${p}?`)){ }
-            });
         }
     }
 
