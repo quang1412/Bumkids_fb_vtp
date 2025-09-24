@@ -425,7 +425,8 @@ const Customer_mng = {
     sync: async function(){
         this.data = await SHEET.getCustomerAll();
         GM_setValue(this.key, this.data);
-        window.prompt(`${this.data.length} customers syncing done! \n\nE.g.: `, JSON.stringify(this.data[0]));
+        let reload = window.prompt(`${this.data.length} customers syncing done! \n\nE.g.: `, JSON.stringify(this.data[0]));
+        reload && window.location.reload();
     },
     setLocal: function(obj){
         this.data = this.data.filter(i => i.uid != obj.uid); // del old id;
@@ -637,7 +638,7 @@ const Customer_mng = {
             let title = `Tạo đơn cho ${name}\n\n`;
 
             try{
-                if(!phone) return this.setInfo();
+                if(!phone) return window.confirm("⚠️ Chưa có sđt/đchi! \nEnter để nhập thông tin!") && this.setInfo();
 
                 if(phone != _samplePhoneNo && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
 
