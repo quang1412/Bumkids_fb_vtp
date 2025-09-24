@@ -693,8 +693,8 @@ const Customer_mng = {
                 let replBtn = e.target.closest('div[aria-label="Trả lời"][role="button"]');
                 replBtn && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
 
-                let scrollDownBtn = e.target.closest('div[aria-label="Xem tin nhắn mới đây nhất"][role="button"]');
-                scrollDownBtn && this.phoneFinder(false);
+                let elm = e.target.closest('div[aria-label*="Tin nhắn trong cuộc trò chuyện"][role="grid"], div[aria-label="Công cụ soạn cuộc trò chuyện"][role="group"]');
+                elm && this.phoneFinder(false);
             });
 
 
