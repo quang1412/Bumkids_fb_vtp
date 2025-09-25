@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.9.24
+// @version      2025.9.25
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -39,16 +39,15 @@
 
 // ==/UserScript==
 
-const _myPhone = '0966628989', _myFbName = 'Trịnh Hiền', _myFbUsername = 'hien.trinh.5011', _myFbUid = '100003982203068', _samplePhoneNo = '0900000000',
-      UrlParams = new URLSearchParams(window.location.search),
-      $ = (window.$ || window.jQuery);
+const MYPHONE = '0966628989', MYFBNAME = 'Trịnh Hiền', MYFBUSERNAME = 'hien.trinh.5011', MYFBUID = '100003982203068', TESTPHONENUM = '0900000000',
+      UrlParams = new URLSearchParams(window.location.search), $ = (window.$ || window.jQuery);
 
 const isFBpage = window.location.host === 'www.facebook.com';
 const isMessPage = window.location.host === 'www.messenger.com' || window.location.pathname.includes('/messages/');
 const isViettelPage = window.location.host === 'viettelpost.vn'
 
-function Delay(ms = 1000) { return new Promise(resolve => setTimeout(resolve, ms)) }
 //var csv is the CSV file with headers
+/***
 function csvJSON(csv = '{}'){
     csv = csv.replace('Dấu thời gian', 'time');
     let lines = csv.split("\n");
@@ -66,6 +65,8 @@ function csvJSON(csv = '{}'){
     }
     return result;
 }
+***/
+function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms||1000)) }
 function randomInteger(min, max) {return Math.floor(Math.random() * (max - min + 1)) + min};
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
 function customEvent(n){
@@ -170,6 +171,7 @@ Facebook
 
         'div.infoCard div.toolBar { text-align: center; background-color: var(--ifc-toolbar-bg); border-radius: 6px; display: flex; justify-content: space-around; }'+
         'div.infoCard div.toolBar a { color: initial; padding: 5px; flex: 1; }'+
+        'div.infoCard div.toolBar a:hover { background-color: inherit; border-radius: inherit; }'+
 
         'div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }'+
         'div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }'+
@@ -362,6 +364,7 @@ const VIETTEL = {
 };
 VIETTEL.init();
 
+/***
 // GOOGLE SHEET
 const GGSHEET = {
     query: function( sheet = 'log', range = 'A:A', queryStr = 'SELECT *'){
@@ -414,6 +417,7 @@ const GGSHEET = {
         })
     },
 }
+***/
 
 // FB CUSTOMER MANAGER
 const Customer_mng = {
@@ -428,13 +432,13 @@ const Customer_mng = {
         let reload = window.prompt(`${this.data.length} customers syncing done! \n\nE.g.: `, JSON.stringify(this.data[0]));
         reload && window.location.reload();
     },
-    setLocal: function(obj){
+    setLocal: async function(obj){
         this.data = this.data.filter(i => i.uid != obj.uid); // del old id;
         this.data.push(obj);
         GM_setValue(this.key, this.data);
     },
     get: async function(uid){
-        if(!uid || uid == _myFbUid) throw new Error('Uid không hợp lệ');
+        if(!uid || uid == MYFBUID) throw new Error('Uid không hợp lệ');
 
         let obj = this.data.find(i => i.uid == uid);
 
@@ -482,9 +486,9 @@ const Customer_mng = {
             btn_od.innerText = 'Tạo đơn'; btn_od.onclick = _ => this.createOrder();
 
             let btn_edit = GM_addElement(toolBar, 'a');
-            btn_edit.innerText = 'Sửa sdt/đchi'; btn_edit.onclick = _ => this.setInfo();
+            btn_edit.innerText = 'Sửa'; btn_edit.onclick = _ => this.setInfo();
 
-            this.eventsListener();
+            this.eventsListeners();
 
             // get infos
             this.table.innerText = '🧸 Tải thông tin khách hàng...';
@@ -589,7 +593,7 @@ const Customer_mng = {
                     let phone = await new Promise(resolve => {
                         let txt = span.innerText.replaceAll(/[^\w\d]/g, '');
                         let num = txt && txt.match(/(03|05|07|08|09)+([0-9]{8})/g)?.pop();
-                        return resolve( !num ? false : num == _myPhone ? false : num );
+                        return resolve( !num ? false : num == MYPHONE ? false : num );
                     });
 
                     if(phone){
@@ -638,27 +642,27 @@ const Customer_mng = {
             let title = `Tạo đơn cho ${name}\n\n`;
 
             try{
-                if(!phone) return window.confirm("⚠️ Chưa có sđt/đchi! \nEnter để nhập thông tin!") && this.setInfo();
+                if(!phone) return window.confirm("⚠️ Chưa có sđt/đchi!⚠️ \n✅ Enter để nhập thông tin!") && this.setInfo();
 
-                if(phone != _samplePhoneNo && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
+                if(phone != TESTPHONENUM && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
-                let prices_str = prompt(title + "B1 - Điền giá:", GM_getValue('lastest_prices', 0));
+                let prices_str = prompt(title + "B1 - Điền giá:", GM_getValue('lastestPrice', 0));
                 if (prices_str == undefined || prices_str == null) { return false }
                 if(!(/^[\d\s]*$/g).test(prices_str)) throw new Error('❌ Giá sản phẩm không hợp lệ!');
 
                 let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
 
-                let itemNameList = GM_getValue('lastest_items_list', []);
-                let list = itemNameList.map((e, i) => `[${i}] ${e}`).join('\n');
-                let input = prompt(title + 'B2 - Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + list, itemNameList[0] || '');
+                let itemList = GM_getValue('lastItems', []);
+                let listStr = itemList.map((e, i) => `[${i}] ${e}`).join('\n');
+                let input = prompt(title + 'B2 - Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + listStr, itemList[0] || '');
                 if (input == null || input == undefined) return false;
+                let itemName = itemList[input] || input;
 
-                let itemName = itemNameList[input] || input
-                itemNameList.unshift(itemName);
-                itemNameList = itemNameList.filter((value, index, array) => array.indexOf(value) === index ); //unique
-                GM_setValue('lastest_items_list', itemNameList.slice(0, 10));
+                itemList.unshift(itemName);
+                itemList = [...new Set(itemList)];
+                GM_setValue('lastItems', itemList.slice(0, 10));
 
                 orderInfo.prdName = `${itemName} - (${prices_str})`;
                 orderInfo.price = (price*1000);
@@ -668,16 +672,14 @@ const Customer_mng = {
                 window.popupWindow?.focus();
                 window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
 
-                GM_setValue('lastest_prices', prices_str);
+                GM_setValue('lastestPrice', prices_str);
 
-                window.addEventListener('message', ({data}) => {
-                    uid == data.uid && this.refreshInfo();
-                }, {once: true});
+                window.addEventListener('message', ({data}) => { uid == data.uid && this.refreshInfo() }, {once: true});
             }
             catch(e){ alert(title + e.message) }
         }
 
-        async eventsListener(){
+        async eventsListeners(){
 
             this.container.addEventListener("click", e => {
                 let replBtn = e.target.closest('div[aria-label="Trả lời"][role="button"]');
@@ -689,7 +691,8 @@ const Customer_mng = {
 
             // Set phone by mouse selection
             this.container.querySelector('div[aria-label*="Tin nhắn trong cuộc trò chuyện"]').addEventListener('mouseup', event => {
-                if(!event.ctrlKey) return;
+
+                if(!event.ctrlKey && !event.metaKey) return;
 
                 if(!window.getSelection) return alert('⚠ window.getSelection is undefined');
 
@@ -701,7 +704,7 @@ const Customer_mng = {
 
                 let p = selectedText.replaceAll(/\D/g, '');
 
-                if(!p || p.length != 10 || p == _myPhone || !isVNPhone(p)) return false;
+                if(!p || p.length != 10 || p == MYPHONE || !isVNPhone(p)) return false;
 
                 let range = selection.getRangeAt(0);
                 let rangeText = range.startContainer.textContent;
@@ -751,7 +754,7 @@ const Customer_mng = {
 
             let hasCard = window.document.querySelector('#ifc'+uid);
 
-            if(!uid || !name || !img || uid == _myFbUid || hasCard) continue;
+            if(!uid || !name || !img || uid == MYFBUID || hasCard) continue;
 
             e.classList.add('checked');
             let target = e.closest('div:is(.__fb-dark-mode, .__fb-light-mode)');
@@ -971,7 +974,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             try{
                 this.value = this.value.replaceAll(/\D/g, '');
                 this.dispatchEvent(customEvent('input'));
-                if(this.value == _samplePhoneNo || !isVNPhone(this.value)) return;
+                if(this.value == TESTPHONENUM || !isVNPhone(this.value)) return;
 
                 let res = await VIETTEL.getListOrders(this.value).catch(e => {throw new Error()});
                 GM_log(JSON.stringify(res));
@@ -1007,7 +1010,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.document.body.classList.add('custom');
         //s.prependTo(p);
 
-        let isSample = phone == _samplePhoneNo;
+        let isSample = phone == TESTPHONENUM;
 
         let productName = window.document.querySelector('input#productName'),
             productPrice = window.document.querySelector('input#productPrice'),
@@ -1174,10 +1177,10 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 let row = link.closest('tr.mat-row[role="row"]');
                 //let checkbox = row.find('label.mat-checkbox-layout');
                 row.find('label.mat-checkbox-layout')?.click();
-                await Delay(100);
+                await delay(100);
                 snd_true.play();
             } else {
-                await Delay(100);
+                await delay(100);
                 snd_fail.play();
             }
 
