@@ -7,8 +7,8 @@
 // @match        https://digitalize.viettelpost.vn/DigitalizePrint/report.do*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
-// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/TagPrinting.js
-// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/main/TagPrinting.js
+// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/viettel-billing-style.js
+// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/viettel-billing-style.js
 
 // @grant        GM_addElement
 // @grant        GM_addStyle
@@ -73,16 +73,6 @@ const debug = urlParams.get('debug');
         });
         txt.innerHTML = 'KHÔNG ĐỒNG KIỂM / KHÔNG THỬ HÀNG';
     });
-
-    /**
-    let acceptedStatus = [-108,100,102,103,104, 200];
-    status && document.querySelectorAll('div.mainPrints').forEach(e => {
-        let tag = GM_addElement(e, 'div', {
-            class: 'acceptedTag ' + (!!~acceptedStatus.indexOf(status) ? 'checked' : 'uncheck' ),
-        });
-        tag.innerHTML = (!~acceptedStatus.indexOf(status) ? 'CHƯA<br>DUYỆT' : ' ' );
-    });
-    **/
 })();
 
 
@@ -137,12 +127,14 @@ const debug = urlParams.get('debug');
         QrWrap.style['z-index'] = '9999999999';
     });
 
-    GM_addStyle('div.customer-name {  background: white; white-space: nowrap; z-index: 100; font-weight: 900; font-size: 26px; height: 28px !important; width: 100%; line-height: 1em; }');
+    GM_addStyle('div.name-phone {  background: white; white-space: nowrap; z-index: 100; font-weight: 900; font-size: 26px; height: 28px !important; width: 100%; line-height: 1em; }');
 
     [...document.querySelectorAll('div.mainPrints')].forEach(mainPrint => {
-        let customerName = mainPrint.querySelector('div.mainPrints > div.line-clamp-1[style*="top:153px"]');
-        customerName?.classList.add('customer-name');
-        let phone = customerName?.innerText.match(/\d+/g)?.pop();
+        let namePhone = mainPrint.querySelector('div.mainPrints > div.line-clamp-1[style*="top:153px"]');
+        namePhone?.classList.add('name-phone');
+        namePhone.innerText = namePhone.innerText.replace(/(\s*\/\s\d+\*+\d+)/g, '');
+
+        //let phone = namePhone?.innerText.match(/\d+/g)?.pop();
     });
 
     document.querySelectorAll('div.mainPrints > div[style*="top: 9px; left: 65px"]').forEach(addressProvince => {
