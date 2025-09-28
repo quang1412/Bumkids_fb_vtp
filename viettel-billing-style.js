@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Print Style - Viettel
 // @namespace    http://tampermonkey.net/
-// @version      2025.08.03
+// @version      2025-06-13
 // @description  try to take over the world!
 // @author       You
 // @match        https://digitalize.viettelpost.vn/DigitalizePrint/report.do*
@@ -35,6 +35,7 @@ const debug = urlParams.get('debug');
     let textCss = 'img.bumkidsWaterMark {filter: brightness(1.4) grayscale(1); width: 84px; margin: 5px; position: absolute; top: -3px; right: 100px;}';
     textCss += 'img.bumkidsWaterMark {}';
     textCss += 'div.barCode_Code span { font-size: 18px; font-weight: 900; }';
+
     /**
     let textCss = 'div.mainPrints > div:nth-child(9) { font-size: 27px !important; text-transform: uppercase; line-height: 1em; text-wrap: nowrap; overflow: hidden; font-weight: 600 !important; min-height: 25px; padding-top: 1px; align-items: center; width: fit-content !important; }';
     textCss += 'div > g.qrCode { position: absolute; top: 15px; left: -35px; padding: 5px; width: calc(100% + 15px); background: white; }';
@@ -108,17 +109,33 @@ const debug = urlParams.get('debug');
         }, 1000);
     }, 500);
 
-    /***
-    document.querySelectorAll('div.mainPrints > div[style*="top: 218px;"]').forEach(itemsPrice => {
-        itemsPrice.innerText = "xem App";
-    })
-    ***/
 
     document.querySelectorAll('div.mainPrints > div[style*="top:204px; left:13px"]').forEach(itemsName => {
         itemsName.style['font-size'] = '12px';
         itemsName.style['font-weight'] = '900';
+        itemsName.style['-webkit-line-clamp'] = '2';
+        itemsName.style.height = '30px';
+        itemsName.style.background = 'white';
+        itemsName.style['padding-bottom'] = '5px';
+        itemsName.style.left = '0';
+        itemsName.style['padding-left'] = '13px';
+
         itemsName.innerText = itemsName.innerText.replace('(1) 1 x ','');
+
     })
+
+//    textCss += 'div:has(> g.qrCode) { z-index: 9999999999; right: 5px; bottom: 5px; width: 90px; height: auto; }';
+
+    document.querySelectorAll('div.mainPrints div:has(> g.qrCode)').forEach(QrWrap => {
+        QrWrap.style.padding = '5px';
+        QrWrap.style.top = 'unset';
+        QrWrap.style.left = 'unset';
+        QrWrap.style.right = '0';
+        QrWrap.style.bottom = '0';
+        QrWrap.style.width = '110px';
+        QrWrap.style.height = 'auto';
+        QrWrap.style['z-index'] = '9999999999';
+    });
 
     GM_addStyle('div.customer-name {  background: white; white-space: nowrap; z-index: 100; font-weight: 900; font-size: 26px; height: 28px !important; width: 100%; line-height: 1em; }');
 
