@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.9.25
+// @version      2025.9.30
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -11,6 +11,11 @@
 
 // @require      https://code.jquery.com/jquery-3.7.1.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
+
+// @require      https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js
+// @require      https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js
+
+
 
 // @match        *viettelpost.vn/*
 // @match        *.facebook.com/*
@@ -120,11 +125,6 @@ function getSelectedText() {
   }
   return selectedText;
 }
-
-var keyState = {};
-function keyHandler(e){ keyState[e.code] = e.type === "keydown" }
-document.addEventListener("keydown",keyHandler);
-document.addEventListener("keyup",keyHandler);
 
 /***********************************************************************************************************************************
 Facebook
@@ -364,97 +364,106 @@ const VIETTEL = {
 };
 VIETTEL.init();
 
-/***
-// GOOGLE SHEET
-const GGSHEET = {
-    query: function( sheet = 'log', range = 'A:A', queryStr = 'SELECT *'){
+const API = {
+    url: 'https://api.bumm.kids',
+    get: function(url){
         return new Promise((resolve, reject) => {
-            let ggsid = '1KAhQCGOIInG3Et77PfY03V_Nn4fWvi0z1ITh1BKFkmk';
-            let tq = encodeURIComponent(queryStr);
-            let url = `https://docs.google.com/spreadsheets/d/${ggsid}/gviz/tq?tqx=out:csv&headers=1&sheet=${sheet}&range=${range}&tq=${tq}&time=${new Date().getTime()}`;
             GM_xmlhttpRequest({
                 url: url,
                 method: "GET",
                 synchronous: true,
-                headers: {"Content-Type": "text/html; charset=utf-8"},
-                onload: function (res) {
-                    let json = csvJSON(res.response);
-                    return resolve(json);
+                headers: {
+                    'Authorization': 'Bearer YOUR_AUTH_TOKEN',
+                    'Content-Type': 'application/json'
                 },
-                onerror: function(res) {
-                    GM_log("error: ", res.message);
-                    return reject(res.message);
-                }
-            });
-        });
-    },
-    formSubmit: function(url){
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                url: url,
-                method: "GET",
-                synchronous: false,
-                headers: {"Content-Type": "text/html; charset=utf-8"},
+                dataType: "text",
+                // contentType: 'application/json',
                 onload: function (res) {
-                    res.readyState == 4 && res.status == 200 && resolve(res);
+                    try{
+                        res = JSON.parse(res.response);
+                        return resolve(res);
+                    } catch (e){
+                        return reject(e.message);
+                    }
                 },
-                onerror: function(res) {
-                    alert('⚠ Google sheet form submit fail!! \nURL:' + url);
-                    return reject('GG Log error: ' + res.message);
+                onerror: function(error) {
+                    return reject(error.message || 'Lỗi API \nMã lỗi: #178');
                 }
             })
         })
     },
-    log: function(type = 'test', data = []){
-        let id = '1FAIpQLSdnt9BSiDQEirKx0Q3ucZFxunOgQQxp4SB7B6Gd8nNMFGzEyw';
-        let fields = [2075359581, 1542826863, 2077606435, 1093369063, 2124435966, 450302808, 2118396800, 839689225, 2086451399, 1329285789];
+    post: function(url, data){
         return new Promise((resolve, reject) => {
-            if(!type || !data.length) { return reject('input is invalid!') };
-            let url = `https://docs.google.com/forms/d/e/${id}/formResponse?entry.${fields[0]}='${type}&${data.map((d, i) => (`entry.${fields[i+1]}='${encodeURIComponent(d)}`)).join('&')}`;
-            this.formSubmit(url)
-                .then(res => resolve(res))
-                .catch(err => reject(err.message));
+            GM_xmlhttpRequest({
+                url: url,
+                method: "POST",
+                synchronous: true,
+                headers: {
+                    'Authorization': 'Bearer YOUR_AUTH_TOKEN',
+                    'Content-Type': 'application/json'
+                },
+                dataType: "json",
+                data: JSON.stringify(data),
+                onload: (res) => {
+                    return resolve(res);
+                },
+                onerror: (error) => {
+                    return reject(error.message || 'Lỗi SHEET \nMã lỗi: #193');
+                }
+            })
         })
     },
+    getAllCustomers: function(){
+        return this.get(this.url+'/getAllCustomers');
+    },
+    getCustomer: function(q){
+        return this.get(this.url+'/getCustomer?q='+q);
+    },
+    setCustomer: function(data){
+        return this.post(this.url+'/setCustomer', data);
+    },
 }
-***/
-
 // FB CUSTOMER MANAGER
 const Customer_mng = {
-    key: 'GMcustomer',
+    key: 'GM_customers',
     int: async function(){
-        this.data = await GM_getValue(this.key, []);
+        this.data = await GM_getValue(this.key, new Object());
         GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => { remote && (this.data = newValue) });
     },
     sync: async function(){
-        this.data = await SHEET.getCustomerAll();
+        let res = await API.getAllCustomers().catch(e => alert(e.message));
+        this.data = res.data;
         GM_setValue(this.key, this.data);
-        let reload = window.prompt(`${this.data.length} customers syncing done! \n\nE.g.: `, JSON.stringify(this.data[0]));
-        reload && window.location.reload();
+        window.confirm('Đã đồng bộ '+Object.keys(this.data).length+' khách hàng \nEnter để tải lại trang') && window.location.reload();
     },
-    setLocal: async function(obj){
-        this.data = this.data.filter(i => i.uid != obj.uid); // del old id;
-        this.data.push(obj);
+    saveLocal: async function(obj){
+        this.data[obj.uid] = obj;
         GM_setValue(this.key, this.data);
     },
     get: async function(uid){
         if(!uid || uid == MYFBUID) throw new Error('Uid không hợp lệ');
 
-        let obj = this.data.find(i => i.uid == uid);
+        let customer = this.data[uid];
 
-        if(!obj){
-            obj = await SHEET.getCustomer(uid);
-            obj && this.setLocal(obj);
-        }
+        if(customer) return customer;
 
-        return obj || {};
+        let res = await API.getCustomer(uid).catch(e => alert(e.message));
+        customer = res.data;
+        customer && this.saveLocal(customer);
+
+        return customer;
     },
     set: async function(obj){
-        SHEET.setCustomer(obj).then( _ => this.setLocal(obj) ).catch(e => alert(e.message));
+        await API.setCustomer(obj).catch(e => alert(e.message));
+        this.saveLocal(obj);
     }
 };
 (isMessPage || isFBpage) && Customer_mng.int();
 
+function Order_mng(){
+
+
+}
 
 // FB INFO CARD
 (function() {
@@ -770,20 +779,18 @@ const Customer_mng = {
     let werwfcsder = null;
     let selector = 'div[role="article"][aria-label*="ình luận"]';
     $(document).on('click', selector, function(e){
-        clearTimeout(werwfcsder);
-        werwfcsder = setTimeout(() => {
-            if(e.target.getAttribute('dir') != 'auto') return;
-            let article = $(e.target).closest('div[role="article"][aria-label*="ình luận"]')[0];
-            let btn = $(article).find('div + div[role="button"][aria-label*="cảm xúc"]')[0];
-            console.log(e.target, article, btn);
-            getSelectedText() && btn?.click();
-        }, 200);
+        if(!e.ctrlKey && !e.metaKey) return;
+
+        if(e.target.getAttribute('dir') != 'auto') return;
+        let article = $(e.target).closest('div[role="article"][aria-label*="ình luận"]')[0];
+        let btn = $(article).find('div + div[role="button"][aria-label*="cảm xúc"]')[0];
+        btn?.click();
     });
 })(window.jQuery);
 
 
 // MESSENGER SEARCH WHEN FOCUS;
-(function($){
+(function(){
     if(!isMessPage) return false;
 
     window.addEventListener("focus", function (e) {
@@ -1201,3 +1208,5 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.open(url, '_blank');
     });
 })();
+
+
