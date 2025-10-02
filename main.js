@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.9.30
+// @version      2025.10.02
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -628,21 +628,20 @@ function Order_mng(){
             this.loopSearching = setInterval(loopFn, 300);
         }
 
-        async setInfo(p, a){
-            let phone = window.prompt("Sđt của " + this.customer.name, p || this.customer.phone || '0900000000');
+        async setInfo(p = window.prompt("Sđt của " + this.customer.name, this.customer.phone || '0900000000')){
 
-            if(phone == null) return;
+            if(p == null) return;
 
-            let addr = window.prompt("Địa chỉ của " + this.customer.name, a || this.customer.addr);
+            // let addr = window.prompt("Địa chỉ của " + this.customer.name, a || this.customer.addr);
 
-            if(addr == null) return;
+            // if(addr == null) return;
 
-            this.customer.phone = phone;
-            this.customer.addr = addr;
+            this.customer.phone = p;
+            // this.customer.addr = addr;
 
             this.refreshInfo();
             Customer_mng.set(this.customer);
-            GM_setClipboard( phone+"\n"+addr, "text");
+            // GM_setClipboard( phone+"\n"+addr, "text");
         }
 
         async createOrder(){
@@ -713,19 +712,19 @@ function Order_mng(){
 
                 let p = selectedText.replaceAll(/\D/g, '');
 
-                if(!p || p.length != 10 || p == MYPHONE || !isVNPhone(p)) return false;
+                if(!p || p.length != 10 || p == this.customer.phone || p == MYPHONE || !isVNPhone(p)) return false;
 
-                let range = selection.getRangeAt(0);
-                let rangeText = range.startContainer.textContent;
+                // let range = selection.getRangeAt(0);
+                // let rangeText = range.startContainer.textContent;
 
-                let a = rangeText.replace(selectedText, '').replaceAll('\n', '');
+                // let a = rangeText.replace(selectedText, '').replaceAll('\n', '');
 
-                if(this.customer.phone && this.customer.addr) return;
+                // if(this.customer.phone) return;
 
                 if(window.delay_xpvs) return false;
                 window.delay_xpvs = setTimeout(_ => {delete window.delay_xpvs}, 1000);
 
-                this.setInfo(p, a);
+                this.setInfo(p);
             });
 
 
@@ -1208,5 +1207,4 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.open(url, '_blank');
     });
 })();
-
 
