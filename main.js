@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.02
+// @version      2025.10.04
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -51,6 +51,7 @@ const isFBpage = window.location.host === 'www.facebook.com';
 const isMessPage = window.location.host === 'www.messenger.com' || window.location.pathname.includes('/messages/');
 const isViettelPage = window.location.host === 'viettelpost.vn'
 
+
 //var csv is the CSV file with headers
 /***
 function csvJSON(csv = '{}'){
@@ -86,14 +87,17 @@ function customEvent(n){
 }
 function getFormatedDate(i = 0) {
     const date = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
-    const yyyy = date.getFullYear();
-    let mm = date.getMonth() + 1; // Months start at 0!
-    let dd = date.getDate();
-    if (dd < 10) dd = '0' + dd;
-    if (mm < 10) mm = '0' + mm;
-    const formattedToday = dd + '/' + mm + '/' + yyyy;
-    return formattedToday;
+    //    const yyyy = date.getFullYear();
+    //    let mm = date.getMonth() + 1; // Months start at 0!
+    //    let dd = date.getDate();
+    //    if (dd < 10) dd = '0' + dd;
+    //    if (mm < 10) mm = '0' + mm;
+    //    const formattedToday = dd + '/' + mm + '/' + yyyy;
+    //    return formattedToday;
+    return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
 }
+
+
 function makeid(length = 12) {
     let result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -114,6 +118,32 @@ function makeid(length = 12) {
 (isMessPage || isFBpage) && GM_registerMenuCommand("Đồng bộ khách hàng." , async _ => {
     await Customer_mng.sync();
     //GM_setValue('change2reload', new Date().getTime());
+});
+
+/*** Sync and reload all pages ***/
+GM_registerMenuCommand("Cài đặt tạo đơn ViettelPost" , async _ => {
+    let options = GM_getValue('vtpCreateOrderOptions', {});
+
+    let listInventory = await VIETTEL.post('https://api.viettelpost.vn/api/setting/listInventoryV2').catch(e => console.error(e));
+    console.log(listInventory);
+    let invIndex = window.prompt('Chọn kho lấy mặc định: \n\n' + listInventory.map((inv, i) => i + '. ' +inv.NAME+' - '+inv.ADDRESS).join('\n'), 0);
+    let sltInv = listInventory[invIndex];
+    if(sltInv){
+        options.GROUPADDRESS_ID = sltInv.GROUPADDRESS_ID;
+        options.CUS_ID = sltInv.CUS_ID;
+        options.SENDER_FULLNAME = sltInv.NAME;
+        options.SENDER_PHONE = sltInv.PHONE;
+        options.SENDER_PROVINCE = sltInv.PROVINCE_ID;
+        options.SENDER_DISTRICT = sltInv.DISTRICT_ID;
+        options.SENDER_WARD = sltInv.WARDS_ID;
+        options.SENDER_HOME_NO = sltInv.ADDRESS;
+    }
+
+    let w = window.prompt('Trọng lượng hàng hoá (gram): ', options.PRODUCT_WEIGHT);
+    if(parseInt(w) > 500) { options.PRODUCT_WEIGHT = w }
+
+    console.log('Set ViettelPost options:', options);
+    GM_setValue('vtpCreateOrderOptions', options);
 });
 
 function getSelectedText() {
@@ -241,9 +271,6 @@ const VIETTEL = {
             GM_setValue('vtp_deviceId', this.deviceId);
             this.token = this.deviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
             GM_setValue('vtp_tokenKey', this.token);
-            if(this.deviceId && this.token) {
-                //$.post('https://bumm.kids/iframe/facebook_order.php', {token: `${this.deviceId}; ${this.token}`}).then(res => GM_log(res))
-            };
         }
         else if(isFBpage || isMessPage){
             this.deviceId = GM_getValue('vtp_deviceId', null);
@@ -251,12 +278,13 @@ const VIETTEL = {
                 if(remote) this.deviceId = newValue;
             });
             this.token = GM_getValue('vtp_tokenKey', null);
-            GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
+            GM_addValueChangeListener('vtp_tokenKey', async (key, oldValue, newValue, remote) => {
                 if(remote) this.token = newValue;
+                API.saveToken(this.deviceId, this.token);
             });
         }
     },
-    getReq: function(url){
+    get: function(url){
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 url: url,
@@ -272,18 +300,18 @@ const VIETTEL = {
             })
         })
     },
-    postReq: function(url, json){
-        //let deviceId = this.deviceId, token = this.token;
+    post: function(url, json = {}){
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 url:  url,
                 method: "POST",
                 synchronous: true,
                 headers: { "Token": this.token, "Content-Type": "application/json" },
-                data: JSON.stringify({...json, "deviceId": this.deviceId}),
+                data: JSON.stringify({...json, "deviceId": this.deviceId, "token": this.token}),
                 onload: (response) => {
+                    console.log(response);
                     let res = JSON.parse(response.responseText);
-                    return res.status == 200 ? resolve(res) : reject(new Error(res.message));
+                    return resolve(res);
                 },
                 onerror: (e) => {
                     alert(e.message || 'Lỗi viettel \nMã lỗi: #178');
@@ -309,7 +337,7 @@ const VIETTEL = {
                 "REASON_RETURN": null,
                 "ORDER_STATUS": "-100,-101,-102,-108,-109,-110,100,101,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570,516,517",
             };
-            this.postReq(url, json ).then(resolve).catch(e => {
+            this.post(url, json ).then(resolve).catch(e => {
                 alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
                 reject(e);
             });
@@ -317,7 +345,7 @@ const VIETTEL = {
     },
     getKyc: function(phone){
         return new Promise((resolve, reject) => {
-            this.getReq('https://io.okd.viettelpost.vn/order/v1.0/kyc/'+phone).then(resolve).catch(e => {
+            this.get('https://io.okd.viettelpost.vn/order/v1.0/kyc/'+phone).then(resolve).catch(e => {
                 alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
                 reject(e);
             });
@@ -333,7 +361,7 @@ const VIETTEL = {
                 "IS_SHOW_POSTAGE": 0,
                 "PRINT_COPY": 1,
             };
-            this.postReq(url, json).then(res => {
+            this.post(url, json).then(res => {
                 if(res.error) return reject(res.message);
                 let link = res?.data?.enCryptUrl;
                 GM_log(json)
@@ -347,7 +375,7 @@ const VIETTEL = {
     },
     getOrderInfo: function(id){
         return new Promise((resolve, reject) => {
-            this.getReq('https://api.viettelpost.vn/api/setting/getOrderDetailForWeb?OrderNumber='+id).then(resolve).catch(e => {
+            this.get('https://api.viettelpost.vn/api/setting/getOrderDetailForWeb?OrderNumber='+id).then(resolve).catch(e => {
                 alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
                 reject(e);
             });
@@ -355,21 +383,119 @@ const VIETTEL = {
     },
     getPhoneAddr: function(phone){
         return new Promise((resolve, reject) => {
-            this.getReq('https://io.okd.viettelpost.vn/order/v1.0/sender/receivers?ofs=0&size=10&q='+phone).then(resolve).catch(e => {
+            this.get('https://io.okd.viettelpost.vn/order/v1.0/sender/receivers?ofs=0&size=10&q='+phone).then(resolve).catch(e => {
                 alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
                 reject(e);
             });
         })
+    },
+    createNewOrder: function(jsonData){
+        try{
+            const options = GM_getValue('vtpCreateOrderOptions', {});
+            if(!options.CUS_ID) throw new Error('Chưa đặt tuỳ chọn gửi hàng!');
+
+            const url = 'https://api.viettelpost.vn/api/tmdt/InsertOrderDraftForWeb';
+            const d = new Date();
+            const date = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+            const time = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', }).format(d);
+
+            let productName = window.prompt('Nhập tên hàng hoá \n', window.lastProductName || 'tên sản phẩm chưa rõ');
+            let collectMoney = window.prompt('Nhập số tiền phải thu \n- nhập 0 = đơn 0đ \n- nhập 1 = thu ship khách', window.lastCollectMoney || 0);
+
+            let webItemsId = window.prompt('Nhập các id sp web', window.lastWebItemIds || '');
+
+            const postData = {
+                // "ORDER_REFERENCE": "nvcghrty5674",
+                "ORDER_NUMBER": jsonData.name + '-' + makeid(10),
+                // "ORDER_TYPE": 1,
+                "TYPE": 12,
+                "DELIVERY_DATE": date + ' ' + time,
+                "GROUPADDRESS_ID": options.GROUPADDRESS_ID,
+                "CUS_ID": options.CUS_ID,
+                "SENDER_FULLNAME": options.SENDER_FULLNAME,
+                "SENDER_PHONE": options.SENDER_PHONE,
+                "SENDER_WARD": options.SENDER_WARD,
+                "SENDER_PROVINCE": options.SENDER_PROVINCE,
+                "SENDER_DISTRICT": options.SENDER_DISTRICT,
+                "SENDER_HOME_NO": options.SENDER_HOME_NO,
+                "RECEIVER_FULLNAME": jsonData.name || 'Khách hàng',
+                "RECEIVER_HOME_NO": jsonData.address || '___ Đổi địa chỉ ❌',
+                "RECEIVER_PHONE": jsonData.phone || '0900000000',
+                "RECEIVER_WARD": 65,
+                "RECEIVER_DISTRICT": 3,
+                "RECEIVER_PROVINCE": 1,
+                "RECEIVER_EMAIL": "trinhdacquang1@gmail.com",
+                "PRODUCT_NAME": productName || 'no name',
+                "PRODUCT_QUANTITY": 1,
+                "PRODUCT_PRICE": collectMoney || 1000000,
+                "PRODUCT_WEIGHT": Math.max(options.PRODUCT_WEIGHT || 500), // gram
+                "PRODUCT_TYPE": "HH",
+                "ORDER_PAYMENT": 2, // (nguoi nhan: 2, nguoi gui: 3)
+                "ORDER_SERVICE": "STK",
+                "ORDER_NOTE": '❌ KHÔNG_XEM_HÀNG ❌ KHÔNG_THỬ_HÀNG ❌  [' + webItemsId + ']',
+                "MONEY_COLLECTION": window.lastCollectMoney,
+                // "SENDER_STREET_NAME": "Phố Thái Hà",
+                // "SENDER_EMAIL": "",
+                // "SENDER_LATITUDE": 0,
+                // "SENDER_LONGITUDE": 0,
+                // "RECEIVER_STREET_NAME": "",
+                // "RECEIVER_LATITUDE": 0,
+                // "RECEIVER_LONGITUDE": 0,
+                // "PRODUCT_DESCRIPTION": "",
+                // "PRODUCT_WIDTH": null,
+                // "PRODUCT_HEIGHT": null,
+                // "PRODUCT_LENGTH": null,
+                // "DISPLAY_SERVICE_NAME": "Chuyển phát tiêu chuẩn",
+                // "ORDER_SERVICE_ADD": "SMS",
+                // "ORDER_TYPE_ADD": "",
+                // "ORDER_VOUCHER": "",
+                // "DELIVERY_CODE": -1,
+                // "MONEY_TOTALFEE": 20000,
+                // "MONEY_FEECOD": 5000,
+                // "MONEY_FEEVAS": 0,
+                // "MONEY_FEEINSURRANCE": 0,
+                // "MONEY_FEE": 0,
+                // "MONEY_FEEOTHER": 0,
+                // "MONEY_TOTALVAT": 1333,
+                // "MONEY_TOTAL": 0,,
+                // "LIST_ITEM": [
+                //     {
+                //         "ORDER_NUMBER_ITEM": 1,
+                //         "PRODUCT_NAME": "ten hang hoa",
+                //         "PRODUCT_QUANTITY": 1,
+                //         "PRODUCT_WEIGHT": 1000,
+                //         "PRODUCT_PRICE": 0
+                //     }
+                // ],
+                // "SENDER_POST_OFFICE_CODE": "",
+                // "SENDER_POST_OFFICE_NAME": "",
+                // "SENDER_BRANCH_CODE": "",
+                // "SENDER_POST_OFFICE_ADDRESS": "",
+                // "PICKUP_DATE": null,
+                // "PICKUP_TIME": null,
+                // "REMOVE_PICKUP_DATE": true,
+                // "OPTION_LOCATION": 0,
+                // "SENDER_ADDRESS": "165 Thái Hà,, Phố Thái Hà",
+                // "RECEIVER_ADDRESS": "đông la, hoài đưc , X.Đông La, H.Hoài Đức, TP.Hà Nội",
+                // "XMG_EXTRA_MONEY": 0,
+                // "deviceId": "wcfalna3z427py9o2v5ez"
+            };
+
+            this.post(url, postData);
+
+        } catch(e){
+            alert(e.message + '\n#392');
+        }
     }
 };
 VIETTEL.init();
 
 const API = {
     url: 'https://api.bumm.kids',
-    get: function(url){
+    get: function(uri){
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
-                url: url,
+                url: this.url+uri,
                 method: "GET",
                 synchronous: true,
                 headers: {
@@ -392,10 +518,10 @@ const API = {
             })
         })
     },
-    post: function(url, data){
+    post: function(path, data){
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
-                url: url,
+                url: this.url+path,
                 method: "POST",
                 synchronous: true,
                 headers: {
@@ -413,14 +539,20 @@ const API = {
             })
         })
     },
+    saveToken: async function(deviceId, token){
+        if(deviceId && token){
+            let res = await API.post('/vtpToken', {deviceId, token}).catch(e => {alert(e.message)});
+            console.log(res);
+        }
+    },
     getAllCustomers: function(){
-        return this.get(this.url+'/getAllCustomers');
+        return this.get('/getAllCustomers');
     },
     getCustomer: function(q){
-        return this.get(this.url+'/getCustomer?q='+q);
+        return this.get('/getCustomer?q='+q);
     },
     setCustomer: function(data){
-        return this.post(this.url+'/setCustomer', data);
+        return this.post('/setCustomer', data);
     },
 }
 // FB CUSTOMER MANAGER
@@ -495,7 +627,7 @@ function Order_mng(){
             btn_od.innerText = 'Tạo đơn'; btn_od.onclick = _ => this.createOrder();
 
             let btn_edit = GM_addElement(toolBar, 'a');
-            btn_edit.innerText = 'Sửa'; btn_edit.onclick = _ => this.setInfo();
+            btn_edit.innerText = 'Sửa sdt'; btn_edit.onclick = _ => this.setInfo();
 
             this.eventsListeners();
 
@@ -724,7 +856,7 @@ function Order_mng(){
                 if(window.delay_xpvs) return false;
                 window.delay_xpvs = setTimeout(_ => {delete window.delay_xpvs}, 1000);
 
-                this.setInfo(p);
+                (!this.customer.phone || window.confirm('Đổi sdt của ' +this.customer.name+ ' => ' + p)) && this.setInfo(p);
             });
 
 
@@ -1207,4 +1339,3 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.open(url, '_blank');
     });
 })();
-
