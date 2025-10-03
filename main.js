@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.04
+// @version      2025.10.03
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -278,7 +278,7 @@ const VIETTEL = {
                 if(remote) this.deviceId = newValue;
             });
             this.token = GM_getValue('vtp_tokenKey', null);
-            GM_addValueChangeListener('vtp_tokenKey', async (key, oldValue, newValue, remote) => {
+            GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
                 if(remote) this.token = newValue;
                 API.saveToken(this.deviceId, this.token);
             });
@@ -495,7 +495,7 @@ const API = {
     get: function(uri){
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
-                url: this.url+uri,
+                url: encodeURI(this.url+uri),
                 method: "GET",
                 synchronous: true,
                 headers: {
@@ -506,8 +506,8 @@ const API = {
                 // contentType: 'application/json',
                 onload: function (res) {
                     try{
-                        res = JSON.parse(res.response);
-                        return resolve(res);
+                        let result = JSON.parse(res.response);
+                        return resolve(result);
                     } catch (e){
                         return reject(e.message);
                     }
@@ -521,7 +521,7 @@ const API = {
     post: function(path, data){
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
-                url: this.url+path,
+                url: encodeURI(this.url+path),
                 method: "POST",
                 synchronous: true,
                 headers: {
@@ -541,7 +541,7 @@ const API = {
     },
     saveToken: async function(deviceId, token){
         if(deviceId && token){
-            let res = await API.post('/vtpToken', {deviceId, token}).catch(e => {alert(e.message)});
+            let res = await this.post('/vtpToken', {deviceId, token}).catch(e => {alert(e.message)});
             console.log(res);
         }
     },
@@ -557,7 +557,7 @@ const API = {
 }
 // FB CUSTOMER MANAGER
 const Customer_mng = {
-    key: 'GM_customers',
+    key: 'GM_customers_11',
     int: async function(){
         this.data = await GM_getValue(this.key, new Object());
         GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => { remote && (this.data = newValue) });
@@ -568,21 +568,21 @@ const Customer_mng = {
         GM_setValue(this.key, this.data);
         window.confirm('Đã đồng bộ '+Object.keys(this.data).length+' khách hàng \nEnter để tải lại trang') && window.location.reload();
     },
-    saveLocal: async function(obj){
+    saveLocal: function(obj){
         this.data[obj.uid] = obj;
         GM_setValue(this.key, this.data);
     },
     get: async function(uid){
         if(!uid || uid == MYFBUID) throw new Error('Uid không hợp lệ');
 
+        // get from local
         let customer = this.data[uid];
-
         if(customer) return customer;
 
+        // get from cloud
         let res = await API.getCustomer(uid).catch(e => alert(e.message));
         customer = res.data;
         customer && this.saveLocal(customer);
-
         return customer;
     },
     set: async function(obj){
@@ -593,8 +593,6 @@ const Customer_mng = {
 (isMessPage || isFBpage) && Customer_mng.int();
 
 function Order_mng(){
-
-
 }
 
 // FB INFO CARD
