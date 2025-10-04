@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.03
+// @version      2025.10.04
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -265,20 +265,22 @@ const SHEET = {
 
 // VIETTEL
 const VIETTEL = {
+    key1: 'vtp_tokenKey',
+    key2: 'vtp_deviceId',
     init: function(){
         if(isViettelPage){
             this.deviceId = window.localStorage.deviceId;
-            GM_setValue('vtp_deviceId', this.deviceId);
+            GM_setValue(this.key2, this.deviceId);
             this.token = this.deviceId && JSON.parse(window.localStorage['vtp-token']).tokenKey;
-            GM_setValue('vtp_tokenKey', this.token);
+            GM_setValue(this.key1, this.token);
         }
         else if(isFBpage || isMessPage){
-            this.deviceId = GM_getValue('vtp_deviceId', null);
-            GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => {
+            this.deviceId = GM_getValue(this.key2, null);
+            GM_addValueChangeListener(this.key2, (key, oldValue, newValue, remote) => {
                 if(remote) this.deviceId = newValue;
             });
-            this.token = GM_getValue('vtp_tokenKey', null);
-            GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
+            this.token = GM_getValue(this.key1, null);
+            GM_addValueChangeListener(this.key1, (key, oldValue, newValue, remote) => {
                 if(remote) this.token = newValue;
                 API.saveToken(this.deviceId, this.token);
             });
@@ -541,7 +543,7 @@ const API = {
     },
     saveToken: async function(deviceId, token){
         if(deviceId && token){
-            let res = await this.post('/vtpToken', {deviceId, token}).catch(e => {alert(e.message)});
+            let res = await this.post('/vtpToken', {content: deviceId+':'+token}).catch(e => {alert(e.message)});
             console.log(res);
         }
     },
