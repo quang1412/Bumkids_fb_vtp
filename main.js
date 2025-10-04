@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.04
+// @version      2025.10.04.1
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -16,12 +16,12 @@
 // @require      https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js
 
 
-
 // @match        *viettelpost.vn/*
 // @match        *.facebook.com/*
 // @match        *.messenger.com/*
 
 // @connect      bumm.kids
+// @connect      location.viettelpost.vn
 // @connect      api.viettelpost.vn
 // @connect      io.okd.viettelpost.vn
 // @connect      script.google.com
@@ -44,7 +44,8 @@
 
 // ==/UserScript==
 
-const MYPHONE = '0966628989', MYFBNAME = 'Trịnh Hiền', MYFBUSERNAME = 'hien.trinh.5011', MYFBUID = '100003982203068', TESTPHONENUM = '0900000000',
+const MYPHONE = '0966628989', MYFBNAME = 'Trịnh Hiền', MYFBUSERNAME = 'hien.trinh.5011', MYFBUID = '100003982203068',
+      TEST_PHONENUM = '0900000000', TEST_ADDRESS = 'số 31 ngõ 19, Trần Quang Diệu, Ô chợ dừa, Đống Đa, Hà Nội',
       UrlParams = new URLSearchParams(window.location.search), $ = (window.$ || window.jQuery);
 
 const isFBpage = window.location.host === 'www.facebook.com';
@@ -96,8 +97,6 @@ function getFormatedDate(i = 0) {
     //    return formattedToday;
     return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
 }
-
-
 function makeid(length = 12) {
     let result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -117,7 +116,6 @@ function makeid(length = 12) {
 /*** Sync and reload all pages ***/
 (isMessPage || isFBpage) && GM_registerMenuCommand("Đồng bộ khách hàng." , async _ => {
     await Customer_mng.sync();
-    //GM_setValue('change2reload', new Date().getTime());
 });
 
 /*** Sync and reload all pages ***/
@@ -145,6 +143,7 @@ GM_registerMenuCommand("Cài đặt tạo đơn ViettelPost" , async _ => {
     console.log('Set ViettelPost options:', options);
     GM_setValue('vtpCreateOrderOptions', options);
 });
+
 
 function getSelectedText() {
   let selectedText = '';
@@ -285,6 +284,15 @@ const VIETTEL = {
                 API.saveToken(this.deviceId, this.token);
             });
         }
+
+        GM_registerMenuCommand("Test tạo đơn vtp." , async _ => {
+            const json = {
+                uid: '',
+                phone: '',
+                money: '',
+            }
+            this.createNewOrder(json);
+        });
     },
     get: function(url){
         return new Promise((resolve, reject) => {
@@ -321,6 +329,12 @@ const VIETTEL = {
                 }
             })
         })
+    },
+    locationAutocomplete: function(text) {
+        return this.get('https://location.viettelpost.vn/location/v1.0/autocomplete?system=VTP&q='+encodeURIComponent(text))
+    },
+    locationAutocomplete_v2: function(id) {
+        return this.get('https://location.viettelpost.vn/location/v2.0/autocomplete/'+encodeURIComponent(id)+'?system=VTP')
     },
     getListOrders: function(key, from = -30, to = 0){
         return new Promise((resolve, reject) => {
@@ -422,7 +436,7 @@ const VIETTEL = {
                 "SENDER_HOME_NO": options.SENDER_HOME_NO,
                 "RECEIVER_FULLNAME": jsonData.name || 'Khách hàng',
                 "RECEIVER_HOME_NO": jsonData.address || '___ Đổi địa chỉ ❌',
-                "RECEIVER_PHONE": jsonData.phone || '0900000000',
+                "RECEIVER_PHONE": jsonData.phone || TEST_PHONENUM,
                 "RECEIVER_WARD": 65,
                 "RECEIVER_DISTRICT": 3,
                 "RECEIVER_PROVINCE": 1,
@@ -563,6 +577,8 @@ const Customer_mng = {
     int: async function(){
         this.data = await GM_getValue(this.key, new Object());
         GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => { remote && (this.data = newValue) });
+
+        // TODO: check time to re-sync
     },
     sync: async function(){
         let res = await API.getAllCustomers().catch(e => alert(e.message));
@@ -614,8 +630,6 @@ function Order_mng(){
             let quangplus = GM_addElement(card, 'small', {style: 'opacity: .5; position: absolute; top: 5px; right: 5px;'});
             quangplus.innerHTML = '<a href="https://fb.com/trinhdacquang" target="_blank" style="color: inherit;">© QuangPlus</a>';
 
-            //if(isMessPage) card.classList.add('bottom');
-
             this.table = GM_addElement(card, 'table', { style: 'padding-bottom: 5px;' });
 
             let toolBar = GM_addElement(card, 'div', { class: 'toolBar' });
@@ -627,7 +641,7 @@ function Order_mng(){
             btn_od.innerText = 'Tạo đơn'; btn_od.onclick = _ => this.createOrder();
 
             let btn_edit = GM_addElement(toolBar, 'a');
-            btn_edit.innerText = 'Sửa sdt'; btn_edit.onclick = _ => this.setInfo();
+            btn_edit.innerText = 'Sửa'; btn_edit.onclick = _ => this.setInfo();
 
             this.eventsListeners();
 
@@ -760,20 +774,43 @@ function Order_mng(){
             this.loopSearching = setInterval(loopFn, 300);
         }
 
-        async setInfo(p = window.prompt("Sđt của " + this.customer.name, this.customer.phone || '0900000000')){
+        async setInfo(key, value){
+            let select = key || window.prompt('Lựa chọn mục cần sửa: \n\n1. Sửa số điện thoại \n2. Sửa địa chỉ');
+            if(select == null) return;
+            try{
+                if(select == 1){
+                    let p = window.prompt("Nhập sđt của " + this.customer.name, value || this.customer.phone || TEST_PHONENUM);
 
-            if(p == null) return;
+                    if(p == null || !p || p.length != 10 || p == this.customer.phone || p == MYPHONE || !isVNPhone(p)) return false;
 
-            // let addr = window.prompt("Địa chỉ của " + this.customer.name, a || this.customer.addr);
+                    this.customer.phone = p;
+                    this.refreshInfo();
+                    Customer_mng.set(this.customer);
+                }
+                else if(select == 2){
+                    let a = window.prompt("Nhập địa chỉ của " + this.customer.name, value || this.customer.addr || TEST_ADDRESS);
+                    if(a == null) return;
 
-            // if(addr == null) return;
+                    let locations = await VIETTEL.locationAutocomplete(a);
+                    console.log(locations);
+                    if(!locations.length) throw new Error('Không tìm thấy địa chỉ nào trùng khớp với: ' + a);
 
-            this.customer.phone = p;
-            // this.customer.addr = addr;
+                    let i = window.prompt('Chọn 1 trong các địa chỉ bên dưới \n\n' + locations.map(( {name}, i ) => `[${i}]. ${name}`).join('\n'),'');
+                    if(i == null) return;
 
-            this.refreshInfo();
-            Customer_mng.set(this.customer);
-            // GM_setClipboard( phone+"\n"+addr, "text");
+                    let location = locations[i];
+                    if(!location) throw new Error('Lựa chọn không hợp lệ!');
+
+                    let addressJson = await VIETTEL.locationAutocomplete_v2(location.id);
+                    console.log(addressJson);
+                }
+                else {
+                    throw new Error('Lựa chọn không hợp lệ!');
+                }
+
+            } catch(e){
+                alert("❌ " + e.message);
+            }
         }
 
         async createOrder(){
@@ -784,7 +821,7 @@ function Order_mng(){
             try{
                 if(!phone) return window.confirm("⚠️ Chưa có sđt/đchi!⚠️ \n✅ Enter để nhập thông tin!") && this.setInfo();
 
-                if(phone != TESTPHONENUM && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
+                if(phone != TEST_PHONENUM && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
@@ -846,17 +883,10 @@ function Order_mng(){
 
                 if(!p || p.length != 10 || p == this.customer.phone || p == MYPHONE || !isVNPhone(p)) return false;
 
-                // let range = selection.getRangeAt(0);
-                // let rangeText = range.startContainer.textContent;
-
-                // let a = rangeText.replace(selectedText, '').replaceAll('\n', '');
-
-                // if(this.customer.phone) return;
+                this.setInfo(1, p);
 
                 if(window.delay_xpvs) return false;
                 window.delay_xpvs = setTimeout(_ => {delete window.delay_xpvs}, 1000);
-
-                (!this.customer.phone || window.confirm('Đổi sdt của ' +this.customer.name+ ' => ' + p)) && this.setInfo(p);
             });
 
 
@@ -1112,7 +1142,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             try{
                 this.value = this.value.replaceAll(/\D/g, '');
                 this.dispatchEvent(customEvent('input'));
-                if(this.value == TESTPHONENUM || !isVNPhone(this.value)) return;
+                if(this.value == TEST_PHONENUM || !isVNPhone(this.value)) return;
 
                 let res = await VIETTEL.getListOrders(this.value).catch(e => {throw new Error()});
                 GM_log(JSON.stringify(res));
@@ -1148,7 +1178,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.document.body.classList.add('custom');
         //s.prependTo(p);
 
-        let isSample = phone == TESTPHONENUM;
+        let isSample = phone == TEST_PHONENUM;
 
         let productName = window.document.querySelector('input#productName'),
             productPrice = window.document.querySelector('input#productPrice'),
