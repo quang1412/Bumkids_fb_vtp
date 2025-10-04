@@ -183,8 +183,8 @@ Facebook
         '');
 
     GM_addStyle(
-        'div.infoCard { --ifc-highlight-color: coral; --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgba(220, 220, 220, 0.40); --ifc-text-color: #333; }'+
-        'html.__fb-dark-mode div.infoCard { --ifc-highlight-color: yellow; --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgba(0, 0, 0, 0.20); --ifc-text-color: white; }'+
+        'div.infoCard-wraper { --ifc-highlight-color: coral; --ifc-bg-gradient: linear-gradient(to right, #ece9e6, #ffffff); --ifc-toolbar-bg: rgba(220, 220, 220, 0.40); --ifc-text-color: #333; }'+
+        'html.__fb-dark-mode div.infoCard-wraper { --ifc-highlight-color: yellow; --ifc-bg-gradient: linear-gradient(to right, #859398, #283048); --ifc-toolbar-bg: rgba(0, 0, 0, 0.20); --ifc-text-color: white; }'+
 
         'div.infoCard-wraper {min-height: 115px; display: flex;flex-direction: column; justify-content: space-between; color: var(--ifc-text-color); backdrop-filter: brightness(1.5) blur(10px);box-shadow: 0 12px 28px 0 var(--shadow-1), 0 2px 4px 0 var(--shadow-1);font-weight: bolder;position: absolute;bottom: calc(100% + 8px);left: 10px;width: calc(100% - 30px);max-height: unset;max-width: 350px;border: 2px solid #d3d3d32b;border-radius: 8px;padding: 8px;filter: blur(0px);transition: all 1.5s ease-in-out;overflow: hidden;opacity: 1;}'+
 
@@ -199,7 +199,7 @@ Facebook
         'div.infoCard ::selection { color: red; background: yellow;}'+
 
         'div[aria-label^="Biểu ngữ Tin nhắn đã ghim"] > div { flex-direction: row-reverse; text-align: right; }'+
-        'div:has(div[role="main"][aria-label^="Cuộc trò chuyện với"]) div.infoCard { left: 27px; top: 64px; right: unset; bottom: unset; }'+
+        'div:has(div[role="main"][aria-label^="Cuộc trò chuyện với"]) div.infoCard-wraper { left: 27px; top: 64px; right: unset; bottom: unset; }'+
 
         'div.infoCard div.toolBar { text-align: center; background-color: var(--ifc-toolbar-bg); border-radius: 6px; display: flex; justify-content: space-around; }'+
         'div.infoCard div.toolBar a { color: initial; padding: 5px; flex: 1; }'+
@@ -620,16 +620,16 @@ const Customer_mng = {
                 'Sửa địa chỉ: ' + fullAddr
             ]
 
-            let select = key || window.prompt('Lựa chọn mục cần sửa: \n\n' + list.map( (text, i) => `[${i}]. ${text}`).join('\n'), 0);
+            let select = key || window.prompt('Lựa chọn mục cần sửa cho '+customer.name+': \n\n' + list.map( (text, i) => `[${i+1}]. ${text}`).join('\n'), 1);
             if(select == null) return;
-            if(select == 0){
+            if(select == 1){
                 let p = window.prompt("Nhập sđt của " + customer.name, value || customer.phone || TEST_PHONENUM);
 
                 if(p == null || !p || p.length != 10 || p == customer.phone || p == MYPHONE || !isVNPhone(p)) return false;
 
                 customer.phone = p;
             }
-            else if(select == 1){
+            else if(select == 2){
                 let a = window.prompt("Nhập địa chỉ của " + customer.name, value || fullAddr || TEST_ADDRESS);
                 if(a == null) return;
 
