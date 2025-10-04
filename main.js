@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.04.2
+// @version      2025.10.04.3
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -610,8 +610,7 @@ const Customer_mng = {
         await API.setCustomer(obj).catch(e => alert(e.message));
         this.save(obj);
     },
-    edit: async function(uid, key, value, callback){
-        let customer = this.data[uid];
+    edit: async function(customer, key, value, callback){
         try{
             if(!customer) throw new Error('Customer invalid');
             const fullAddr = customer.address?.formattedAddress;
@@ -831,7 +830,7 @@ function Order_mng(){
         }
 
         async edit(key, value){
-            return Customer_mng.edit(this.customer.uid, key, value, (res) => {
+            Customer_mng.edit(this.customer, key, value, (res) => {
                 this.customer = res;
                 this.refreshInfo();
             });
