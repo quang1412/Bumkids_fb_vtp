@@ -415,16 +415,10 @@ const VIETTEL = {
             return resolve(link);
         })
     },
-    getOrderPrint_v2: async function(id, callback){
+    getOrderPrint_v2: async function(id){
         let url = 'https://api.viettelpost.vn/api/setting/encryptLinkPrintV2';
         let data = { "TYPE": 100, "ORDER_NUMBER": id + ',' + (new Date().getTime() + (360000000)), "IS_SHOW_POSTAGE": 0, "PRINT_COPY": 1 };
-        let link = null;
-
-        let res = await this.post(url, data).catch(e => alert('❌ Lỗi: ' + e.message));
-
-        if(res.error) throw new Error(res.message);
-        link = res?.data?.enCryptUrl;
-        return callback(link);
+        return this.post(url, data).catch(e => alert('❌ Lỗi: ' + e.message));
     },
     getOrderInfo: function(id){
         return new Promise((resolve, reject) => {
@@ -941,6 +935,49 @@ function Order_mng(){
         }
 
         async createOrder(){
+
+            const {uid, phone, name} = this.customer;
+            const orderInfo = { uid, phone, name };
+            let title = `Tạo đơn cho ${name}\n\n`;
+
+            try{
+                if(!phone) return window.confirm("⚠️ Chưa có sđt/đchi!") && this.edit();
+
+                if(phone != TEST_PHONENUM && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
+
+                let url = 'https://viettelpost.vn/order/tao-don-le?query=';
+
+                let prices_str = prompt(title + "B1 - Điền giá:", GM_getValue('lastestPrice', 0));
+                if (prices_str == undefined || prices_str == null) { return false }
+                if(!(/^[\d\s]*$/g).test(prices_str)) throw new Error('❌ Giá sản phẩm không hợp lệ!');
+
+                let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
+
+                let itemList = GM_getValue('lastItems', []);
+                let listStr = itemList.map((e, i) => `[${i}] ${e}`).join('\n');
+                let input = prompt(title + 'B2 - Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + listStr, itemList[0] || '');
+                if (input == null || input == undefined) return false;
+                let itemName = itemList[input] || input;
+
+                itemList.unshift(itemName);
+                itemList = [...new Set(itemList)];
+                GM_setValue('lastItems', itemList.slice(0, 10));
+
+                orderInfo.prdName = `${itemName} - (${prices_str})`;
+                orderInfo.price = (price*1000);
+
+                url += btoa(unescape(encodeURIComponent(JSON.stringify(orderInfo))));
+
+                window.popupWindow?.focus();
+                window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
+
+                GM_setValue('lastestPrice', prices_str);
+
+                window.addEventListener('message', ({data}) => { uid == data.uid && this.refreshInfo() }, {once: true});
+            }
+            catch(e){ alert(title + e.message) }
+
+            /***
             if(this.customer.phone != TEST_PHONENUM && (this.penddingOrderCount || this.draftOrderCount) && !confirm('❌ Có đơn đang giữ! bạn vẫn muốn tiếp tục?')) return;
 
             return VIETTEL.createNewOrder(this.customer, (od) => {
@@ -972,6 +1009,8 @@ function Order_mng(){
 
                //  GM_setClipboard(textToCopy, 'text');
             })
+            ***/
+
         }
 
         async eventsListeners(){
@@ -1266,7 +1305,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 if(this.value == TEST_PHONENUM || !isVNPhone(this.value)) return;
 
                 let res = await VIETTEL.getListOrders(this.value).catch(e => {throw new Error()});
-                GM_log(JSON.stringify(res));
+                // GM_log(JSON.stringify(res));
                 if(res?.status != 200) throw new Error();
 
                 let orders = (res.data.data.LIST_ORDER || []).filter(o => !!~([-100, -108,100,102,103,104]).indexOf(o.ORDER_STATUS));
@@ -1322,39 +1361,32 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 autoAddress.dispatchEvent(customEvent('input'));
 
                 let invesId = window.document.querySelector('select#selectGroupAddress')?.value;
-                GM_setValue('lastInventoryID', invesId);
+                //GM_setValue('lastInventoryID', invesId);
 
                 if(e.shiftKey){
                     $('#confirmCreateOrder button.btn.btn-viettel').click();
                     status = 1;
                 } else {
                     $('#confirmSaveDraft button.btn.btn-viettel').click();
-                    status = 0;
+                    //status = 0;
                 }
 
                 let doPrint = window.confirm('in tem?');
 
-                let interv = setInterval(_ => {
+                let interv = setInterval(async _ => {
                     if(productName.value || phoneNo.value) return true;
-
                     clearInterval(interv);
 
                     if(!doPrint) return window.close();
 
-                    VIETTEL.getListOrders(phone, 0, 0).then(data => {
-                        let order = data.data.data.LIST_ORDER[0];
-                        let oid = order?.ORDER_NUMBER;
+                    let res = await VIETTEL.getListOrders(phone, 0, 0).catch(e => alert(e.message));
+                    let order = res?.data?.data?.LIST_ORDER[0];
+                    let oid = order?.ORDER_NUMBER;
 
-                        if(!oid) throw new Error('Không tìm thấy đơn hàng mới!');
-
-                        return VIETTEL.getOrderPrint(oid);
-                    }).then(link => {
-                        window.open(link+'&status='+status , '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=50"');
-                    }).catch(e => {
-                        e.message && alert(e.message);
-                    }).finally(_=>{
-                        setTimeout(window.close, 200);
-                    })
+                    res = await VIETTEL.getOrderPrint_v2(oid).catch(e => alert(e.message));
+                    let link = res?.data?.enCryptUrl;
+                    link && window.open(link, '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=50"');
+                    setTimeout(window.close, 200);
                 }, 1500);
             }
         });
