@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.06.1
+// @version      2025.10.06.2
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -237,12 +237,13 @@ const VIETTEL = {
         this.token = await GM_getValue('vtp_tokenKey', null);
         GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
             this.token = newValue;
+            // API.saveToken(this.deviceId, this.token);
         });
         if(isViettelPage){
             let id = window.localStorage.deviceId;
             let tk = JSON.parse(window.localStorage['vtp-token']).tokenKey;
 
-            tk != this.token && API.saveToken(this.deviceId, this.token);
+            tk != this.token && (API.saveToken(id, tk), alert('token update'))
 
             GM_setValue('vtp_deviceId', id);
             GM_setValue('vtp_tokenKey', tk);
@@ -438,6 +439,10 @@ const VIETTEL = {
             });
         })
     },
+    suggestAddress: async function(p){
+        return this.get('https://io.okd.viettelpost.vn/order/v1.0/receiver/_suggest?q='+p);
+    //https://io.okd.viettelpost.vn/order/v1.0/receiver/_suggest?q=0877775505
+    },
     createNewOrder: async function(user, callback){
         try{
             if(!user.phone || !user.address) throw new Error('Chưa có sđt / địa chỉ!');
@@ -463,6 +468,35 @@ const VIETTEL = {
 
             const rawAddr = user.address?.rawAddress || '❌ Đổi địa chỉ ❌';
 
+            let suggestAddress = await this.suggestAddress(user.phone).catch(e => {throw new Error(e.message)});
+            let ii = window.prompt('▶︎ Chọn hoặc nhập địa chỉ \n' + suggestAddress?.items.map((item, i) => `[${i}]. ${item.addr}`));
+            if(ii == null) return;
+            let selectAddress = suggestAddress[ii] || ii;
+            if(selectAddress == ii){
+                let locations = await VIETTEL.locationAutocomplete(a);
+                console.log(locations);
+                if(!locations.length) throw new Error('Không tìm thấy địa chỉ nào trùng khớp với: ' + a);
+
+                let i = window.prompt('▶︎ Chọn 1 trong các địa chỉ bên dưới \n' + locations.map( ({name}, i) => `[${i}]. ${name.toLowerCase()}`).join('\n'), 0);
+                if(i == null) return;
+
+                let location = locations[i];
+                if(!location) throw new Error('Lựa chọn không hợp lệ!');
+
+                let res = await VIETTEL.locationAutocomplete_v2(location.id);
+                console.log(res);
+                if(!res.id) throw new Error(res.message);
+                selectAddress = {
+                    'ward': res.components?.find(a => a.type == 'WARD')?.code,
+                    'district': res.components?.find(a => a.type == 'DISTRICT')?.code,
+                    'province': res.components?.find(a => a.type == 'PROVINCEs')?.code,
+                    'addr': ii,
+                }
+                //res.rawAddress = ii;
+            }
+
+            // selectAddress
+
             const d = new Date();
             const date = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
             const time = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', }).format(d);
@@ -479,9 +513,9 @@ const VIETTEL = {
                 "ORDER_NUMBER": order_reference,
                 "ORDER_REFERENCE": order_reference,
                 "ORDER_PAYMENT": vtpOpt.ORDER_PAYMENT, // 2: nguoi_nhan / 3: nguoi_gui
-                "ORDER_SERVICE": "STK", // Chuyển_phát_tiêu_chuẩn
-                "ORDER_SERVICE_ADD": "", // SMS
-                "ORDER_NOTE": '❌ 𝗞𝗛𝗢̂𝗡𝗚 xem hàng ❌ 𝗞𝗛𝗢̂𝗡𝗚 thử hàng ' + hashtags,
+                "ORDER_SERVICE": "VSL9", // STK:Chuyển_phát_tiêu_chuẩn / VSL9:flashsale thoả thuận
+                "ORDER_SERVICE_ADD": (productName.toLowerCase().includes('đổi') ? 'GGDH' : ''), // SMS / GGDH
+                "ORDER_NOTE": '❌ 𝗞𝗛𝗢̂𝗡𝗚 xem ❌ 𝗞𝗛𝗢̂𝗡𝗚 thử hàng ' + hashtags,
 
                 "SENDER_FULLNAME": vtpOpt.SENDER_FULLNAME, // option
                 "SENDER_PHONE": vtpOpt.SENDER_PHONE,
@@ -691,7 +725,7 @@ const Customer_mng = {
                 console.log(locations);
                 if(!locations.length) throw new Error('Không tìm thấy địa chỉ nào trùng khớp với: ' + a);
 
-                let i = window.prompt('▶︎ Chọn 1 trong các địa chỉ bên dưới \n' + locations.map( ({name}, i) => `[${i+1}]. ${name.toLowerCase()}`).join('\n'), 0);
+                let i = window.prompt('▶︎ Chọn 1 trong các địa chỉ bên dưới \n' + locations.map( ({name}, i) => `[${i}]. ${name.toLowerCase()}`).join('\n'), 0);
                 if(i == null) return;
 
                 let location = locations[i];
@@ -919,8 +953,7 @@ function Order_mng(){
                     `- giá: ${new Intl.NumberFormat('vn-VN').format(od.MONEY_COLLECTION)}đ ${(od.ORDER_PAYMENT == 3 ? 'cả ship' : '+ ship ' + new Intl.NumberFormat('vn-VN').format(od.MONEY_TOTALFEE))} \n` + // 2: nguoi nhan trả cước / 3: nguoi gui trả cước
                     // '- mã đơn hàng: #' + od.ORDER_REFERENCE + ' \n' +
                     '\n' +
-                    '- link xác nhận, thanh toán, sửa thông tin và các yêu cầu khác \n' +
-                    'https://bumm.kids/my-preod?o=' + od.ORDER_REFERENCE + ' \n' +
+                    '- link xử lý đơn hàng: https://BUMM.KIDS/my-preod?o=' + od.ORDER_REFERENCE + ' \n' +
                     '';
 
                 GM_setClipboard(textToCopy, 'text');
@@ -1347,7 +1380,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     let onKeyDown = function(e){
         let buttons = $('div.mat-menu-content button.vtp-bill-btn-action');
         if(!buttons.length) return;
-        if(e.key == 'i'){
+        if(e.key == 'i' || e.key == 'I'){
             e.preventDefault();
             $.each(buttons, (i, btn) => {
                 if(btn.innerText != 'In đơn') return;
@@ -1355,7 +1388,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 setTimeout(_ => $('div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child')?.focus(), 200);
             });
         }
-        if(e.key == 'd'){
+        if(e.key == 'd' || e.key == 'D'){
             e.preventDefault();
             $.each(buttons, (i, btn) => {
                 if(btn.innerText != 'Duyệt đơn') return;
@@ -1363,7 +1396,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 setTimeout(_ => $('div#vtpBillModalOrderApproval.modal.show div.col-6:first-child button')?.focus(), 200);
             });
         }
-        if(e.key == 'h'){
+        if(e.key == 'h' || e.key == 'H'){
             e.preventDefault();
             $.each(buttons, (i, btn) => {
                 if(btn.innerText != 'Hủy đơn') return;
@@ -1371,7 +1404,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 setTimeout(_ => $('#vtpBillModalDeleteOrder.modal.show button.btn-confirm:not([data-dismiss])')?.focus(), 200);
             });
         }
-        if(e.key == 'x'){
+        if(e.key == 'x' || e.key == 'X'){
             e.preventDefault();
             $.each(buttons, (i, btn) => {
                 if(btn.innerText != 'Xóa đơn') return;
