@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.06.2
+// @version      2025.10.06.4
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -466,16 +466,16 @@ const VIETTEL = {
             let hashtags = window.prompt('▶︎ Nhập #hashtags gắn cho đơn hàng (ko bắt buộc)', GM_getValue('lastOrderHashtags', ''));
             if(hashtags == null) return;
 
-            const rawAddr = user.address?.rawAddress || '❌ Đổi địa chỉ ❌';
+            // const rawAddr = user.address?.rawAddress || '❌ Đổi địa chỉ ❌';
 
             let suggestAddress = await this.suggestAddress(user.phone).catch(e => {throw new Error(e.message)});
-            let ii = window.prompt('▶︎ Chọn hoặc nhập địa chỉ \n' + suggestAddress?.items.map((item, i) => `[${i}]. ${item.addr}`));
+            const ii = window.prompt('▶︎ Chọn hoặc nhập địa chỉ \n' + suggestAddress?.items.map((item, i) => `[${i}]. ${item.addr}`), 0);
             if(ii == null) return;
-            let selectAddress = suggestAddress[ii] || ii;
+            let selectAddress = suggestAddress?.items[ii] || ii;
             if(selectAddress == ii){
-                let locations = await VIETTEL.locationAutocomplete(a);
+                let locations = await this.locationAutocomplete(selectAddress);
                 console.log(locations);
-                if(!locations.length) throw new Error('Không tìm thấy địa chỉ nào trùng khớp với: ' + a);
+                if(!locations.length) throw new Error('Không tìm thấy địa chỉ nào trùng khớp với: ' + ii);
 
                 let i = window.prompt('▶︎ Chọn 1 trong các địa chỉ bên dưới \n' + locations.map( ({name}, i) => `[${i}]. ${name.toLowerCase()}`).join('\n'), 0);
                 if(i == null) return;
@@ -483,7 +483,7 @@ const VIETTEL = {
                 let location = locations[i];
                 if(!location) throw new Error('Lựa chọn không hợp lệ!');
 
-                let res = await VIETTEL.locationAutocomplete_v2(location.id);
+                let res = await this.locationAutocomplete_v2(location.id);
                 console.log(res);
                 if(!res.id) throw new Error(res.message);
                 selectAddress = {
@@ -492,8 +492,8 @@ const VIETTEL = {
                     'province': res.components?.find(a => a.type == 'PROVINCEs')?.code,
                     'addr': ii,
                 }
-                //res.rawAddress = ii;
             }
+
 
             // selectAddress
 
@@ -526,16 +526,15 @@ const VIETTEL = {
 
                 "RECEIVER_FULLNAME": user.name,
                 "RECEIVER_PHONE": user.phone || TEST_PHONENUM,
-                "RECEIVER_HOME_NO": rawAddr,
+                "RECEIVER_HOME_NO": selectAddress.addr,
                 "RECEIVER_STREET_NAME": " ",
                 "RECEIVER_ADDRESS": " ",
 
-                "RECEIVER_WARD": user.address?.components?.find(a => a.type == 'WARD')?.code || 489, // Phường Quang Trung
-                "RECEIVER_DISTRICT": user.address?.components?.find(a => a.type == 'DISTRICT')?.code || 24, // Quận Đống Đa
-                "RECEIVER_PROVINCE": user.address?.components?.find(a => a.type == 'PROVINCE')?.code || 1, // Thành phố Hà Nội
+                "RECEIVER_WARD": selectAddress.ward, // Phường Quang Trung
+                "RECEIVER_DISTRICT": selectAddress.district, // Quận Đống Đa
+                "RECEIVER_PROVINCE": selectAddress.province, // Thành phố Hà Nội
                 "RECEIVER_EMAIL": "trinhdacquang1@gmail.com",
 
-                // "PRODUCT_NAME": productName + '(' + cod_input + ')',
                 "PRODUCT_NAME": `${productName} - (${cod_input})`,
                 "PRODUCT_QUANTITY": 1,
                 "PRODUCT_WEIGHT": vtpOpt.PRODUCT_WEIGHT || 100, // gram
@@ -543,6 +542,8 @@ const VIETTEL = {
                 "PRODUCT_PRICE": Math.max(cod, 1000000),
                 "PRODUCT_DESCRIPTION": hashtags,
             };
+
+            await delay(1000);
 
             const shippingFee = await this.getshippingFee(orderData).catch(e => {throw new Error(e.message)});
             const totalFee = parseInt(shippingFee.find(e => e.SERVICE_CODE == 'ALL')?.PRICE);
@@ -565,7 +566,7 @@ const VIETTEL = {
 
             let c = new Intl.NumberFormat('vn-VN').format(orderData.MONEY_COLLECTION)+'đ';
             let f = new Intl.NumberFormat('vn-VN').format(totalFee)+'đ thu ' + (vtpOpt.ORDER_PAYMENT == 2 ? 'người nhận' : 'người gửi');
-            let a = rawAddr + ' - ' + user.address.formattedAddress.toLowerCase().replaceAll('-',',');
+            let a = orderData.RECEIVER_HOME_NO;
 
             if(!window.confirm(`✅ Xác nhận thông tin đơn hàng cho: ${user.name} \n- Sđt: ${user.phone} \n- Địa chỉ: ${a} \n-----\n- Tên SP: ${productName} \n- COD: ${c} \n- Cước ${f}\n-----\n- Tags: ${hashtags} \n▶︎ Bấm Enter/OK để tạo đơn`, )) return;
 
