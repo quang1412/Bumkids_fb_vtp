@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.04.5
+// @version      2025.10.06.1
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -49,9 +49,6 @@ const MYPHONE = '0966628989', MYFBNAME = 'Trịnh Hiền', MYFBUSERNAME = 'hien.
       TEST_PHONENUM = '0900000000', TEST_ADDRESS = 'số 31 ngõ 19, Trần Quang Diệu, Ô chợ dừa, Đống Đa, Hà Nội',
       UrlParams = new URLSearchParams(window.location.search), $ = (window.$ || window.jQuery);
 
-      // SYMBOLS = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
-
-
 const isFBpage = window.location.host === 'www.facebook.com';
 const isMessPage = window.location.host === 'www.messenger.com' || window.location.pathname.includes('/messages/');
 const isViettelPage = window.location.host === 'viettelpost.vn'
@@ -92,13 +89,6 @@ function customEvent(n){
 }
 function getFormatedDate(i = 0) {
     const date = new Date(new Date().getTime() + i * 24 * 60 * 60 * 1000);
-    //    const yyyy = date.getFullYear();
-    //    let mm = date.getMonth() + 1; // Months start at 0!
-    //    let dd = date.getDate();
-    //    if (dd < 10) dd = '0' + dd;
-    //    if (mm < 10) mm = '0' + mm;
-    //    const formattedToday = dd + '/' + mm + '/' + yyyy;
-    //    return formattedToday;
     return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
 }
 function makeid(length = 12) {
@@ -116,12 +106,6 @@ function makeid(length = 12) {
 (isMessPage || isFBpage) && GM_addValueChangeListener('change2reload', (key, oldValue, newValue, remote) => {
     window.confirm('Đã cập nhật dữ liệu mới! \nEnter để tải lại trang!') && window.location.reload();
 });
-
-/*** Sync and reload all pages ***/
-(isMessPage || isFBpage) && GM_registerMenuCommand("Đồng bộ khách hàng." , async _ => {
-    await Customer_mng.sync();
-});
-
 
 function getSelectedText() {
   let selectedText = '';
@@ -203,7 +187,7 @@ const SHEET = {
                 onload: function (res) {
                     res = JSON.parse(res.response);
                     console.log(res);
-                    return (res.status != 'success') ? reject(res.message) : resolve(res.data);
+                    return (res.status != 200) ? reject(res.message) : resolve(res.data);
                 },
                 onerror: function(error) {
                     return reject(error.message || 'Lỗi SHEET \nMã lỗi: #178');
@@ -223,7 +207,7 @@ const SHEET = {
                 onload: (res) => {
                     res = JSON.parse(res.response);
                     //console.log(res);
-                    return (res.status != 'success') ? reject(res.message) : resolve(res.data);
+                    return (res.status != 200) ? reject(res.message) : resolve(res.data);
                 },
                 onerror: (error) => {
                     return reject(error.message || 'Lỗi SHEET \nMã lỗi: #193');
@@ -483,13 +467,14 @@ const VIETTEL = {
             const date = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
             const time = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', }).format(d);
 
-            const order_reference = (user.uid + '-' + makeid(3));
+            const order_reference = makeid(12);
             const orderData = {
                 "TYPE": 12, // ??? BƯU KIỆN.
                 "DELIVERY_DATE": date + ' ' + time,
                 "GROUPADDRESS_ID": vtpOpt.GROUPADDRESS_ID,
                 "CUS_ID": vtpOpt.CUS_ID,
                 "MONEY_COLLECTION": cod,
+                "MONEY_TOTAL": "",
 
                 "ORDER_NUMBER": order_reference,
                 "ORDER_REFERENCE": order_reference,
@@ -527,6 +512,7 @@ const VIETTEL = {
 
             const shippingFee = await this.getshippingFee(orderData).catch(e => {throw new Error(e.message)});
             const totalFee = parseInt(shippingFee.find(e => e.SERVICE_CODE == 'ALL')?.PRICE);
+            orderData.MONEY_TOTALFEE = totalFee;
 
             let highValue = cod > 3000000;
 
@@ -636,6 +622,8 @@ const API = {
         return this.post('/setCustomer', data);
     },
 }
+
+
 // FB CUSTOMER MANAGER
 const Customer_mng = {
     key: 'GM_customers_11',
@@ -643,6 +631,9 @@ const Customer_mng = {
         this.data = await GM_getValue(this.key, new Object());
         GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => { remote && (this.data = newValue) });
 
+        GM_registerMenuCommand("Đồng bộ khách hàng." , async _ => {
+            await this.sync();
+        });
         // TODO: check time to re-sync
     },
     sync: async function(){
@@ -902,25 +893,37 @@ function Order_mng(){
         }
 
         async createOrder(){
-            // this.table.innerText = '⚠️ ' + err.message;
-            return VIETTEL.createNewOrder(this.customer, (res) => {
+            if((this.penddingOrderCount || this.draftOrderCount) && !confirm('❌ Có đơn đang giữ! bạn vẫn muốn tiếp tục?')) return;
+
+            return VIETTEL.createNewOrder(this.customer, (od) => {
                 this.refreshInfo();
-                // window.confirm('✅ Tạo đơn thành công! \nBạn có muốn in tem không?') &&
-                const vtpOpt = GM_getValue('vtpCreateOrderOptions', {});
-                // \n[0]. Không tự động in \n[1]. Hỏi trước khi in \n[2]. Tự động in
-                if(vtpOpt.qp_autoprint == '0'){
-                    return alert('✅ Tạo đơn thành công!');
-                }
-                if(vtpOpt.qp_autoprint == '1'){
-                    if(!window.confirm('✅ Tạo đơn thành công! \nBạn có muốn in tem không?')) return;
-                }
-                if(vtpOpt.qp_autoprint == '2'){
 
-                }
+                try{
+                    const vtpOpt = GM_getValue('vtpCreateOrderOptions', {});
+                    if(vtpOpt.qp_autoprint == '0'){
+                        throw alert('✅ Tạo đơn thành công!');
+                    }
+                    if(vtpOpt.qp_autoprint == '1' && !window.confirm('✅ Tạo đơn thành công! \nBạn có muốn in tem không?')){
+                        throw true;
+                    }
+                    //if(vtpOpt.qp_autoprint == '2'){}
 
-                VIETTEL.getOrderPrint_v2(res.ORDER_NUMBER, link => {
-                    link && window.open(link, '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=50"');
-                })
+                    VIETTEL.getOrderPrint_v2(od.ORDER_NUMBER, link => {
+                        link && window.open(link, '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=50"');
+                    });
+
+                } catch(e){}
+
+                let textToCopy = '🧸 E gửi c đơn order ngày -/- \n' +
+                    '- gồm: ' + od.PRODUCT_NAME.replace(/\-\s\(.*\)/g, '') + '\n' +
+                    `- giá: ${new Intl.NumberFormat('vn-VN').format(od.MONEY_COLLECTION)}đ ${(od.ORDER_PAYMENT == 3 ? 'cả ship' : '+ ship ' + new Intl.NumberFormat('vn-VN').format(od.MONEY_TOTALFEE))} \n` + // 2: nguoi nhan trả cước / 3: nguoi gui trả cước
+                    // '- mã đơn hàng: #' + od.ORDER_REFERENCE + ' \n' +
+                    '\n' +
+                    '- link xác nhận, thanh toán, sửa thông tin và các yêu cầu khác \n' +
+                    'https://bumm.kids/my-preod?o=' + od.ORDER_REFERENCE + ' \n' +
+                    '';
+
+                GM_setClipboard(textToCopy, 'text');
             })
         }
 
@@ -1462,7 +1465,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 // "ORDER_TYPE_ADD": "",
 // "ORDER_VOUCHER": "",
 // "DELIVERY_CODE": -1,
-// "MONEY_TOTALFEE": 20000,
 // "MONEY_FEECOD": 5000,
 // "MONEY_FEEVAS": 0,
 // "MONEY_FEEINSURRANCE": 0,
@@ -1496,3 +1498,4 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 //"ORDER_REFERENCE": (user.uid + '-' + makeid(10)),
 // "RECEIVER_HOME_NO": "",
 // "RECEIVER_ADDRESS": rawAddr,
+// "MONEY_TOTALFEE": "",
