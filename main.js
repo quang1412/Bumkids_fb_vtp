@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.06.5
+// @version      2025.10.06.66
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
-// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/main.js?v=eqwe12
-// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/main.js?v=eqwe12
+// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/main.js
+// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/main.js
 
 // @require      https://code.jquery.com/jquery-3.7.1.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
@@ -285,7 +285,7 @@ const VIETTEL = {
                 }
                 else if(i == 3){
                     let currVal = opts.qp_autoprint
-                    let arr = [{label: 'Tự động in', val: 1}, {label: 'Không in', val: 0}, {label: 'Hỏi trước khi in', val: 'ask'}]
+                    let arr = [{label: 'Không in', val: 0}, {label: 'Tự động in', val: 1}, {label: 'Hỏi trước khi in', val: 'ask'}]
                     let i = window.prompt('▶︎ Tự động in tem vận đơn \n' + arr.map((op, i) => `[${i}]. ${op.label} ${currVal == op.val ? '*' : ''}`).join('\n'), 0);
                     if(i == null) return false;
                     let sl = arr[i];
@@ -1294,7 +1294,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
     // ON CREATE ORDERS
     $(document).ready( async function(){
-        let opts = GM_getValue('vtpCreateOrderOptions', {});
+        const opts = GM_getValue('vtpCreateOrderOptions', {});
 
         let info_encode = UrlParams.get('query');
         if(!info_encode) return false;
@@ -1312,9 +1312,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         // CHECK TRÙNG ĐƠN.
         $(document).on('change', 'form.create-order input#phoneNo', async function(){
             try{
-                this.value = this.value.replaceAll(/\D/g, '');
+                this.value = this.value?.replaceAll(/\D/g, '');
                 this.dispatchEvent(customEvent('input'));
-                if(this.value == TEST_PHONENUM) return;
+                if(!this.value || this.value == TEST_PHONENUM) return;
 
                 let res = await VIETTEL.getListOrders(this.value);
 
@@ -1378,6 +1378,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         $(document).keyup(function(e) {
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
+
+                if($('input.is-invalid').length) return alert('is-invalid');
+
                 let status = 0;
 
                 autoAddress.value = autoAddress.value.toLowerCase().replace(/((phường)|(xã)|(thị\strấn)|(p\.)|(x\.)|(tt\.)).*/g,'');
@@ -1393,10 +1396,15 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                     //status = 0;
                 }
 
-                let doPrint = opts.qp_autoprint = 'ask' ? window.confirm('✅ Bạn có muốn in tem ko?') : opts.qp_autoprint;
+
+                let doPrint = opts.qp_autoprint == 'ask' ? window.confirm('✅ Bạn có muốn in tem ko?') : opts.qp_autoprint;
 
                 let interv = setInterval(async _ => {
-                    if(productName.value || phoneNo.value) return true;
+
+                    const toast = $('div.toast-success div.toast-message');
+                    const modal = $('div#createOrderSuccess.modal.show');
+
+                    if(!toast.length || modal.length) return;
                     clearInterval(interv);
 
                     if(!doPrint) return window.close();
@@ -1410,9 +1418,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                     let link = res?.data?.enCryptUrl;
                     link && window.open(link, '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=50"');
 
-                    await delay(500);
+                   // await delay(500);
                     window.close();
-                }, 1500);
+                }, 500);
             }
         });
     });
