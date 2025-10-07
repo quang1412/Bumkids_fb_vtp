@@ -284,10 +284,13 @@ const VIETTEL = {
                     if(parseInt(w) > 100) { opts.PRODUCT_WEIGHT = w }
                 }
                 else if(i == 3){
-                    let i = window.prompt('▶︎ Tự động in tem vận đơn \n[0]. Không tự động in \n[1]. Hỏi trước khi in \n[2]. Tự động in ');
-                    if(i == null) return;
-                    if(!~(['0', '1', '2']).indexOf(i)) throw new Error('Lựa chọn không hợp lệ');
-                    opts.qp_autoprint = i;
+                    let currVal = opts.qp_autoprint
+                    let arr = [{label: 'Tự động in', val: 1}, {label: 'Không in', val: 0}, {label: 'Hỏi trước khi in', val: 'ask'}]
+                    let i = window.prompt('▶︎ Tự động in tem vận đơn \n' + arr.map((op, i) => `[${i}]. ${op.label} ${currVal == op.val ? '*' : ''}`).join('\n'), 0);
+                    if(i == null) return false;
+                    let sl = arr[i];
+                    if(!sl) throw new Error('Lựa chọn không hợp lệ');
+                    opts.qp_autoprint = sl.val;
                 }
                 else {
                     throw new Error('Lựa chọn không hợp lệ');
@@ -295,9 +298,10 @@ const VIETTEL = {
 
                 console.log('Set ViettelPost options:', opts);
                 GM_setValue('vtpCreateOrderOptions', opts);
+                alert('✅ Đã lưu!');
             }
             catch(e){
-                alert('❌ Lỗi: ' + e.message);
+                return alert('❌ Lỗi: ' + e.message);
             }
         });
 
@@ -365,28 +369,26 @@ const VIETTEL = {
         let success = [105,200,202,300,310,320,400,500,506,507,509,505,501,515,502,551,508,550,504,503,516,517],
             pedding = [-108,100,102,103,104],
             draft = [-100];
+        if(!key) {
+            return new Error('Chưa có sdt');
+        }
 
-        return new Promise((resolve, reject) => {
-            if(!key) return reject(new Error('Chưa có sdt'));
-            let url = 'https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2';
-            let json = {
-                "PAGE_INDEX": 1,
-                "PAGE_SIZE": 10,
-                "INVENTORY": null,
-                "TYPE": 0,
-                "DATE_FROM": getFormatedDate(from),
-                "DATE_TO": getFormatedDate(to),
-                "ORDER_PROPERTIES": key,
-                "ORDER_PAYMENT": "",
-                "IS_FAST_DELIVERY": false,
-                "REASON_RETURN": null,
-                "ORDER_STATUS": ([...success, ...pedding, ...draft]).join(),
-            };
-            this.post(url, json ).then(resolve).catch(e => {
-                alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
-                reject(e);
-            });
-        })
+        let url = 'https://api.viettelpost.vn/api/supperapp/get-list-order-by-status-v2';
+        let json = {
+            "PAGE_INDEX": 1,
+            "PAGE_SIZE": 10,
+            "INVENTORY": null,
+            "TYPE": 0,
+            "DATE_FROM": getFormatedDate(from),
+            "DATE_TO": getFormatedDate(to),
+            "ORDER_PROPERTIES": key,
+            "ORDER_PAYMENT": "",
+            "IS_FAST_DELIVERY": false,
+            "REASON_RETURN": null,
+            "ORDER_STATUS": ([...success, ...pedding, ...draft]).join(),
+        };
+        return this.post(url, json);
+
     },
     getKyc: function(phone){
         return new Promise((resolve, reject) => {
@@ -466,6 +468,7 @@ const VIETTEL = {
             resolve(result);
         })
     },
+    /***
     createNewOrder: async function(user, callback){
         try{
             if(!user.phone) throw new Error('Chưa có sđt!');
@@ -596,6 +599,7 @@ const VIETTEL = {
             }
         } catch(e){ alert('❌ Lỗi: ' + e.message) }
     }
+    ***/
 };
 VIETTEL.init();
 
@@ -665,7 +669,6 @@ const API = {
         return this.post('/setCustomer', data);
     },
 }
-
 
 // FB CUSTOMER MANAGER
 const Customer_mng = {
@@ -820,7 +823,7 @@ function Order_mng(){
 
                 if(!phone) throw new Error('Chưa có số đt!!');
 
-                let vt = await VIETTEL.getListOrders(phone);
+                let vt = await VIETTEL.getListOrders(phone).catch(err => alert(err.message));
                 if(!vt) throw new Error('Lỗi: không tìm đc đơn hàng viettel!');
                 if(vt.error) throw new Error('Viettel: ' + vt.message);
 
@@ -857,14 +860,10 @@ function Order_mng(){
                 </tr>
                 <tr> <td>Tỷ lệ nhận:</td> <td>${this.kycStr}</td> </tr>`;
             } catch(e){
-
                 this.table.innerText = '⚠️ ' + e.message;
-
             } finally{
-
                 delete this.delay_kfbs;
                 console.log(this.customer);
-
             }
         }
 
@@ -935,23 +934,28 @@ function Order_mng(){
         }
 
         async createOrder(){
-
             const {uid, phone, name} = this.customer;
             const orderInfo = { uid, phone, name };
             let title = `Tạo đơn cho ${name}\n\n`;
 
             try{
-                if(!phone) return window.confirm("⚠️ Chưa có sđt/đchi!") && this.edit();
+                if(!phone) return window.confirm("⚠️ Chưa có sđt/đchi! ") && this.edit(0);
 
                 if(phone != TEST_PHONENUM && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
-                let prices_str = prompt(title + "B1 - Điền giá:", GM_getValue('lastestPrice', 0));
-                if (prices_str == undefined || prices_str == null) { return false }
-                if(!(/^[\d\s]*$/g).test(prices_str)) throw new Error('❌ Giá sản phẩm không hợp lệ!');
+                let cod_input = window.prompt('▶︎ Chọn hoặc nhập số tiền phải thu (đv nghìn đồng) \n[0]. Đơn 0 đồng \n[1]. Chỉ thu ship', GM_getValue('lastCOD', 0));
+                if(cod_input == undefined || cod_input == null) return false;
 
-                let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
+                if(!(/^\d[\d\+\-\*]*\d$/g).test(cod_input)) throw new Error('Số tiền không hợp lệ!');
+                cod_input = cod_input.trim();
+                // let cod = window.eval(cod_input.replaceAll(/\s+/g, '+'));
+
+                // let prices_str = prompt(title + "B1 - Điền giá:", GM_getValue('lastestPrice', 0));
+                // if (prices_str == undefined || prices_str == null) { return false }
+                // if(!(/^[\d\s]*$/g).test(prices_str)) throw new Error('❌ Giá sản phẩm không hợp lệ!');
+                // let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
 
                 let itemList = GM_getValue('lastItems', []);
                 let listStr = itemList.map((e, i) => `[${i}] ${e}`).join('\n');
@@ -963,17 +967,19 @@ function Order_mng(){
                 itemList = [...new Set(itemList)];
                 GM_setValue('lastItems', itemList.slice(0, 10));
 
-                orderInfo.prdName = `${itemName} - (${prices_str})`;
-                orderInfo.price = (price*1000);
+                orderInfo.prdName = `${itemName} - (${cod_input})`;
+                // orderInfo.price = (cod*1000);
+
+                orderInfo.ref = makeid(12);
 
                 url += btoa(unescape(encodeURIComponent(JSON.stringify(orderInfo))));
 
                 window.popupWindow?.focus();
                 window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
 
-                GM_setValue('lastestPrice', prices_str);
+                GM_setValue('lastCOD', cod_input);
 
-                window.addEventListener('message', ({data}) => { uid == data.uid && this.refreshInfo() }, {once: true});
+                window.addEventListener('message', ({data}) => { orderInfo.ref == data.ref && this.refreshInfo() }, {once: true});
             }
             catch(e){ alert(title + e.message) }
 
@@ -1074,7 +1080,6 @@ function Order_mng(){
         let profiles = window.document.querySelectorAll(`
         div:not([hidden]) > div[style*="chat-composer"] a[role="link"][href^="/"][aria-label]:not(.checked, [aria-label="Mở ảnh"]),
         div[role="main"][aria-label^="Cuộc trò chuyện với "] > div > div > div > div:first-child a[role="link"][href]:not(.checked, [aria-label])`);
-
 
         for(let i = 0; i < profiles.length; i++){
             let e = profiles[i];
@@ -1209,20 +1214,13 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel
 ***/
 
-// VIETTEL MAIN //
-(function() {
+// STYLE - CSS
+(function(){
     if(!isViettelPage) return;
-
     let vtpStyle = (
         'div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:not(:last-child){ display:none; }'+
         'div:is(#vtpModalPrintOrder, #vtpBillModalPrintOrder, #createOrderSuccess) button.btn:last-child{ width:100%; }'+
         '.mat-menu-item-highlighted:not([disabled]), .mat-menu-item.cdk-keyboard-focused:not([disabled]), .mat-menu-item.cdk-program-focused:not([disabled]), .mat-menu-item:hover:not([disabled]){background: gray; color: white;}'+
-
-        //'body.custom div.box-product-info div.card-body { max-height: 210px; overflow: auto; }' +
-        //'body.custom div.box-receiver div.card-body { max-height: 400px; overflow: auto; }' +
-
-        //màu số tiền
-        //'body.custom #createEditForm > div.mt-3.vt-order-footer > div > div.row.col-lg-8.resp-border-money > div:nth-child(3) > div > strong.txt-color-viettel {color: orangered !important; font-size: 30px;}' +
 
         'body.custom button {text-wrap: nowrap; width: auto;}'+
 
@@ -1237,75 +1235,89 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         'div.vtp-order-detail-card c-payment-cod-status span.bold-700, div[class*="col-"]:not(.row) > div.resp-money > strong.txt-color-viettel { font-size: 1.3em; color: yellow !important; background-color: var(--brand-color-red, red); padding: .1em .3em; border-radius: 5px;  }'
     );
     GM_addStyle(vtpStyle);
+})();
 
+// VIETTEL FUNCTION //
+(function() {
+    if(!isViettelPage) return;
+
+    // GLOBAL //
+
+    function updateCOD(){
+        try{
+            let price = Number($('input#productPrice')?.val()?.replaceAll(/\D/g, '') || 0),
+                fee = Number($('div.text-price-right')?.text()?.replaceAll(/\D/g, '') || 0);
+
+            if(!fee) return 0;
+
+            let tax = Number((price + fee) / 100 * 1.5);
+
+            let total = (price == 0) ? 0 : (price == 1000) ? fee : (price + fee + tax);
+
+            if(window.lastTotal == total) return 0;
+
+            let input_cod = window.document.querySelector('input#cod');
+            input_cod.value = Math.round(total);
+            input_cod.dispatchEvent(customEvent('input'));
+            input_cod.dispatchEvent(customEvent('change'));
+
+            window.lastTotal = total;
+
+            return true;
+        } catch(e){
+            alert('Lỗi cập nhật COD \n' + e.message + 'Mã lỗi: #1213');
+            return false;
+        }
+    }
+
+    $(document).on('change', 'form.create-order input#productName', function(){
+        try{
+            let prices = this.value?.match(/\(.*\)/g)?.shift()?.replaceAll(/[\(\)]/g, '').trim();
+            let priceTotal = (window.eval(prices.replaceAll(/\s+/g, "+")) || 0) * 1000;
+            $('input#productPrice')?.val(priceTotal) //.trigger('input').trigger('change');
+
+            setTimeout(updateCOD, 500);
+        }catch(err){
+            alert('❌ Lỗi: ' + err.message);
+        }
+    });
+
+    // $(document).on('change', 'form.create-order input#productPrice', _ => setTimeout(updateCOD, 500));
+
+    $(document).one('click', 'div.vtp-bill-table td.mat-column-select', function(){
+        window.onbeforeunload = function (e) {
+            e = e || window.event;
+            if (e) { e.returnValue = 'Sure?' }
+            return 'Sure?';
+        };
+    });
+
+    // ON CREATE ORDERS
     $(document).ready( async function(){
-        await new Promise(resolve => { setTimeout(resolve, 1000)});
+        let opts = GM_getValue('vtpCreateOrderOptions', {});
 
-        function updateCOD(){
-            try{
-                let price = Number($('input#productPrice')?.val()?.replaceAll(/\D/g, '') || 0),
-                    fee = Number($('div.text-price-right')?.text()?.replaceAll(/\D/g, '') || 0);
+        let info_encode = UrlParams.get('query');
+        if(!info_encode) return false;
 
-                let tax = Number((price + fee) / 100 * 1.5);
+        let info = JSON.parse(decodeURIComponent(escape(window.atob(info_encode.replaceAll(' ','+')))));
 
-                let total = (price + fee + tax);
+        let {uid,ref, phone, addr, name, prdName} = info;
 
-                if(price == 0) total = 0;
-                else if(price == 1000) {total = fee;}
+        if(!uid || !phone || !ref) return true;
 
-                if(!fee || window.lastTotal == total) return 0;
+        await delay(1000);
 
-                let input_cod = window.document.querySelector('input#cod');
-                input_cod.value = Math.round(total);
-                input_cod.dispatchEvent(customEvent('input'));
-                input_cod.dispatchEvent(customEvent('change'));
+        window.addEventListener('beforeunload', _ => window.opener?.postMessage({ ref: ref }, '*') );
 
-                window.lastTotal = total;
-
-                return true;
-            } catch(e){
-                alert('Lỗi cập nhật COD \n' + e.message + 'Mã lỗi: #1213');
-                return false;
-            }
-        }
-
-        async function setInves(){
-            let slt = window.document.querySelector('select#selectGroupAddress');
-            if(!slt) return false;
-            let id = await GM_getValue('lastInventoryID', 0);
-            if(!id || slt.value == id) return false;
-
-            slt.value = id;
-            slt.dispatchEvent(new Event('click', { bubbles: true }));
-            slt.dispatchEvent(new Event('input', { bubbles: true }));
-            slt.dispatchEvent(new Event('change', { bubbles: true }));
-            clearInterval(seInvesInterval);
-        }
-        let seInvesInterval = setInterval(setInves , 1000);
-
-        $(document).one('click', 'div.vtp-bill-table td.mat-column-select', function(){
-            window.onbeforeunload = function (e) {
-                e = e || window.event;
-                if (e) { e.returnValue = 'Sure?' }
-                return 'Sure?';
-            };
-
-        });
-
-        $(document).on('change', 'form.create-order input#productName', function(){
-            let price = (window.eval(this.value?.match(/\(.*\)/g)?.shift()?.replaceAll(/[\(\)]/g, '').trim().replaceAll(/\s+/g, " + ")) || 0) * 1000;
-            $('input#productPrice')?.val(price).trigger('input').trigger('change');
-        });
-        $(document).on('change', 'form.create-order input#productPrice', _ => setTimeout(updateCOD, 500));
-
+        // CHECK TRÙNG ĐƠN.
         $(document).on('change', 'form.create-order input#phoneNo', async function(){
             try{
                 this.value = this.value.replaceAll(/\D/g, '');
                 this.dispatchEvent(customEvent('input'));
-                if(this.value == TEST_PHONENUM || !isVNPhone(this.value)) return;
+                if(this.value == TEST_PHONENUM) return;
 
-                let res = await VIETTEL.getListOrders(this.value).catch(e => {throw new Error()});
-                // GM_log(JSON.stringify(res));
+                let res = await VIETTEL.getListOrders(this.value);
+
                 if(res?.status != 200) throw new Error();
 
                 let orders = (res.data.data.LIST_ORDER || []).filter(o => !!~([-100, -108,100,102,103,104]).indexOf(o.ORDER_STATUS));
@@ -1316,27 +1328,18 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                 oLength && alert('❌ CẢNH BÁO: \n\n SDT có đơn chưa gửi!!!?');
 
-            } catch(e){
-                alert('Lỗi check trùng đơn! ❌❌❌');
+            } catch(err){
+                alert('❌ Lỗi: ' + err.message);
             }
         });
 
-        GM_addElement(window.document.body, 'input', {style:'position:absolute; top:0; right:0;', placeholder:'confirm url', id:'BumConfirmUrl'});
+        // GM_addElement(window.document.body, 'input', {style:'position:absolute; top:0; right:0;', placeholder:'confirm url', id:'BumConfirmUrl'});
 
-        let info_encode = UrlParams.get('query');
-
-        if(!info_encode) return false;
-
-        let info = JSON.parse(decodeURIComponent(escape(window.atob(info_encode.replaceAll(' ','+')))));
-        let {uid, phone, addr, name, price, prdName} = info;
-
-        if(!uid || !phone) return true;
-
-        let col1 = $('div.box-receiver, div.box-sender').parent();
-        //$('div.box-sender').appendTo(col1);
-        //$('div.box-receiver').prependTo(col1);
+        // let col1 = $('div.box-receiver, div.box-sender').parent();
+        // $('div.box-sender').appendTo(col1);
+        // $('div.box-receiver').prependTo(col1);
         window.document.body.classList.add('custom');
-        //s.prependTo(p);
+        // s.prependTo(p);
 
         let isSample = phone == TEST_PHONENUM;
 
@@ -1348,49 +1351,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             autoAddress = window.document.querySelector('input#autoAddress'),
             phoneNo = window.document.querySelector('input#phoneNo');
 
-
-        window.addEventListener('beforeunload', _ => {
-            window.opener?.postMessage({uid: uid}, '*');
-        });
-
-        $(document).keyup(function(e) {
-            if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
-                let status = 0;
-
-                autoAddress.value = autoAddress.value.toLowerCase().replace(/((phường)|(xã)|(thị\strấn)|(p\.)|(x\.)|(tt\.)).*/g,'');
-                autoAddress.dispatchEvent(customEvent('input'));
-
-                let invesId = window.document.querySelector('select#selectGroupAddress')?.value;
-                //GM_setValue('lastInventoryID', invesId);
-
-                if(e.shiftKey){
-                    $('#confirmCreateOrder button.btn.btn-viettel').click();
-                    status = 1;
-                } else {
-                    $('#confirmSaveDraft button.btn.btn-viettel').click();
-                    //status = 0;
-                }
-
-                let doPrint = window.confirm('in tem?');
-
-                let interv = setInterval(async _ => {
-                    if(productName.value || phoneNo.value) return true;
-                    clearInterval(interv);
-
-                    if(!doPrint) return window.close();
-
-                    let res = await VIETTEL.getListOrders(phone, 0, 0).catch(e => alert(e.message));
-                    let order = res?.data?.data?.LIST_ORDER[0];
-                    let oid = order?.ORDER_NUMBER;
-
-                    res = await VIETTEL.getOrderPrint_v2(oid).catch(e => alert(e.message));
-                    let link = res?.data?.enCryptUrl;
-                    link && window.open(link, '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=50"');
-                    setTimeout(window.close, 200);
-                }, 1500);
-            }
-        });
-
         $(window.document).on('click keyup keydown', function(){
             if(fullName.value != name) {
                 fullName.value = name;
@@ -1399,12 +1359,12 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         });
 
         fullName.setAttribute('disabled', 'true');
+        // productPrice.value = price;
         phoneNo.value = phone;
-        productPrice.value = price;
         productWeight.value = 1000;
         productName.value = prdName + (isSample ? '    ❌ ❌ ❌' : '');
         autoAddress.value = isSample ? '..., Ô chợ dừa, đống đa' : '';
-        orderNo.value = [uid, makeid(5)].join('-');
+        orderNo.value = ref;
 
         [ productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
             ['click', 'input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
@@ -1415,6 +1375,46 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         phoneNo.scrollIntoView({ behavior: 'auto', block: 'center' });
 
         setInterval(updateCOD , 1000);
+
+        $(document).keyup(function(e) {
+            if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
+                let status = 0;
+
+                autoAddress.value = autoAddress.value.toLowerCase().replace(/((phường)|(xã)|(thị\strấn)|(p\.)|(x\.)|(tt\.)).*/g,'');
+                autoAddress.dispatchEvent(customEvent('input'));
+
+                // let invesId = window.document.querySelector('select#selectGroupAddress')?.value;
+
+                if(e.shiftKey){
+                    $('#confirmCreateOrder button.btn.btn-viettel').click();
+                    status = 1;
+                } else {
+                    $('#confirmSaveDraft button.btn.btn-viettel').click();
+                    //status = 0;
+                }
+
+                let doPrint = opts.qp_autoprint = 'ask' ? window.confirm('✅ Bạn có muốn in tem ko?') : opts.qp_autoprint;
+
+                let interv = setInterval(async _ => {
+                    if(productName.value || phoneNo.value) return true;
+                    clearInterval(interv);
+
+                    if(!doPrint) return window.close();
+
+                    let res = await VIETTEL.getListOrders(phone, 0, 0).catch(e => alert(e.message));
+
+                    let order = res?.data?.data?.LIST_ORDER[0];
+                    let oid = order?.ORDER_NUMBER;
+
+                    res = await VIETTEL.getOrderPrint_v2(oid).catch(e => alert(e.message));
+                    let link = res?.data?.enCryptUrl;
+                    link && window.open(link, '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=50"');
+
+                    await delay(500);
+                    window.close();
+                }, 1500);
+            }
+        });
     });
 
 })();
@@ -1511,6 +1511,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     });
 })();
 
+/***
 (function(){
     if(!isViettelPage) return;
 
@@ -1522,7 +1523,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         window.open(url, '_blank');
     });
 })();
-
+***/
 
 
 
