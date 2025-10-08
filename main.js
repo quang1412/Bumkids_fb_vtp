@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.06.66
+// @version      2025.10.08.1
 // @description  try to take over the world!
 // @namespace    bumkids_ext
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -942,89 +942,44 @@ function Order_mng(){
         }
 
         async createOrder(){
-            const {uid, phone, name} = this.customer;
+            let {uid, phone, name} = this.customer;
             const orderInfo = { uid, phone, name };
-            let title = `Tạo đơn cho ${name}\n\n`;
 
             try{
-                if(!phone) return window.confirm("⚠️ Chưa có sđt/đchi! ") && this.edit(0);
+                if(!phone && window.confirm("⚠️ Chưa có sđt! enter để thêm sdt")) return this.edit('0');
 
-                if(phone != TEST_PHONENUM && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm(title + '❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
+                if(phone != TEST_PHONENUM && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm('❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
 
                 let url = 'https://viettelpost.vn/order/tao-don-le?query=';
 
                 let cod_input = window.prompt('▶︎ Chọn hoặc nhập số tiền phải thu (đv nghìn đồng) \n[0]. Đơn 0 đồng \n[1]. Chỉ thu ship', GM_getValue('lastCOD', 0));
-                if(cod_input == undefined || cod_input == null) return false;
-
-                if(!(/^\d[\d\+\-\*]*\d$/g).test(cod_input)) throw new Error('Số tiền không hợp lệ!');
+                if(!cod_input || cod_input == null) return false;
+                cod_input = cod_input.replaceAll(/\s+/g, '+');
+                if(!(/^\d[\d\+\-\*]*\d$/g).test(cod_input)) throw new Error('Số tiền không hợp lệ! - ' + cod_input);
                 cod_input = cod_input.trim();
-                // let cod = window.eval(cod_input.replaceAll(/\s+/g, '+'));
-
-                // let prices_str = prompt(title + "B1 - Điền giá:", GM_getValue('lastestPrice', 0));
-                // if (prices_str == undefined || prices_str == null) { return false }
-                // if(!(/^[\d\s]*$/g).test(prices_str)) throw new Error('❌ Giá sản phẩm không hợp lệ!');
-                // let price = prices_str.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
 
                 let itemList = GM_getValue('lastItems', []);
-                let listStr = itemList.map((e, i) => `[${i}] ${e}`).join('\n');
-                let input = prompt(title + 'B2 - Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + listStr, itemList[0] || '');
-                if (input == null || input == undefined) return false;
+                let input = prompt('▶︎ Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + itemList.map((name, i) => `[${i}]. ${name}`).join('\n'), itemList[0]);
+                if (!input || input == null) return false;
                 let itemName = itemList[input] || input;
 
                 itemList.unshift(itemName);
                 itemList = [...new Set(itemList)];
                 GM_setValue('lastItems', itemList.slice(0, 10));
 
-                orderInfo.prdName = `${itemName} - (${cod_input})`;
-                // orderInfo.price = (cod*1000);
-
                 orderInfo.ref = makeid(12);
+                orderInfo.prdName = `${itemName} - (${cod_input})`;
 
                 url += btoa(unescape(encodeURIComponent(JSON.stringify(orderInfo))));
 
-                window.popupWindow?.focus();
-                window.popupWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
+                window.createOrderWindow && !window.createOrderWindow.closed && window.createOrderWindow.close();
+                window.createOrderWindow = window.open(url, 'window', 'toolbar=no, menubar=no, resizable=no, width=1200, height=800');
 
                 GM_setValue('lastCOD', cod_input);
 
                 window.addEventListener('message', ({data}) => { orderInfo.ref == data.ref && this.refreshInfo() }, {once: true});
             }
-            catch(e){ alert(title + e.message) }
-
-            /***
-            if(this.customer.phone != TEST_PHONENUM && (this.penddingOrderCount || this.draftOrderCount) && !confirm('❌ Có đơn đang giữ! bạn vẫn muốn tiếp tục?')) return;
-
-            return VIETTEL.createNewOrder(this.customer, (od) => {
-                this.refreshInfo();
-
-                try{
-                    const vtpOpt = GM_getValue('vtpCreateOrderOptions', {});
-                    if(vtpOpt.qp_autoprint == '0'){
-                        throw alert('✅ Tạo đơn thành công!');
-                    }
-                    if(vtpOpt.qp_autoprint == '1' && !window.confirm('✅ Tạo đơn thành công! \nBạn có muốn in tem không?')){
-                        throw true;
-                    }
-                    //if(vtpOpt.qp_autoprint == '2'){}
-
-                    VIETTEL.getOrderPrint_v2(od.ORDER_NUMBER, link => {
-                        link && window.open(link, '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=50"');
-                    });
-
-                } catch(e){}
-
-                let textToCopy = '🧸 E gửi c đơn order ngày -/- \n' +
-                    '- gồm: ' + od.PRODUCT_NAME.replace(/\-\s\(.*\)/g, '') + '\n' +
-                    `- giá: ${new Intl.NumberFormat('vn-VN').format(od.MONEY_COLLECTION)}đ ${(od.ORDER_PAYMENT == 3 ? 'cả ship' : '+ ship ' + new Intl.NumberFormat('vn-VN').format(od.MONEY_TOTALFEE))} \n` + // 2: nguoi nhan trả cước / 3: nguoi gui trả cước
-                    // '- mã đơn hàng: #' + od.ORDER_REFERENCE + ' \n' +
-                    '\n' +
-                    '- link xử lý đơn hàng: https://BUMM.KIDS/my-preod?o=' + od.ORDER_REFERENCE + ' \n' +
-                    '';
-
-               //  GM_setClipboard(textToCopy, 'text');
-            })
-            ***/
-
+            catch(e){ alert('❌ Lỗi: ' + e.message) }
         }
 
         async eventsListeners(){
@@ -1054,9 +1009,6 @@ function Order_mng(){
 
                 if(p.length == 10 && p != this.customer.phone && p != MYPHONE && isVNPhone(p)) {
                     this.edit('0', p);
-                }
-                else if(p.length > 10){
-                    this.edit(1, selectedText);
                 }
 
                 if(window.delay_xpvs) return false;
@@ -1311,7 +1263,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         let {uid,ref, phone, addr, name, prdName} = info;
 
-        if(!uid || !phone || !ref) return true;
+        if(!uid || !phone || !ref) return alert('❌ Lỗi: ');
 
         // let col1 = $('div.box-receiver, div.box-sender').parent();
         // $('div.box-sender').appendTo(col1);
@@ -1366,8 +1318,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             };
         });
         ***/
-
+        fullName.value = name;
         fullName.setAttribute('disabled', 'true');
+
         phoneNo.value = phone;
         productWeight.value = 2000;
         productName.value = prdName + (isSample ? '        ❌ ❌ ❌' : '');
@@ -1375,7 +1328,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         orderNote.value = '⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗫𝗘𝗠 𝗛𝗔̀𝗡𝗚 - ⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗧𝗛𝗨̛̉ 𝗛𝗔̀𝗡𝗚';
         orderNo.value = ref;
 
-        [ productPrice, productName, productWeight, orderNo, autoAddress, phoneNo, orderNote].forEach(i => {
+        [fullName, productPrice, productName, productWeight, orderNo, autoAddress, phoneNo, orderNote].forEach(i => {
+            orderNote.value = '⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗫𝗘𝗠 𝗛𝗔̀𝗡𝗚 - ⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗧𝗛𝗨̛̉ 𝗛𝗔̀𝗡𝗚';
             ['click', 'input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
         });
 
@@ -1388,37 +1342,34 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         $(document).keyup(function(e) {
             if ((e.keyCode == 10 || e.keyCode == 13) && e.ctrlKey){
 
-                if($('input.is-invalid').length) return alert('is-invalid');
-
-                let status = 0;
-
                 autoAddress.value = autoAddress.value.toLowerCase().replace(/((phường)|(xã)|(thị\strấn)|(p\.)|(x\.)|(tt\.)).*/g,'');
                 autoAddress.dispatchEvent(customEvent('input'));
 
-                // let invesId = window.document.querySelector('select#selectGroupAddress')?.value;
-
+                const submitBtn = e.shiftKey ? $('#confirmCreateOrder button.btn.btn-viettel') : $('#confirmSaveDraft button.btn.btn-viettel');
+                submitBtn.click();
+                /***
                 if(e.shiftKey){
                     $('#confirmCreateOrder button.btn.btn-viettel').click();
-                    status = 1;
                 } else {
                     $('#confirmSaveDraft button.btn.btn-viettel').click();
-                    //status = 0;
                 }
-
+                ***/
 
                 let doPrint = opts.qp_autoprint == 'ask' ? window.confirm('✅ Bạn có muốn in tem ko?') : opts.qp_autoprint;
 
                 let interv = setInterval(async _ => {
 
+                    if($('input.is-invalid').length) return (alert('is-invalid'), clearInterval(interv));
+
                     const toast = $('div.toast-success div.toast-message');
                     const modal = $('div#createOrderSuccess.modal.show');
 
-                    if(!toast.length || modal.length) return;
+                    if(!toast.length && !modal.length) return;
                     clearInterval(interv);
 
                     if(!doPrint) return window.close();
 
-                    const res = await VIETTEL.getListOrders(phone, 0, 0).catch(e => alert(e.message));
+                    let res = await VIETTEL.getListOrders(ref, 0, 0).catch(e => alert(e.message));
 
                     const order = res?.data?.data?.LIST_ORDER[0];
                     const oid = order?.ORDER_NUMBER;
@@ -1427,7 +1378,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                     const link = res?.data?.enCryptUrl;
                     link && window.open(link, '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=50"');
 
-                   // await delay(500);
+                    !link && alert(JSON.stringify(res));
+
+                    await delay(100);
                     window.close();
                 }, 500);
             }
