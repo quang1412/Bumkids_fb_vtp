@@ -239,14 +239,22 @@ const VIETTEL = {
             this.token = newValue;
             // API.saveToken(this.deviceId, this.token);
         });
+        this.cus_id = await GM_getValue('vtp_cusId', null);
+        GM_addValueChangeListener('vtp_cusId', (key, oldValue, newValue, remote) => {
+            this.token = newValue;
+            // API.saveToken(this.deviceId, this.token);
+        });
         if(isViettelPage){
-            let id = window.localStorage.deviceId;
-            let tk = JSON.parse(window.localStorage['vtp-token']).tokenKey;
+            let deviceId = window.localStorage.deviceId;
+            let {tokenKey, UserId} = JSON.parse(window.localStorage['vtp-token']);
 
-            tk != this.token && (API.saveToken(id, tk), alert('token update'))
+            //let tk = JSON.parse(window.localStorage['vtp-token']).tokenKey;
 
-            GM_setValue('vtp_deviceId', id);
-            GM_setValue('vtp_tokenKey', tk);
+            tokenKey != this.token && (API.saveToken(UserId, deviceId, tokenKey), alert('token update'))
+
+            GM_setValue('vtp_deviceId', deviceId);
+            GM_setValue('vtp_tokenKey', tokenKey);
+            GM_setValue('vtp_cusId', UserId);
         }
 
         GM_registerMenuCommand("Cài đặt tạo đơn ViettelPost" , async _ => {
@@ -653,9 +661,9 @@ const API = {
             })
         })
     },
-    saveToken: async function(deviceId, token){
-        if(deviceId && token){
-            let res = await this.post('/vtpToken', {content: deviceId+':'+token}).catch(e => {alert(e.message)});
+    saveToken: async function(cus_id, deviceId, token){
+        if(cus_id && deviceId && token){
+            let res = await this.post('/admin/vtpToken', {cus_id: cus_id, content: deviceId+':'+token}).catch(e => { alert(e.message) });
             console.log(res);
         }
     },
@@ -1274,11 +1282,11 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         try{
             let prices = this.value?.match(/\(.*\)/g)?.shift()?.replaceAll(/[\(\)]/g, '').trim();
             let priceTotal = (window.eval(prices.replaceAll(/\s+/g, "+")) || 0) * 1000;
-            $('input#productPrice')?.val(priceTotal) //.trigger('input').trigger('change');
+            $('input#productPrice')?.val(priceTotal)
 
             setTimeout(updateCOD, 500);
         }catch(err){
-            alert('❌ Lỗi: ' + err.message);
+            alert('❌ Lỗi: ' + err.message)
         }
     });
 
@@ -1304,6 +1312,12 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         let {uid,ref, phone, addr, name, prdName} = info;
 
         if(!uid || !phone || !ref) return true;
+
+        // let col1 = $('div.box-receiver, div.box-sender').parent();
+        // $('div.box-sender').appendTo(col1);
+        // $('div.box-receiver').prependTo(col1);
+        window.document.body.classList.add('custom');
+        // s.prependTo(p);
 
         await delay(1000);
 
@@ -1333,14 +1347,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             }
         });
 
-        // GM_addElement(window.document.body, 'input', {style:'position:absolute; top:0; right:0;', placeholder:'confirm url', id:'BumConfirmUrl'});
-
-        // let col1 = $('div.box-receiver, div.box-sender').parent();
-        // $('div.box-sender').appendTo(col1);
-        // $('div.box-receiver').prependTo(col1);
-        window.document.body.classList.add('custom');
-        // s.prependTo(p);
-
         let isSample = phone == TEST_PHONENUM;
 
         let productName = window.document.querySelector('input#productName'),
@@ -1349,24 +1355,27 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             orderNo = window.document.querySelector('input#orderNo'),
             fullName = window.document.querySelector('input#fullName'),
             autoAddress = window.document.querySelector('input#autoAddress'),
-            phoneNo = window.document.querySelector('input#phoneNo');
+            phoneNo = window.document.querySelector('input#phoneNo'),
+            orderNote = window.document.querySelector('textarea#otherYeuCauGiao');
 
+        /***
         $(window.document).on('click keyup keydown', function(){
             if(fullName.value != name) {
                 fullName.value = name;
                 fullName.dispatchEvent(customEvent('input'));
             };
         });
+        ***/
 
         fullName.setAttribute('disabled', 'true');
-        // productPrice.value = price;
         phoneNo.value = phone;
-        productWeight.value = 1000;
-        productName.value = prdName + (isSample ? '    ❌ ❌ ❌' : '');
-        autoAddress.value = isSample ? '..., Ô chợ dừa, đống đa' : '';
+        productWeight.value = 2000;
+        productName.value = prdName + (isSample ? '        ❌ ❌ ❌' : '');
+        autoAddress.value = isSample ? '..., Ô chợ dừa, hà nội' : '';
+        orderNote.value = '⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗫𝗘𝗠 𝗛𝗔̀𝗡𝗚 - ⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗧𝗛𝗨̛̉ 𝗛𝗔̀𝗡𝗚';
         orderNo.value = ref;
 
-        [ productPrice, productName, productWeight, orderNo, autoAddress, phoneNo].forEach(i => {
+        [ productPrice, productName, productWeight, orderNo, autoAddress, phoneNo, orderNote].forEach(i => {
             ['click', 'input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
         });
 
@@ -1409,13 +1418,13 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                     if(!doPrint) return window.close();
 
-                    let res = await VIETTEL.getListOrders(phone, 0, 0).catch(e => alert(e.message));
+                    const res = await VIETTEL.getListOrders(phone, 0, 0).catch(e => alert(e.message));
 
-                    let order = res?.data?.data?.LIST_ORDER[0];
-                    let oid = order?.ORDER_NUMBER;
+                    const order = res?.data?.data?.LIST_ORDER[0];
+                    const oid = order?.ORDER_NUMBER;
 
                     res = await VIETTEL.getOrderPrint_v2(oid).catch(e => alert(e.message));
-                    let link = res?.data?.enCryptUrl;
+                    const link = res?.data?.enCryptUrl;
                     link && window.open(link, '_blank', 'toolbar=no, menubar=no, resizable=no, width=500, height=800, top=50, left=50"');
 
                    // await delay(500);
