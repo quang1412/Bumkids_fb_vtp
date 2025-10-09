@@ -260,10 +260,10 @@ const VIETTEL = {
         this.allDistrict = await this.get('https://api.viettelpost.vn/api/setting/listalldistrict').catch(e => alert(e.message));
         this.allProvince = await this.get('https://api.viettelpost.vn/api/setting/listallprovince').catch(e => alert(e.message));
 
-        GM_registerMenuCommand("Cài đặt ViettelPost" , _ => this.setOptions(0))
+        GM_registerMenuCommand("Cài đặt ViettelPost" , _ => this.setOptions())
     },
     setOptions: async function(v){
-        v = v.toString();
+        v = v?.toString();
         let opts = GM_getValue('vtpCreateOrderOptions', {});
         try{
             let optionsList = ['Sửa kho mặc định', 'Sửa người trả cước mặc định', 'Sửa trọng lượng sp mặc định', 'Sửa tự động tin tem']
@@ -720,7 +720,7 @@ const Customer_mng = {
                 'Sửa địa chỉ: ' + rawAddr
             ]
 
-            let select = key.toString() || window.prompt('▶︎ Lựa chọn mục cần sửa cho '+customer.name+': \n' + list.map( (text, i) => `[${i}]. ${text}`).join('\n'), 0);
+            let select = key?.toString() || window.prompt('▶︎ Lựa chọn mục cần sửa cho '+customer.name+': \n' + list.map( (text, i) => `[${i}]. ${text}`).join('\n'), 0);
             if(select == null) return;
 
             if( select == '0' ){
@@ -1316,7 +1316,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         fullName.setAttribute('disabled', 'true');
 
         phoneNo.value = phone;
-        productWeight.value = opts.productWeight;
+        productWeight.value = opts.PRODUCT_WEIGHT || 1000;
         productName.value = prdName + (isSample ? '        ❌ ❌ ❌' : '');
         autoAddress.value = isSample ? '..., Ô chợ dừa, hà nội' : '';
         orderNote.value = '⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗫𝗘𝗠 𝗛𝗔̀𝗡𝗚 - ⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗧𝗛𝗨̛̉ 𝗛𝗔̀𝗡𝗚';
@@ -1353,7 +1353,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                 let interv = setInterval(async _ => {
 
-                    if($('input.is-invalid').length) return (alert('is-invalid'), clearInterval(interv));
+                    // if($('input.is-invalid').length) return (alert('is-invalid'), clearInterval(interv));
 
                     const toast = $('div.toast-success div.toast-message');
                     const modal = $('div#createOrderSuccess.modal.show');
