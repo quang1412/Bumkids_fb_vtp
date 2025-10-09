@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.08.2
+// @version      2025.10.08.3
 // @description  try to take over the world!
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -675,29 +675,30 @@ const API = {
 const Customer_mng = {
     key: 'GM_customers_11',
     int: async function(){
-        this.data = await GM_getValue(this.key, new Object());
-        GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => { remote && (this.data = newValue) });
+        this.storage = await GM_getValue(this.key, new Array());
+        GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => { remote && (this.storage = newValue) });
 
-        GM_registerMenuCommand("Đồng bộ khách hàng." , async _ => {
-            await this.sync();
-        });
+        GM_registerMenuCommand("Đồng bộ khách hàng." , _ => this.sync() );
         // TODO: check time to re-sync
     },
     sync: async function(){
         let res = await API.getAllCustomers().catch(e => alert(e.message));
-        this.data = res.data;
-        GM_setValue(this.key, this.data);
-        window.confirm('Đã đồng bộ '+Object.keys(this.data).length+' khách hàng \nEnter để tải lại trang') && window.location.reload();
+        this.storage = res.data;
+        GM_setValue(this.key, this.storage);
+        window.confirm('Đã đồng bộ '+Object.keys(this.storage).length+' khách hàng \nEnter để tải lại trang') && window.location.reload();
     },
     save: function(obj){
-        this.data[obj.uid] = obj;
+        this.storage = this.storage.filter(u => u.uid != obj)
+        this.storage.push(obj);
         GM_setValue(this.key, this.data);
     },
     get: async function(uid){
         if(!uid || uid == MYFBUID) throw new Error('Uid không hợp lệ');
 
+        console.log(this.storage);
+
         // get from local
-        let customer = this.data[uid];
+        let customer = this.storage.find(u => u.uid == uid);
         if(customer) return customer;
 
         // get from cloud
@@ -975,34 +976,22 @@ const Customer_mng = {
         }
 
         async eventsListeners(){
-
             this.container.addEventListener("click", e => {
                 let replBtn = e.target.closest('div[aria-label="Trả lời"][role="button"]');
                 replBtn && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
-
                 let elm = e.target.closest('div[aria-label*="Tin nhắn trong cuộc trò chuyện"][role="grid"], div[aria-label="Công cụ soạn cuộc trò chuyện"][role="group"]');
                 elm && this.phoneFinder(false);
             });
 
             // Set phone by mouse selection
             this.container.querySelector('div[aria-label*="Tin nhắn trong cuộc trò chuyện"]').addEventListener('mouseup', event => {
-
                 if(!event.ctrlKey && !event.metaKey) return;
-
                 if(!window.getSelection) return alert('⚠ window.getSelection is undefined');
-
                 let selection = window.getSelection();
-
                 if (selection.rangeCount <= 0) return false;
-
                 let selectedText = selection.toString();
-
                 let p = selectedText.replaceAll(/[^\d\w]*/g, '');
-
                 if(p.length == 10 && p != this.customer.phone && p != MYPHONE && isVNPhone(p)) this.edit(0, p);
-
-                // if(window.delay_xpvs) return false;
-                // window.delay_xpvs = setTimeout(_ => {delete window.delay_xpvs}, 1000);
             });
 
 
@@ -1025,11 +1014,14 @@ const Customer_mng = {
 
     window.document.addEventListener('mousemove', async function() {
         if(window.delay_i0mr) return;
-        window.delay_i0mr = 1; setTimeout(_ => {window.delay_i0mr = 0}, 1000);
+
+        window.delay_i0mr = setTimeout(_ => delete window.delay_i0mr, 1000);
 
         let profiles = window.document.querySelectorAll(`
         div:not([hidden]) > div[style*="chat-composer"] a[role="link"][href^="/"][aria-label]:not(.checked, [aria-label="Mở ảnh"]),
         div[role="main"][aria-label^="Cuộc trò chuyện với "] > div > div > div > div:first-child a[role="link"][href]:not(.checked, [aria-label])`);
+
+        if(!profiles.length) return;
 
         for(let i = 0; i < profiles.length; i++){
             let e = profiles[i];
