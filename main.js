@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.08.1
+// @version      2025.10.08.2
 // @description  try to take over the world!
-// @namespace    bumkids_ext
+// @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
 // @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/main.js
@@ -231,91 +231,99 @@ const SHEET = {
 const VIETTEL = {
     init: async function(){
         this.deviceId = await GM_getValue('vtp_deviceId', null);
-        GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => {
-            this.deviceId = newValue;
-        });
+        GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => { this.deviceId = newValue });
+
         this.token = await GM_getValue('vtp_tokenKey', null);
-        GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => {
-            this.token = newValue;
-            // API.saveToken(this.deviceId, this.token);
-        });
+        GM_addValueChangeListener('vtp_tokenKey', (key, oldValue, newValue, remote) => { this.token = newValue });
+
         this.cus_id = await GM_getValue('vtp_cusId', null);
-        GM_addValueChangeListener('vtp_cusId', (key, oldValue, newValue, remote) => {
-            this.token = newValue;
-            // API.saveToken(this.deviceId, this.token);
-        });
+        GM_addValueChangeListener('vtp_cusId', (key, oldValue, newValue, remote) => { this.cus_id = newValue });
+
         if(isViettelPage){
             let deviceId = window.localStorage.deviceId;
             let {tokenKey, UserId} = JSON.parse(window.localStorage['vtp-token']);
 
-            //let tk = JSON.parse(window.localStorage['vtp-token']).tokenKey;
-
-            tokenKey != this.token && (API.saveToken(UserId, deviceId, tokenKey), alert('token update'))
+            // tokenKey != this.token && (API.saveToken(UserId, deviceId, tokenKey), alert('token update'));
 
             GM_setValue('vtp_deviceId', deviceId);
             GM_setValue('vtp_tokenKey', tokenKey);
             GM_setValue('vtp_cusId', UserId);
+
+            if(tokenKey != this.token){
+                await API.post('/admin/vtpToken', {cus_id: UserId, content: deviceId+':'+tokenKey}).then(res => {
+                    alert('Token updated!');
+                }).catch(e => { alert(e.message) });
+            }
         }
-
-        GM_registerMenuCommand("Cài đặt tạo đơn ViettelPost" , async _ => {
-            let opts = GM_getValue('vtpCreateOrderOptions', {});
-            try{
-                let optionsList = ['Sửa kho mặc định', 'Sửa người trả cước mặc định', 'Sửa trọng lượng sp mặc định', 'Sửa tự động tin tem']
-                let i = window.prompt('▶︎ Chọn mục cần sửa:\n' + optionsList.map((name, i) => `[${i}] ${name}`).join('\n'), 0);
-                if(i == null) return false;
-
-                if(i == 0){
-                    let listInventory = await this.post('https://api.viettelpost.vn/api/setting/listInventoryV2').catch(e => console.error(e));
-                    console.log(listInventory);
-                    let i = window.prompt('▶︎ Chọn kho lấy mặc định \n' + listInventory.map((inv, i) => `[${i}]. ${inv.NAME} - ${inv.ADDRESS}`).join('\n'), 0);
-                    let sltInv = listInventory[i];
-                    if(sltInv){
-                        opts.GROUPADDRESS_ID = sltInv.GROUPADDRESS_ID;
-                        opts.CUS_ID = sltInv.CUS_ID;
-                        opts.SENDER_FULLNAME = sltInv.NAME;
-                        opts.SENDER_PHONE = sltInv.PHONE;
-                        opts.SENDER_PROVINCE = sltInv.PROVINCE_ID;
-                        opts.SENDER_DISTRICT = sltInv.DISTRICT_ID;
-                        opts.SENDER_WARD = sltInv.WARDS_ID;
-                        opts.SENDER_HOME_NO = sltInv.ADDRESS;
-                    }
-                }
-                else if(i == 1){
-                    var array = ['Người nhận', 'Người gửi'];
-                    var p = window.prompt('▶︎ Mặc định ai trả cước? \n' + array.map((name, i) => `[${i}]. ${name}`).join('\n'));
-                    if(p == null) return false;
-                    if(!array[p]) throw new Error('Lựa chọn không hợp lệ');
-                    opts.ORDER_PAYMENT = parseInt(p) + 2;
-                }
-                else if(i == 2){
-                    let w = window.prompt('▶︎ Nhập trọng lượng hàng hoá mặc định (gram)', opts.PRODUCT_WEIGHT);
-                    if(parseInt(w) > 100) { opts.PRODUCT_WEIGHT = w }
-                }
-                else if(i == 3){
-                    let currVal = opts.qp_autoprint
-                    let arr = [{label: 'Không in', val: 0}, {label: 'Tự động in', val: 1}, {label: 'Hỏi trước khi in', val: 'ask'}]
-                    let i = window.prompt('▶︎ Tự động in tem vận đơn \n' + arr.map((op, i) => `[${i}]. ${op.label} ${currVal == op.val ? '*' : ''}`).join('\n'), 0);
-                    if(i == null) return false;
-                    let sl = arr[i];
-                    if(!sl) throw new Error('Lựa chọn không hợp lệ');
-                    opts.qp_autoprint = sl.val;
-                }
-                else {
-                    throw new Error('Lựa chọn không hợp lệ');
-                }
-
-                console.log('Set ViettelPost options:', opts);
-                GM_setValue('vtpCreateOrderOptions', opts);
-                alert('✅ Đã lưu!');
-            }
-            catch(e){
-                return alert('❌ Lỗi: ' + e.message);
-            }
-        });
 
         this.allWard = await this.get('https://api.viettelpost.vn/api/setting/listallwards').catch(e => alert(e.message));
         this.allDistrict = await this.get('https://api.viettelpost.vn/api/setting/listalldistrict').catch(e => alert(e.message));
         this.allProvince = await this.get('https://api.viettelpost.vn/api/setting/listallprovince').catch(e => alert(e.message));
+
+        GM_registerMenuCommand("Cài đặt ViettelPost" , _ => this.setOptions(0))
+    },
+    setOptions: async function(v){
+        v = v.toString();
+        let opts = GM_getValue('vtpCreateOrderOptions', {});
+        try{
+            let optionsList = ['Sửa kho mặc định', 'Sửa người trả cước mặc định', 'Sửa trọng lượng sp mặc định', 'Sửa tự động tin tem']
+            let i = v || window.prompt('▶︎ Chọn mục cần sửa:\n' + optionsList.map((name, i) => `[${i}] ${name}`).join('\n'), 0);
+            if(i == null) return false;
+
+            if(i == 0){
+                let listInventory = await this.post('https://api.viettelpost.vn/api/setting/listInventoryV2').catch(e => console.error(e));
+                console.log(listInventory);
+                listInventory = listInventory.filter(i => (i.IS_VISIBLE >= 0 && i.CUS_ID == this.cus_id));
+                listInventory.sort((a, b) => b.IS_VISIBLE - a.IS_VISIBLE);
+                let i = window.prompt('▶︎ Chọn kho lấy mặc định \n' + listInventory.map((inv, i) => `[${i}]. ${inv.NAME} - ${inv.SENDER_HOME_NO}`).join('\n'), 0);
+                if(i == null) return false;
+                let sltInv = listInventory[i];
+                if(sltInv){
+                    opts.GROUPADDRESS_ID = sltInv.GROUPADDRESS_ID;
+                    opts.CUS_ID = sltInv.CUS_ID;
+                    opts.SENDER_FULLNAME = sltInv.NAME;
+                    opts.SENDER_PHONE = sltInv.PHONE;
+                    opts.SENDER_PROVINCE = sltInv.PROVINCE_ID;
+                    opts.SENDER_DISTRICT = sltInv.DISTRICT_ID;
+                    opts.SENDER_WARD = sltInv.WARDS_ID;
+                    opts.SENDER_HOME_NO = sltInv.ADDRESS;
+                }
+            }
+            else if(i == 1){
+                let current = opts.ORDER_PAYMENT
+                let array = [{label: 'Người nhận', val: 2}, {label: 'Người gửi', val: 3}]
+                let p = window.prompt('▶︎ Mặc định ai trả cước? \n' + array.map((op, i) => `[${i}]. ${op.label} ${current == op.val ? '◀︎ đang chọn' : ''}`).join('\n'), 0);
+                if(p == null) return false;
+                let sl = array[i];
+                if(!sl) throw new Error('Lựa chọn không hợp lệ');
+                opts.ORDER_PAYMENT = sl.val;
+            }
+            else if(i == 2){
+                let w = window.prompt('▶︎ Nhập trọng lượng hàng hoá mặc định (d.v gram) lớn hơn 100g ', opts.PRODUCT_WEIGHT);
+                if(w == null) return false;
+                if(parseInt(w) > 100) { opts.PRODUCT_WEIGHT = w }
+                else { throw new Error('Giá trị không hợp lệ'); }
+            }
+            else if(i == 3){
+                let current = opts.qp_autoprint
+                let arr = [{label: 'Không in', val: 0}, {label: 'Tự động in', val: 1}, {label: 'Hỏi trước khi in', val: 'ask'}]
+                let i = window.prompt('▶︎ Tự động in tem vận đơn \n' + arr.map((op, i) => `[${i}]. ${op.label} ${current == op.val ? '◀︎ đang chọn' : ''}`).join('\n'), 0);
+                if(i == null) return false;
+                let sl = arr[i];
+                if(!sl) throw new Error('Lựa chọn không hợp lệ');
+                opts.qp_autoprint = sl.val;
+            }
+            else {
+                throw new Error('Lựa chọn không hợp lệ');
+            }
+
+            console.log('Set ViettelPost options:', opts);
+            GM_setValue('vtpCreateOrderOptions', opts);
+            alert('✅ Đã lưu!');
+        }
+        catch(e){
+            return alert('❌ Lỗi: ' + e.message);
+        }
     },
     get: function(url){
         return new Promise((resolve, reject) => {
@@ -404,25 +412,6 @@ const VIETTEL = {
                 alert(e.message || 'Lỗi viettel \nMã lỗi: #202');
                 reject(e);
             });
-        })
-    },
-    getOrderPrint: function(id){
-        return new Promise((resolve, reject) => {
-            if(!id) return reject(new Error('Chưa có sdt'));
-            let url = 'https://api.viettelpost.vn/api/setting/encryptLinkPrintV2';
-            let json = {
-                "TYPE": 100,
-                "ORDER_NUMBER": id + "," + (new Date().getTime() + (360000000)),
-                "IS_SHOW_POSTAGE": 0,
-                "PRINT_COPY": 1,
-            };
-            let res = this.post(url, json).catch(e => {
-                alert(e || 'Lỗi viettel \nMã lỗi: #202');
-                return reject(e);
-            });
-            if(res.error) return reject(res.message);
-            let link = res?.data?.enCryptUrl;
-            return resolve(link);
         })
     },
     getOrderPrint_v2: async function(id){
@@ -621,7 +610,7 @@ const API = {
                 method: "GET",
                 synchronous: true,
                 headers: {
-                    'Authorization': 'Bearer YOUR_AUTH_TOKEN',
+                    // 'Authorization': 'Bearer YOUR_AUTH_TOKEN',
                     'Content-Type': 'application/json'
                 },
                 dataType: "text",
@@ -635,7 +624,7 @@ const API = {
                     }
                 },
                 onerror: function(error) {
-                    return reject(error.message || 'Lỗi API \nMã lỗi: #178');
+                    return reject(error.message || 'Lỗi API: #645');
                 }
             })
         })
@@ -647,7 +636,7 @@ const API = {
                 method: "POST",
                 synchronous: true,
                 headers: {
-                    'Authorization': 'Bearer YOUR_AUTH_TOKEN',
+                    // 'Authorization': 'Bearer YOUR_AUTH_TOKEN',
                     'Content-Type': 'application/json'
                 },
                 dataType: "json",
@@ -656,17 +645,19 @@ const API = {
                     return resolve(res);
                 },
                 onerror: (error) => {
-                    return reject(error.message || 'Lỗi SHEET \nMã lỗi: #193');
+                    return reject(error.message || 'Lỗi API: #666');
                 }
             })
         })
     },
+    /***
     saveToken: async function(cus_id, deviceId, token){
         if(cus_id && deviceId && token){
             let res = await this.post('/admin/vtpToken', {cus_id: cus_id, content: deviceId+':'+token}).catch(e => { alert(e.message) });
             console.log(res);
         }
     },
+    ***/
     getAllCustomers: function(){
         return this.get('/getAllCustomers');
     },
@@ -678,7 +669,9 @@ const API = {
     },
 }
 
-// FB CUSTOMER MANAGER
+/***
+* FB CUSTOMER MANAGER
+***/
 const Customer_mng = {
     key: 'GM_customers_11',
     int: async function(){
@@ -727,7 +720,7 @@ const Customer_mng = {
                 'Sửa địa chỉ: ' + rawAddr
             ]
 
-            let select = key || window.prompt('▶︎ Lựa chọn mục cần sửa cho '+customer.name+': \n' + list.map( (text, i) => `[${i}]. ${text}`).join('\n'), 0);
+            let select = key.toString() || window.prompt('▶︎ Lựa chọn mục cần sửa cho '+customer.name+': \n' + list.map( (text, i) => `[${i}]. ${text}`).join('\n'), 0);
             if(select == null) return;
 
             if( select == '0' ){
@@ -772,10 +765,9 @@ const Customer_mng = {
 };
 (isMessPage || isFBpage) && Customer_mng.int();
 
-function Order_mng(){
-}
-
-// FB INFO CARD
+/***
+* FB INFO CARD
+***/
 (function() {
     if(!isFBpage && !isMessPage) return !1;
 
@@ -946,7 +938,7 @@ function Order_mng(){
             const orderInfo = { uid, phone, name };
 
             try{
-                if(!phone && window.confirm("⚠️ Chưa có sđt! enter để thêm sdt")) return this.edit('0');
+                if(!phone && window.confirm("⚠️ Chưa có sđt! enter để thêm sdt")) return this.edit(0);
 
                 if(phone != TEST_PHONENUM && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm('❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
 
@@ -1007,12 +999,10 @@ function Order_mng(){
 
                 let p = selectedText.replaceAll(/[^\d\w]*/g, '');
 
-                if(p.length == 10 && p != this.customer.phone && p != MYPHONE && isVNPhone(p)) {
-                    this.edit('0', p);
-                }
+                if(p.length == 10 && p != this.customer.phone && p != MYPHONE && isVNPhone(p)) this.edit(0, p);
 
-                if(window.delay_xpvs) return false;
-                window.delay_xpvs = setTimeout(_ => {delete window.delay_xpvs}, 1000);
+                // if(window.delay_xpvs) return false;
+                // window.delay_xpvs = setTimeout(_ => {delete window.delay_xpvs}, 1000);
             });
 
 
@@ -1058,8 +1048,9 @@ function Order_mng(){
     });
 })();
 
-
-// ///////////////////;
+/***
+* FB PHÍM TẮT THẢ TIM
+***/
 (async function($){
     if(!isFBpage) return false;
     let werwfcsder = null;
@@ -1074,8 +1065,9 @@ function Order_mng(){
     });
 })(window.jQuery);
 
-
-// MESSENGER SEARCH WHEN FOCUS;
+/***
+* MESSENGER SEARCH WHEN FOCUS
+***/
 (function(){
     if(!isMessPage) return false;
 
@@ -1086,7 +1078,9 @@ function Order_mng(){
     });
 })();
 
-// MESSENGER AUTO SCROLL BUTTON;
+/***
+* MESSENGER AUTO SCROLL BUTTON
+***/
 (function(){
     if(!isMessPage) return false;
 
@@ -1322,7 +1316,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         fullName.setAttribute('disabled', 'true');
 
         phoneNo.value = phone;
-        productWeight.value = 2000;
+        productWeight.value = opts.productWeight;
         productName.value = prdName + (isSample ? '        ❌ ❌ ❌' : '');
         autoAddress.value = isSample ? '..., Ô chợ dừa, hà nội' : '';
         orderNote.value = '⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗫𝗘𝗠 𝗛𝗔̀𝗡𝗚 - ⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗧𝗛𝗨̛̉ 𝗛𝗔̀𝗡𝗚';
