@@ -695,8 +695,6 @@ const Customer_mng = {
     get: async function(uid){
         if(!uid || uid == MYFBUID) throw new Error('Uid không hợp lệ');
 
-        console.log(this.storage);
-
         // get from local
         let customer = this.storage.find(u => u.uid == uid);
         if(customer) return customer;
