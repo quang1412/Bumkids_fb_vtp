@@ -754,7 +754,7 @@ const Customer_mng = {
             const orderInfo = { uid, phone, name };
 
             try{
-                if(!phone && window.confirm("⚠️ Chưa có sđt! enter để thêm sdt")) return this.edit(0);
+                if(!phone) return window.confirm("⚠️ Chưa có sđt! enter để thêm sdt") ? this.edit(0) : false;
 
                 if(phone != TEST_PHONENUM && ( (this.draftOrderCount || this.penddingOrderCount) && !window.confirm('❌ Có đơn chưa giao!!! \nVẫn tiếp tục tạo đơn?') )) return false
 
@@ -762,6 +762,7 @@ const Customer_mng = {
 
                 let cod_input = window.prompt('▶︎ Chọn hoặc nhập số tiền phải thu (đv nghìn đồng) \n[0]. Đơn 0 đồng \n[1]. Chỉ thu ship', GM_getValue('lastCOD', 0));
                 if(!cod_input || cod_input == null) return false;
+                cod_input = cod_input.trim();
                 cod_input = cod_input.replaceAll(/\s+/g, '+');
                 if(!(/^\d[\d\+\-\*]*\d$/g).test(cod_input)) throw new Error('Số tiền không hợp lệ! - ' + cod_input);
                 cod_input = cod_input.trim();
@@ -775,7 +776,7 @@ const Customer_mng = {
                 itemList = [...new Set(itemList)];
                 GM_setValue('lastItems', itemList.slice(0, 10));
 
-                orderInfo.ref = makeid(12);
+                orderInfo.ref = uid + '-' + makeid(12);
                 orderInfo.prdName = `${itemName} - (${cod_input})`;
 
                 url += btoa(unescape(encodeURIComponent(JSON.stringify(orderInfo))));
@@ -1136,7 +1137,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         phoneNo.value = phone;
         productWeight.value = opts.PRODUCT_WEIGHT || 1000;
-        productName.value = prdName;
+        productName.value = prdName + (isSample ? '        ❌ ❌ ❌' : '' );
+        autoAddress.value = isSample ? '(❌ Địa chỉ ảo), Đống Đa, Hà Nội' : '';
         orderNote.value = '⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗫𝗘𝗠 𝗛𝗔̀𝗡𝗚 - ⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗧𝗛𝗨̛̉ 𝗛𝗔̀𝗡𝗚';
         orderNo.value = ref;
 
@@ -1146,13 +1148,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         });
 
         if(isSample){
-            productName.value = prdName + '        ❌ ❌ ❌';
-
-            autoAddress.value = '(❌) Đường Trần Quang Diệu, Đống Đa, Hà Nội';
-            autoAddress.dispatchEvent(customEvent('input'));
-            autoAddress.dispatchEvent(customEvent('change'));
             autoAddress.focus();
-
             autoAddress.scrollIntoView({ behavior: 'auto', block: 'center' });
         } else {
             phoneNo.click();
