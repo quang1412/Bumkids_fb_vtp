@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.13.1
+// @version      2025.10.13.3
 // @description  try to take over the world!
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -515,7 +515,7 @@ const Customer_mng = {
     key: 'GM_customers_11',
     int: async function(){
         this.storage = await GM_getValue(this.key, new Array());
-        GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => { remote && (this.storage = newValue) });
+        GM_addValueChangeListener('GM_customers_11', (key, oldValue, newValue, remote) => { remote && (this.storage = newValue) });
 
         GM_registerMenuCommand("Đồng bộ khách hàng." , _ => this.sync() );
         // TODO: check time to re-sync
@@ -523,13 +523,15 @@ const Customer_mng = {
     sync: async function(){
         let res = await API.getAllCustomers().catch(e => alert(e.message));
         this.storage = res.data;
+        console.log(this.storage);
+
         GM_setValue(this.key, this.storage);
         window.confirm('Đã đồng bộ '+Object.keys(this.storage).length+' khách hàng \nEnter để tải lại trang') && window.location.reload();
     },
     save: function(obj){
-        this.storage = this.storage.filter(u => u.uid != obj)
+        this.storage = this.storage.filter(u => u.uid != obj.uid);
         this.storage.push(obj);
-        GM_setValue(this.key, this.data);
+        GM_setValue(this.key, this.storage);
     },
     get: async function(uid){
         if(!uid || uid == MYFBUID) throw new Error('Uid không hợp lệ');
@@ -853,17 +855,29 @@ const Customer_mng = {
     });
 })();
 
+(function($){
+    $(document).on('contextmenu', 'div[aria-label*="in nhắn trong cuộc trò chuyện"] div[role="gridcell"]', async function(ev){
+        try{
+            ev.preventDefault();
+            $(this).find('div[aria-label="Xem thêm"]')?.click();
+           // await delay(50);
+           // let menuContainer = document.querySelector('div[style*="transform: translate"]:has(div[role="menu"])')
+           // menuContainer.style.transform = ('translate('+ev.clientX+'px, '+ev.clientY+'px) translate(-50%, -100%)');
+        } catch(err){
+            console.error(err);
+        }
+
+    })
+})(window.jQuery);
+
 /***
 * FB PHÍM TẮT THẢ TIM
 ***/
 (async function($){
     if(!isFBpage) return false;
-    let werwfcsder = null;
     let selector = 'div[role="article"][aria-label*="ình luận"]';
     $(document).on('click', selector, function(e){
-        if(!e.ctrlKey && !e.metaKey) return;
-
-        if(e.target.getAttribute('dir') != 'auto') return;
+        if((!e.ctrlKey && !e.metaKey) || e.target.getAttribute('dir') != 'auto') return;
         let article = $(e.target).closest('div[role="article"][aria-label*="ình luận"]')[0];
         let btn = $(article).find('div + div[role="button"][aria-label*="cảm xúc"]')[0];
         btn?.click();
