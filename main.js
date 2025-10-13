@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.08.3
+// @version      2025.10.13.1
 // @description  try to take over the world!
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -46,7 +46,7 @@
 // ==/UserScript==
 
 const MYPHONE = '0966628989', MYFBNAME = 'Trịnh Hiền', MYFBUSERNAME = 'hien.trinh.5011', MYFBUID = '100003982203068',
-      TEST_PHONENUM = '0900000000', TEST_ADDRESS = 'số 31 ngõ 19, Trần Quang Diệu, Ô chợ dừa, Đống Đa, Hà Nội',
+      TEST_PHONENUM = '0900000000', TEST_ADDRESS = 'số 31 ngõ 19, Trần Quang Diệu, Đống Đa, Hà Nội',
       UrlParams = new URLSearchParams(window.location.search), $ = (window.$ || window.jQuery);
 
 const isFBpage = window.location.host === 'www.facebook.com';
@@ -54,26 +54,6 @@ const isMessPage = window.location.host === 'www.messenger.com' || window.locati
 const isViettelPage = window.location.host === 'viettelpost.vn'
 
 
-//var csv is the CSV file with headers
-/***
-function csvJSON(csv = '{}'){
-    csv = csv.replace('Dấu thời gian', 'time');
-    let lines = csv.split("\n");
-    let result = [];
-    let headers = lines[0].split(",");
-    for(let i = 1; i < lines.length; i++){
-        let obj = {};
-        let currentline = lines[i].split("\",\"");
-        for(let j = 0; j < headers.length; j++){
-            let label = headers[j].replaceAll('\"','');
-            let value = currentline[j]?.replaceAll('\"','');
-            if(value) obj[label] = value;
-        }
-        result.push(obj);
-    }
-    return result;
-}
-***/
 function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms||1000)) }
 function randomInteger(min, max) {return Math.floor(Math.random() * (max - min + 1)) + min};
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
@@ -103,9 +83,11 @@ function makeid(length = 12) {
     return result;
 }
 
+/***
 (isMessPage || isFBpage) && GM_addValueChangeListener('change2reload', (key, oldValue, newValue, remote) => {
     window.confirm('Đã cập nhật dữ liệu mới! \nEnter để tải lại trang!') && window.location.reload();
 });
+***/
 
 function getSelectedText() {
   let selectedText = '';
@@ -230,6 +212,8 @@ const SHEET = {
 // VIETTEL
 const VIETTEL = {
     init: async function(){
+        GM_registerMenuCommand("Cài đặt ViettelPost" , _ => this.setOptions());
+
         this.deviceId = await GM_getValue('vtp_deviceId', null);
         GM_addValueChangeListener('vtp_deviceId', (key, oldValue, newValue, remote) => { this.deviceId = newValue });
 
@@ -243,24 +227,17 @@ const VIETTEL = {
             let deviceId = window.localStorage.deviceId;
             let {tokenKey, UserId} = JSON.parse(window.localStorage['vtp-token']);
 
-            // tokenKey != this.token && (API.saveToken(UserId, deviceId, tokenKey), alert('token update'));
-
             GM_setValue('vtp_deviceId', deviceId);
             GM_setValue('vtp_tokenKey', tokenKey);
             GM_setValue('vtp_cusId', UserId);
 
-            if(tokenKey != this.token){
-                await API.post('/admin/vtpToken', {cus_id: UserId, content: deviceId+':'+tokenKey}).then(res => {
-                    alert('Token updated!');
-                }).catch(e => { alert(e.message) });
-            }
+            tokenKey != this.token && API.saveToken(deviceId, tokenKey);
         }
 
         this.allWard = await this.get('https://api.viettelpost.vn/api/setting/listallwards').catch(e => alert(e.message));
         this.allDistrict = await this.get('https://api.viettelpost.vn/api/setting/listalldistrict').catch(e => alert(e.message));
         this.allProvince = await this.get('https://api.viettelpost.vn/api/setting/listallprovince').catch(e => alert(e.message));
 
-        GM_registerMenuCommand("Cài đặt ViettelPost" , _ => this.setOptions())
     },
     setOptions: async function(v){
         v = v?.toString();
@@ -465,138 +442,6 @@ const VIETTEL = {
             resolve(result);
         })
     },
-    /***
-    createNewOrder: async function(user, callback){
-        try{
-            if(!user.phone) throw new Error('Chưa có sđt!');
-
-            const vtpOpt = GM_getValue('vtpCreateOrderOptions', {});
-            if(!vtpOpt.CUS_ID || !vtpOpt.ORDER_PAYMENT || !vtpOpt.PRODUCT_WEIGHT) throw new Error('Chưa đặt tuỳ chọn tạo đơn Viettel!');
-
-            let itemsList = GM_getValue('createOrderItemsName', []);
-            let i = window.prompt('▶︎ Chọn hoặc nhập tên hàng hoá' + itemsList.map((name, i) => `${i == 0 ? '\n' : ''}[${i}]. ${name}`).join('\n'), itemsList[0]);
-            if(i == null) return false;
-            const productName = (itemsList[i] || i).trim();
-
-
-            const cod_input = window.prompt('▶︎ Chọn hoặc nhập số tiền phải thu (đv nghìn đồng) \n[0]. Đơn 0 đồng \n[1]. Chỉ thu ship', GM_getValue('lastCOD', 0));
-            if(cod_input == null) return false;
-            if(!(/^[\d\s]*$/g).test(cod_input)) throw new Error('Số tiền không hợp lệ!');
-            let cod = cod_input.trim().split(/\D+/g).reduce((pv, cv) => pv + parseInt(cv || 0), 0);
-
-            cod = parseInt(cod) * 1000;
-
-            let hashtags = window.prompt('▶︎ Nhập #hashtags gắn cho đơn hàng (ko bắt buộc)', GM_getValue('lastOrderHashtags', ''));
-            if(hashtags == null) return;
-
-            let selectAddress = { 'ward': 469, 'district': 24, 'province': 1, 'addr': ' ❌ Đổi địa chỉ ❌', }
-
-            if (user.phone != TEST_PHONENUM){
-                let suggestAddress = await this.suggestAddress(user.phone).catch(e => {throw new Error(e.message)});
-
-                const ii = window.prompt('▶︎ Chọn hoặc nhập địa chỉ \n' + suggestAddress?.items.map((item, i) => `[${i}]. ${item.addr}`).join('\n'), 0);
-                if(ii == null) return;
-
-                selectAddress = suggestAddress?.items[ii] || ii;
-                if(selectAddress == ii){
-                    selectAddress = await this.textToAddress(ii).catch(mess => { throw new Error(mess) });
-                }
-            }
-
-            const d = new Date();
-            const date = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
-            const time = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', }).format(d);
-
-            const order_reference = makeid(12);
-            const orderData = {
-                "TYPE": 12, // ??? BƯU KIỆN.
-                "DELIVERY_DATE": date + ' ' + time,
-                "GROUPADDRESS_ID": vtpOpt.GROUPADDRESS_ID,
-                "CUS_ID": vtpOpt.CUS_ID,
-                "MONEY_COLLECTION": cod,
-                "MONEY_TOTAL": "",
-
-                "ORDER_NUMBER": order_reference,
-                "ORDER_REFERENCE": order_reference,
-                "ORDER_PAYMENT": vtpOpt.ORDER_PAYMENT, // 2: nguoi_nhan / 3: nguoi_gui
-                "ORDER_SERVICE": "VSL9", // STK: Chuyển_phát_tiêu_chuẩn / VSL9: flashsale thoả thuận
-                "ORDER_SERVICE_ADD": (productName.toLowerCase().includes('đổi') ? 'GGDH' : ''), // SMS / GGDH
-                "ORDER_NOTE": '❌ 𝗞𝗛𝗢̂𝗡𝗚 xem ❌ 𝗞𝗛𝗢̂𝗡𝗚 thử hàng ' + hashtags,
-
-                "SENDER_FULLNAME": vtpOpt.SENDER_FULLNAME, // option
-                "SENDER_PHONE": vtpOpt.SENDER_PHONE,
-                "SENDER_WARD": vtpOpt.SENDER_WARD,
-                "SENDER_PROVINCE": vtpOpt.SENDER_PROVINCE,
-                "SENDER_DISTRICT": vtpOpt.SENDER_DISTRICT,
-                "SENDER_HOME_NO": vtpOpt.SENDER_HOME_NO, // option
-
-                "RECEIVER_FULLNAME": user.name,
-                "RECEIVER_PHONE": user.phone || TEST_PHONENUM,
-                "RECEIVER_HOME_NO": selectAddress.addr,
-                "RECEIVER_STREET_NAME": " ",
-                "RECEIVER_ADDRESS": selectAddress.addr + ', ' + this.allWard.find(w => w.WARDS_ID == selectAddress.ward)?.WARDS_NAME,
-
-                "RECEIVER_WARD": selectAddress.ward, // Phường Quang Trung
-                "RECEIVER_DISTRICT": selectAddress.district, // Quận Đống Đa
-                "RECEIVER_PROVINCE": selectAddress.province, // Thành phố Hà Nội
-                "RECEIVER_EMAIL": "trinhdacquang1@gmail.com",
-
-                "PRODUCT_NAME": `${productName} - (${cod_input}) ${user.phone == TEST_PHONENUM ? '   ❌❌❌' : ''}`,
-                "PRODUCT_QUANTITY": 1,
-                "PRODUCT_WEIGHT": vtpOpt.PRODUCT_WEIGHT || 100, // gram
-                "PRODUCT_TYPE": "HH",
-                "PRODUCT_PRICE": Math.max(cod, 1000000),
-                "PRODUCT_DESCRIPTION": hashtags,
-            };
-
-          //  await delay(1000);
-
-            console.log(orderData);
-
-            const shippingFee = await this.getshippingFee(orderData).catch(e => {throw new Error(e.message)});
-            const totalFee = parseInt(shippingFee.find(e => e.SERVICE_CODE == 'ALL')?.PRICE);
-            orderData.MONEY_TOTALFEE = totalFee;
-
-            let highValue = cod > 3000000;
-
-            if(orderData.ORDER_PAYMENT == 3){
-                // nếu người gửi trả cước (3)
-                orderData.MONEY_COLLECTION = (cod == 0 ? 0 : cod == 1000 ? totalFee : (cod + totalFee));
-            } else {
-                // người nhận trả cước (2)
-                let minCOD = totalFee + 10000;
-                if(cod < minCOD) throw new Error('Người nhận trả cước, nên cần COD tối thiểu ' + minCOD + ', hoặc chuyển qua người gửi trả cước');
-            }
-
-            console.log(orderData);
-
-            const url = 'https://api.viettelpost.vn/api/tmdt/InsertOrderDraftForWeb';
-
-            let c = new Intl.NumberFormat('vn-VN').format(orderData.MONEY_COLLECTION)+'đ';
-            let f = new Intl.NumberFormat('vn-VN').format(totalFee)+'đ thu ' + (vtpOpt.ORDER_PAYMENT == 2 ? 'người nhận' : 'người gửi');
-            let a = orderData.RECEIVER_HOME_NO;
-
-            if(!window.confirm(`✅ Xác nhận thông tin đơn hàng cho: ${user.name} \n- Sđt: ${user.phone} \n- Địa chỉ: ${a} \n-----\n- Tên SP: ${productName} \n- COD: ${c} \n- Cước ${f}\n-----\n- Tags: ${hashtags} \n▶︎ Bấm Enter/OK để tạo đơn`, )) return;
-
-            let res = await this.post(url, orderData).catch(e => {throw new Error(e.message)});
-
-            if(res.error) throw new Error(res.message);
-            else if(res.data?.ORDER_NUMBER) {
-
-                itemsList.unshift(productName);
-                itemsList = ([...new Set(itemsList)]).slice(0, 10);
-
-                GM_setValue('createOrderItemsName', itemsList);
-                GM_setValue('lastCOD', cod_input.trim());
-                GM_setValue('lastOrderHashtags', hashtags);
-
-                let result = {...orderData, "ORDER_NUMBER": res.data.ORDER_NUMBER};
-                console.log(result);
-                return callback(result);
-            }
-        } catch(e){ alert('❌ Lỗi: ' + e.message) }
-    }
-    ***/
 };
 VIETTEL.init();
 
@@ -616,12 +461,7 @@ const API = {
                 dataType: "text",
                 // contentType: 'application/json',
                 onload: function (res) {
-                    try{
-                        let result = JSON.parse(res.response);
-                        return resolve(result);
-                    } catch (e){
-                        return reject(e.message);
-                    }
+                    return resolve(JSON.parse(res.response));
                 },
                 onerror: function(error) {
                     return reject(error.message || 'Lỗi API: #645');
@@ -650,14 +490,13 @@ const API = {
             })
         })
     },
-    /***
-    saveToken: async function(cus_id, deviceId, token){
-        if(cus_id && deviceId && token){
-            let res = await this.post('/admin/vtpToken', {cus_id: cus_id, content: deviceId+':'+token}).catch(e => { alert(e.message) });
-            console.log(res);
-        }
+    saveToken: function(cus_id, deviceId, token){
+        this.post('/admin/vtpToken', {cus_id: cus_id, content: deviceId+':'+token}).then(res => {
+            alert('token updated!')
+        }).catch(e => {
+            alert(e.message)
+        });
     },
-    ***/
     getAllCustomers: function(){
         return this.get('/getAllCustomers');
     },
@@ -714,41 +553,17 @@ const Customer_mng = {
             if(!customer) throw new Error('Customer invalid');
             const rawAddr = customer?.address?.rawAddress;
 
-            const list = [
-                'Sửa số điện thoại: ' + customer.phone,
-                'Sửa địa chỉ: ' + rawAddr
-            ]
+            const list = [ 'Sửa số điện thoại: ' + customer.phone, ];
 
-            let select = key?.toString() || window.prompt('▶︎ Lựa chọn mục cần sửa cho '+customer.name+': \n' + list.map( (text, i) => `[${i}]. ${text}`).join('\n'), 0);
-            if(select == null) return;
+            let i = key?.toString() || window.prompt('▶︎ Lựa chọn mục cần sửa cho '+customer.name+': \n' + list.map( (text, i) => `[${i}]. ${text}`).join('\n'), 0);
+            if(i == null) return;
 
-            if( select == '0' ){
+            if( i == '0' ){
                 let p = window.prompt("Nhập sđt của " + customer.name, value || customer.phone || TEST_PHONENUM);
 
                 if(p == null || !p || p.length != 10 || p == customer.phone || p == MYPHONE || !isVNPhone(p)) return false;
 
                 customer.phone = p;
-            }
-            else if( select == '1' ){
-                let a = window.prompt('▶︎ Nhập địa chỉ của ' + customer.name, value || rawAddr || TEST_ADDRESS);
-                if(a == null || a == rawAddr) return;
-
-                let locations = await VIETTEL.locationAutocomplete(a);
-                console.log(locations);
-                if(!locations.length) throw new Error('Không tìm thấy địa chỉ nào trùng khớp với: ' + a);
-
-                let i = window.prompt('▶︎ Chọn 1 trong các địa chỉ bên dưới \n' + locations.map( ({name}, i) => `[${i}]. ${name.toLowerCase()}`).join('\n'), 0);
-                if(i == null) return;
-
-                let location = locations[i];
-                if(!location) throw new Error('Lựa chọn không hợp lệ!');
-
-                let res = await VIETTEL.locationAutocomplete_v2(location.id);
-                console.log(res);
-                if(!res.id) throw new Error(res.message);
-
-                res.rawAddress = a;
-                customer.address = res
             }
             else {
                 throw new Error('Lựa chọn không hợp lệ!');
@@ -950,7 +765,7 @@ const Customer_mng = {
                 cod_input = cod_input.trim();
 
                 let itemList = GM_getValue('lastItems', []);
-                let input = prompt('▶︎ Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + itemList.map((name, i) => `[${i}]. ${name}`).join('\n'), itemList[0]);
+                let input = prompt('▶︎ Chọn tên sp có sẵn hoặc nhập tên sản phẩm mới: \n' + itemList.map((item, i) => `[${i}]. ${item}`).join('\n'), itemList[0]);
                 if (!input || input == null) return false;
                 let itemName = itemList[input] || input;
 
@@ -992,7 +807,6 @@ const Customer_mng = {
                 if(p.length == 10 && p != this.customer.phone && p != MYPHONE && isVNPhone(p)) this.edit(0, p);
             });
 
-
             /***
             this.container.addEventListener("keydown", e => {
                 if(e.key === "F2") {
@@ -1007,6 +821,7 @@ const Customer_mng = {
                 alert('contextmenu');
             });
             ***/
+
         }
     }
 
@@ -1194,7 +1009,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
             if(!fee) return 0;
 
-            let tax = Number((price + fee) / 100 * 1.5);
+            let tax = Number(price * 1.5 / 100);
 
             let total = (price == 0) ? 0 : (price == 1000) ? fee : (price + fee + tax);
 
@@ -1307,8 +1122,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         phoneNo.value = phone;
         productWeight.value = opts.PRODUCT_WEIGHT || 1000;
-        productName.value = prdName + (isSample ? '        ❌ ❌ ❌' : '');
-        autoAddress.value = isSample ? '..., Ô chợ dừa, hà nội' : '';
+        productName.value = prdName;
         orderNote.value = '⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗫𝗘𝗠 𝗛𝗔̀𝗡𝗚 - ⚠️ 𝗞𝗛𝗢̂𝗡𝗚 𝗧𝗛𝗨̛̉ 𝗛𝗔̀𝗡𝗚';
         orderNo.value = ref;
 
@@ -1317,9 +1131,20 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             ['click', 'input', 'change'].forEach(e => i.dispatchEvent(customEvent(e)));
         });
 
-        phoneNo.click();
-        phoneNo.focus();
-        phoneNo.scrollIntoView({ behavior: 'auto', block: 'center' });
+        if(isSample){
+            productName.value = prdName + '        ❌ ❌ ❌';
+
+            autoAddress.value = '(❌) Đường Trần Quang Diệu, Đống Đa, Hà Nội';
+            autoAddress.dispatchEvent(customEvent('input'));
+            autoAddress.dispatchEvent(customEvent('change'));
+            autoAddress.focus();
+
+            autoAddress.scrollIntoView({ behavior: 'auto', block: 'center' });
+        } else {
+            phoneNo.click();
+            phoneNo.focus();
+            phoneNo.scrollIntoView({ behavior: 'auto', block: 'center' });
+        }
 
         setInterval(updateCOD , 1000);
 
@@ -1331,13 +1156,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
                 const submitBtn = e.shiftKey ? $('#confirmCreateOrder button.btn.btn-viettel') : $('#confirmSaveDraft button.btn.btn-viettel');
                 submitBtn.click();
-                /***
-                if(e.shiftKey){
-                    $('#confirmCreateOrder button.btn.btn-viettel').click();
-                } else {
-                    $('#confirmSaveDraft button.btn.btn-viettel').click();
-                }
-                ***/
 
                 let doPrint = opts.qp_autoprint == 'ask' ? window.confirm('✅ Bạn có muốn in tem ko?') : opts.qp_autoprint;
 
