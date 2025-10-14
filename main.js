@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.13.4
+// @version      2025.10.13.5
 // @description  try to take over the world!
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -1019,44 +1019,61 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
     function updateCOD(){
         try{
-            let price = Number($('input#productPrice')?.val()?.replaceAll(/\D/g, '') || 0),
-                fee = Number($('div.text-price-right')?.text()?.replaceAll(/\D/g, '') || 0);
+            const product_name = window.document.querySelector('input#productName');
+            const product_price = window.document.querySelector('input#productPrice');
+            const input_cod = window.document.querySelector('input#cod');
 
-            if(!fee) return 0;
+            const feeStr = ($('div.text-price-right')?.text()?.replaceAll(/\D/g, '') || 0);
+            const priceStr = (product_price?.value.replaceAll(/\D/g, '') || 0);
 
-            let tax = Number(price * 1.5 / 100);
+            if(!feeStr) return 0;
 
-            let total = (price == 0) ? 0 : (price == 1000) ? fee : (price + fee + tax);
+            const price = Number(priceStr);
+            const fee = product_name.value.includes('#fs') ? 0 : Number(feeStr);
 
-            if(window.lastTotal == total) return 0;
+            const tax = Number(price * 1.5 / 100);
 
-            let input_cod = window.document.querySelector('input#cod');
+            const total = product_name.value.includes('#ckfull') ? 0 : (price == 0) ? 0 : (price == 1000) ? fee : (price + fee + tax);
+
+            if(window.lastTotal == total) return false;
+
             input_cod.value = Math.round(total);
-            input_cod.dispatchEvent(customEvent('input'));
-            input_cod.dispatchEvent(customEvent('change'));
+            ['click', 'input', 'change'].forEach(e => input_cod.dispatchEvent(customEvent(e)));
 
             window.lastTotal = total;
 
             return true;
         } catch(e){
-            alert('Lỗi cập nhật COD \n' + e.message + 'Mã lỗi: #1213');
+            alert('Lỗi cập nhật COD \n' + e.message + 'Mã lỗi: #1044');
             return false;
         }
     }
 
     $(document).on('change', 'form.create-order input#productName', function(){
         try{
-            let prices = this.value?.match(/\(.*\)/g)?.shift()?.replaceAll(/[\(\)]/g, '').trim();
-            let priceTotal = (window.eval(prices.replaceAll(/\s+/g, "+")) || 0) * 1000;
-            $('input#productPrice')?.val(priceTotal)
+            const product_price = window.document.querySelector('input#productPrice');
+            const priceStr = this.value?.match(/\(.*\)/g)[0]?.replaceAll(/[\(\)]/g, '').trim();
+            const priceStrFixed = priceStr.replaceAll(/\s+/g, '+').replaceAll(/\D{2,}/g, '+');
 
-            setTimeout(updateCOD, 500);
+            this.value = this.value.replace(priceStr, priceStrFixed);
+            ['click', 'input'].forEach(e => this.dispatchEvent(customEvent(e)));
+
+            const priceTotal = (window.eval(priceStrFixed) || 0) * 1000;
+            product_price.value = priceTotal;
+
+            ['click', 'input', 'change'].forEach(e => product_price.dispatchEvent(customEvent(e)));
         }catch(err){
             alert('❌ Lỗi: ' + err.message)
         }
     });
 
-    // $(document).on('change', 'form.create-order input#productPrice', _ => setTimeout(updateCOD, 500));
+     $(document).on('change', 'form.create-order input#productPrice, form.create-order input#autoAddress', _ => setTimeout(updateCOD, 500));
+
+    $(document).on('change', 'input#phoneNo', function(){
+        if(this.value == TEST_PHONENUM) return;
+        let o = $('form.create-order input#productName').val();
+        $('form.create-order input#productName').val(o.replaceAll('❌', ''))
+    });
 
     $(document).one('click', 'div.vtp-bill-table td.mat-column-select', function(){
         window.onbeforeunload = function (e) {
@@ -1124,14 +1141,6 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             phoneNo = window.document.querySelector('input#phoneNo'),
             orderNote = window.document.querySelector('textarea#otherYeuCauGiao');
 
-        /***
-        $(window.document).on('click keyup keydown', function(){
-            if(fullName.value != name) {
-                fullName.value = name;
-                fullName.dispatchEvent(customEvent('input'));
-            };
-        });
-        ***/
         fullName.value = name;
         fullName.setAttribute('disabled', 'true');
 
