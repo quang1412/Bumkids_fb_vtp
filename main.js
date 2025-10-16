@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.13.5
+// @version      2025.10.13.6
 // @description  try to take over the world!
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -227,11 +227,12 @@ const VIETTEL = {
             let deviceId = window.localStorage.deviceId;
             let {tokenKey, UserId} = JSON.parse(window.localStorage['vtp-token']);
 
+            tokenKey != this.token && API.saveToken(UserId, deviceId, tokenKey);
+
             GM_setValue('vtp_deviceId', deviceId);
             GM_setValue('vtp_tokenKey', tokenKey);
             GM_setValue('vtp_cusId', UserId);
 
-            tokenKey != this.token && API.saveToken(deviceId, tokenKey);
         }
 
         this.allWard = await this.get('https://api.viettelpost.vn/api/setting/listallwards').catch(e => alert(e.message));
@@ -491,7 +492,7 @@ const API = {
         })
     },
     saveToken: function(cus_id, deviceId, token){
-        this.post('/admin/vtpToken', {cus_id: cus_id, content: deviceId+':'+token}).then(res => {
+        this.post('/admin/vtpToken', {cus_id, deviceId, token}).then(res => {
             alert('token updated!')
         }).catch(e => {
             alert(e.message)
@@ -793,8 +794,12 @@ const Customer_mng = {
 
         async eventsListeners(){
             this.container.addEventListener("click", e => {
+                if(!e.ctrlKey) return;
+
                 let replBtn = e.target.closest('div[aria-label="Trả lời"][role="button"]');
                 replBtn && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
+
+                // dừng tìm sdt
                 let elm = e.target.closest('div[aria-label*="Tin nhắn trong cuộc trò chuyện"][role="grid"], div[aria-label="Công cụ soạn cuộc trò chuyện"][role="group"]');
                 elm && this.phoneFinder(false);
             });
@@ -878,10 +883,9 @@ const Customer_mng = {
     if(!isFBpage) return false;
     let selector = 'div[role="article"][aria-label*="ình luận"]';
     $(document).on('click', selector, function(e){
-        if((!e.ctrlKey && !e.metaKey) || e.target.getAttribute('dir') != 'auto') return;
-        let article = $(e.target).closest('div[role="article"][aria-label*="ình luận"]')[0];
-        let btn = $(article).find('div + div[role="button"][aria-label*="cảm xúc"]')[0];
-        btn?.click();
+        if((!e.ctrlKey && !e.metaKey)) return;
+        let parentElm = $(e.target).closest('div[role="article"][aria-label*="ình luận"]')[0];
+        $(parentElm).find('div + div[role="button"][aria-label*="cảm xúc"]')[0]?.click();
     });
 })(window.jQuery);
 
@@ -998,6 +1002,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
         'body.custom button {text-wrap: nowrap; width: auto;}'+
 
+        // nổi bật tên tỉnh/thành khi tạo đơn.
+        'ng-select[formcontrolname="cityAddress"] span.ng-value-label { font-size: 110%; font-weight: 600; color: red; background: yellow; }'+
+
         'div.vtp-bill-table *:is(.mat-column-SENDER_FULLNAME, .mat-column-PARTNER, .mat-column-COD_STATUS ):is(th, td) {display:none;}'+
         'div.vtp-bill-table {  overflow-y: hidden !important; }'+
 
@@ -1017,7 +1024,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
     // GLOBAL //
 
-    function updateCOD(){
+    function updateCOD(x){
         try{
             const product_name = window.document.querySelector('input#productName');
             const product_price = window.document.querySelector('input#productPrice');
@@ -1029,11 +1036,12 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             if(!feeStr) return 0;
 
             const price = Number(priceStr);
-            const fee = product_name.value.includes('#fs') ? 0 : Number(feeStr);
-
+            let fee = Number(feeStr);
+            // if(product_name.value.includes('#fs') ){ fee = 0; }
             const tax = Number(price * 1.5 / 100);
 
-            const total = product_name.value.includes('#ckfull') ? 0 : (price == 0) ? 0 : (price == 1000) ? fee : (price + fee + tax);
+            let total = (price == 0) ? 0 : (price == 1000) ? fee : (price + fee + tax);
+            // if(product_name.value.includes('#ckfull')){ total = 0; }
 
             if(window.lastTotal == total) return false;
 
@@ -1041,7 +1049,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             ['click', 'input', 'change'].forEach(e => input_cod.dispatchEvent(customEvent(e)));
 
             window.lastTotal = total;
-
+            console.log(price, fee, tax, total);
             return true;
         } catch(e){
             alert('Lỗi cập nhật COD \n' + e.message + 'Mã lỗi: #1044');
@@ -1067,12 +1075,15 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         }
     });
 
-     $(document).on('change', 'form.create-order input#productPrice, form.create-order input#autoAddress', _ => setTimeout(updateCOD, 500));
+     $(document).on('change', 'form.create-order input#productPrice', updateCOD);
+     $(document).on('change', 'form.create-order input#autoAddress', _ => setTimeout(updateCOD, 1500));
 
     $(document).on('change', 'input#phoneNo', function(){
         if(this.value == TEST_PHONENUM) return;
-        let o = $('form.create-order input#productName').val();
-        $('form.create-order input#productName').val(o.replaceAll('❌', ''))
+        let product_name = window.document.querySelector('form.create-order input#productName');
+        let v = product_name.value.replaceAll('❌', '').trim();
+        product_name.value = v;
+        ['click', 'input', 'change'].forEach(e => product_name.dispatchEvent(customEvent(e)));
     });
 
     $(document).one('click', 'div.vtp-bill-table td.mat-column-select', function(){
