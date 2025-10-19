@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.13.6
+// @version      2025.10.13.7
 // @description  try to take over the world!
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -235,10 +235,33 @@ const VIETTEL = {
 
         }
 
-        this.allWard = await this.get('https://api.viettelpost.vn/api/setting/listallwards').catch(e => alert(e.message));
-        this.allDistrict = await this.get('https://api.viettelpost.vn/api/setting/listalldistrict').catch(e => alert(e.message));
-        this.allProvince = await this.get('https://api.viettelpost.vn/api/setting/listallprovince').catch(e => alert(e.message));
+        // this.listenXhr();
 
+        // this.allWard = await this.get('https://api.viettelpost.vn/api/setting/listallwards').catch(e => alert(e.message));
+        // this.allDistrict = await this.get('https://api.viettelpost.vn/api/setting/listalldistrict').catch(e => alert(e.message));
+        // this.allProvince = await this.get('https://api.viettelpost.vn/api/setting/listallprovince').catch(e => alert(e.message));
+
+    },
+    listenXhr: function(){
+        const callback = function(type, info, req) {
+            console.info(JSON.parse(req.response))
+            try {
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        const nativeXhrOpen = window.XMLHttpRequest.prototype.open;
+        window.XMLHttpRequest.prototype.open = function (method, url) {
+            if (url && url.includes('/api/setting/getOrderDetailForWeb')) {
+                this.addEventListener('readystatechange', () => {
+                    if (this.readyState === 4) {
+                        callback('fetch', null, this);
+                    }
+                })
+            }
+            return nativeXhrOpen.apply(this, arguments);
+        }
     },
     setOptions: async function(v){
         v = v?.toString();
@@ -1060,7 +1083,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     $(document).on('change', 'form.create-order input#productName', function(){
         try{
             const product_price = window.document.querySelector('input#productPrice');
-            const priceStr = this.value?.match(/\(.*\)/g)[0]?.replaceAll(/[\(\)]/g, '').trim();
+            const priceStr = this.value?.match(/\(.*\)/g)?.pop()?.replaceAll(/[\(\)]/g, '').trim();
             const priceStrFixed = priceStr.replaceAll(/\s+/g, '+').replaceAll(/\D{2,}/g, '+');
 
             this.value = this.value.replace(priceStr, priceStrFixed);
