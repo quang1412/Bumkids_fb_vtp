@@ -6,8 +6,8 @@
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
-// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/main.js
-// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/main.js
+// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/refs/heads/master/main.js
+// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/refs/heads/master/main.js
 
 // @require      https://code.jquery.com/jquery-3.7.1.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
