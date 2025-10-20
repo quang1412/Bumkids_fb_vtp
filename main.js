@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.13.9
+// @version      2025.10.200
 // @description  try to take over the world!
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -564,10 +564,10 @@ const API = {
 * FB CUSTOMER MANAGER
 ***/
 const Customer_mng = {
-    key: 'GM_customers_18',
+    key: 'GM_customers_11',
     int: async function(){
         this.storage = await GM_getValue(this.key, new Array());
-        GM_addValueChangeListener('GM_customers_11', (key, oldValue, newValue, remote) => { remote && (this.storage = newValue) });
+        GM_addValueChangeListener(this.key, (key, oldValue, newValue, remote) => { remote && (this.storage = newValue) });
 
         GM_registerMenuCommand("Đồng bộ khách hàng." , _ => this.sync() );
         // TODO: check time to re-sync
