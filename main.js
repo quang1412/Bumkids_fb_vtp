@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.13.7
+// @version      2025.10.13.9
 // @description  try to take over the world!
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -514,6 +514,28 @@ const API = {
             })
         })
     },
+    put: function(path, data){
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                url: encodeURI(this.url+path),
+                method: "PUT",
+                synchronous: true,
+                headers: {
+                    // 'Authorization': 'Bearer YOUR_AUTH_TOKEN',
+                    'Content-Type': 'application/json'
+                },
+                dataType: "json",
+                data: JSON.stringify(data),
+                onload: (res) => {
+                    return resolve(res);
+                },
+                onerror: (error) => {
+                    return reject(error.message || 'Lỗi API: #666');
+                }
+            })
+        })
+    },
+
     saveToken: function(cus_id, deviceId, token){
         this.post('/admin/vtpToken', {cus_id, deviceId, token}).then(res => {
             alert('token updated!')
@@ -522,13 +544,19 @@ const API = {
         });
     },
     getAllCustomers: function(){
-        return this.get('/getAllCustomers');
+        return this.get('/customers');
     },
-    getCustomer: function(q){
-        return this.get('/getCustomer?q='+q);
+    getCustomer: function(id){
+        return this.get('/customers/'+id);
     },
-    setCustomer: function(data){
-        return this.post('/setCustomer', data);
+    getCustomerByUid: function(uid){
+        return this.get('/customers/get-by-uid/'+uid);
+    },
+    updateCustomer: function(id, data){
+        return this.put('/customers/'+id, data);
+    },
+    createCustomer: function(data){
+        return this.post('/customers', data);
     },
 }
 
@@ -536,7 +564,7 @@ const API = {
 * FB CUSTOMER MANAGER
 ***/
 const Customer_mng = {
-    key: 'GM_customers_11',
+    key: 'GM_customers_18',
     int: async function(){
         this.storage = await GM_getValue(this.key, new Array());
         GM_addValueChangeListener('GM_customers_11', (key, oldValue, newValue, remote) => { remote && (this.storage = newValue) });
@@ -552,51 +580,62 @@ const Customer_mng = {
         GM_setValue(this.key, this.storage);
         window.confirm('Đã đồng bộ '+Object.keys(this.storage).length+' khách hàng \nEnter để tải lại trang') && window.location.reload();
     },
-    save: function(obj){
-        this.storage = this.storage.filter(u => u.uid != obj.uid);
-        this.storage.push(obj);
+    save: function(){
         GM_setValue(this.key, this.storage);
+    },
+    push: function(data){
+        this.storage = this.storage.filter(u => u.uid != data.uid);
+        this.storage.push(data);
     },
     get: async function(uid){
         if(!uid || uid == MYFBUID) throw new Error('Uid không hợp lệ');
 
         // get from local
-        let customer = this.storage.find(u => u.uid == uid);
-        if(customer) return customer;
+        let data = this.storage.find(u => u.uid == uid);
+        if(data) return data;
 
         // get from cloud
-        let res = await API.getCustomer(uid).catch(e => alert(e.message));
-        customer = res.data;
-        customer && this.save(customer);
-        return customer;
+        let res = await API.getCustomerByUid(uid).catch(e => alert(e.message));
+        data = res.data;
+
+        if(data){
+            this.push(data);
+            this.save();
+        }
+        return data;
     },
-    set: async function(obj){
-        await API.setCustomer(obj).catch(e => alert(e.message));
-        this.save(obj);
-    },
-    edit: async function(customer, key, value, callback){
+    edit: async function(data, key, value, callback){
         try{
-            if(!customer) throw new Error('Customer invalid');
-            const rawAddr = customer?.address?.rawAddress;
+            if(!data) throw new Error('Customer invalid');
+            const rawAddr = data?.address?.rawAddress;
 
-            const list = [ 'Sửa số điện thoại: ' + customer.phone, ];
+            const list = [ 'Sửa số điện thoại: ' + data.phone, ];
 
-            let i = key?.toString() || window.prompt('▶︎ Lựa chọn mục cần sửa cho '+customer.name+': \n' + list.map( (text, i) => `[${i}]. ${text}`).join('\n'), 0);
+            let i = key?.toString() || window.prompt('▶︎ Lựa chọn mục cần sửa cho '+data.name+': \n' + list.map( (text, i) => `[${i}]. ${text}`).join('\n'), 0);
             if(i == null) return;
 
             if( i == '0' ){
-                let p = window.prompt("Nhập sđt của " + customer.name, value || customer.phone || TEST_PHONENUM);
+                let p = window.prompt("Nhập sđt của " + data.name, value || data.phone || TEST_PHONENUM);
 
-                if(p == null || !p || p.length != 10 || p == customer.phone || p == MYPHONE || !isVNPhone(p)) return false;
+                if(p == null || !p || p.length != 10 || p == data.phone || p == MYPHONE || !isVNPhone(p)) return false;
 
-                customer.phone = p;
+                data.phone = p;
             }
             else {
                 throw new Error('Lựa chọn không hợp lệ!');
             }
 
-            callback(customer);
-            this.set(customer);
+            if(data.id){
+                API.updateCustomer(data.id, data);
+            } else {
+                API.createCustomer(data);
+            }
+            this.push(data);
+            this.save();
+
+            return callback(data);
+
+            // this.set(data);
 
         } catch(e){
             alert("❌ Lỗi:" + e.message);
