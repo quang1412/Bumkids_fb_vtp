@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.10.200
+// @version      2025.10.201
 // @description  try to take over the world!
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
-// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/refs/heads/master/main.js
-// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/refs/heads/master/main.js
+// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/main.js
+// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/main.js
 
 // @require      https://code.jquery.com/jquery-3.7.1.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
@@ -233,6 +233,12 @@ const VIETTEL = {
             GM_setValue('vtp_tokenKey', tokenKey);
             GM_setValue('vtp_cusId', UserId);
 
+            GM_registerMenuCommand("Update Token" , async _ => {
+                const {cus_id, deviceId, token} = this;
+                let resp = await API.saveToken(cus_id, deviceId, token).then(res => JSON.parse(res.response));
+                console.log('Token updated:', resp.success)
+                alert(resp.success ? 'Token updated ok' : 'Token updated false' );
+            });
         }
 
         // this.listenXhr();
@@ -506,9 +512,11 @@ const API = {
                 dataType: "json",
                 data: JSON.stringify(data),
                 onload: (res) => {
+                    console.log(res);
                     return resolve(res);
                 },
                 onerror: (error) => {
+                    console.error(error);
                     return reject(error.message || 'Lỗi API: #666');
                 }
             })
@@ -536,12 +544,9 @@ const API = {
         })
     },
 
-    saveToken: function(cus_id, deviceId, token){
-        this.post('/admin/vtpToken', {cus_id, deviceId, token}).then(res => {
-            alert('token updated!')
-        }).catch(e => {
-            alert(e.message)
-        });
+    saveToken: async function(cus_id, deviceId, token){
+        const res = await this.post('/vtp/token', {cus_id, deviceId, token});
+        return res;
     },
     getAllCustomers: function(){
         return this.get('/customers');
@@ -856,8 +861,7 @@ const Customer_mng = {
 
         async eventsListeners(){
             this.container.addEventListener("click", e => {
-                if(!e.ctrlKey) return;
-
+console.log(e)
                 let replBtn = e.target.closest('div[aria-label="Trả lời"][role="button"]');
                 replBtn && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
 
@@ -1093,7 +1097,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
             const input_cod = window.document.querySelector('input#cod');
 
             const feeStr = ($('div.text-price-right')?.text()?.replaceAll(/\D/g, '') || 0);
-            const priceStr = (product_price?.value.replaceAll(/\D/g, '') || 0);
+            const priceStr = (product_price?.value?.replaceAll(/\D/g, '') || 0);
 
             if(!feeStr) return 0;
 
@@ -1123,7 +1127,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         try{
             const product_price = window.document.querySelector('input#productPrice');
             const priceStr = this.value?.match(/\(.*\)/g)?.pop()?.replaceAll(/[\(\)]/g, '').trim();
-            const priceStrFixed = priceStr.replaceAll(/\s+/g, '+').replaceAll(/\D{2,}/g, '+');
+            const priceStrFixed = priceStr?.replaceAll(/\s+/g, '+')?.replaceAll(/\D{2,}/g, '+');
 
             this.value = this.value.replace(priceStr, priceStrFixed);
             ['click', 'input'].forEach(e => this.dispatchEvent(customEvent(e)));
@@ -1143,7 +1147,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     $(document).on('change', 'input#phoneNo', function(){
         if(this.value == TEST_PHONENUM) return;
         let product_name = window.document.querySelector('form.create-order input#productName');
-        let v = product_name.value.replaceAll('❌', '').trim();
+        let v = product_name.value?.replaceAll('❌', '').trim();
         product_name.value = v;
         ['click', 'input', 'change'].forEach(e => product_name.dispatchEvent(customEvent(e)));
     });
@@ -1186,7 +1190,9 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
                 this.dispatchEvent(customEvent('input'));
                 if(!this.value || this.value == TEST_PHONENUM) return;
 
-                let res = await VIETTEL.getListOrders(this.value);
+                let res = await VIETTEL.getListOrders(this.value).catch(err => {
+
+                })
 
                 if(res?.status != 200) throw new Error();
 
