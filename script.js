@@ -164,7 +164,6 @@
                         for (var l = 0; l <= 2; l++) {
                             let color = colors[l] || '';
                             let price = !color ? '' : memData.find(item => (item.mem == mem && item.color == color))?.price;
-                            let priceFormat = price && formatterCurrency.format(price);
                             $('<td>').text(color).appendTo(tr);
                             $('<td>').text(price).appendTo(tr); 
                         }
