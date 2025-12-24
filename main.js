@@ -861,7 +861,6 @@ const Customer_mng = {
 
         async eventsListeners(){
             this.container.addEventListener("click", e => {
-console.log(e)
                 let replBtn = e.target.closest('div[aria-label="Trả lời"][role="button"]');
                 replBtn && GM_setClipboard("e gửi về địa chỉ này c nhé", "text");
 
@@ -888,13 +887,18 @@ console.log(e)
                     this.preOrder();
                 }
             });
-
-            this.container.addEventListener('contextmenu', function(e) {
-                return;
-                event.preventDefault();
-                alert('contextmenu');
-            });
             ***/
+
+            this.container.addEventListener('contextmenu', function(ev) {
+                event.preventDefault();
+                console.log(ev);
+                const row = ev.target.closest('div[role="row"]');
+                if(ev.ctrlKey){
+                    row.querySelector('div[role="button"][aria-label="Trả lời"]')?.click();
+                } else {
+                    row.querySelector('div[role="button"][aria-label="Xem thêm"]')?.click();
+                }
+            });
 
         }
     }
@@ -926,21 +930,6 @@ console.log(e)
         }
     });
 })();
-
-(function($){
-    $(document).on('contextmenu', 'div[aria-label*="in nhắn trong cuộc trò chuyện"] div[role="gridcell"]', async function(ev){
-        try{
-            ev.preventDefault();
-            $(this).find('div[aria-label="Xem thêm"]')?.click();
-           // await delay(50);
-           // let menuContainer = document.querySelector('div[style*="transform: translate"]:has(div[role="menu"])')
-           // menuContainer.style.transform = ('translate('+ev.clientX+'px, '+ev.clientY+'px) translate(-50%, -100%)');
-        } catch(err){
-            console.error(err);
-        }
-
-    })
-})(window.jQuery);
 
 /***
 * FB PHÍM TẮT THẢ TIM
@@ -1103,8 +1092,13 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
             const price = Number(priceStr);
             let fee = Number(feeStr);
+
             // if(product_name.value.includes('#fs') ){ fee = 0; }
-            const tax = Number(price * 1.5 / 100);
+
+            let tax = Number(price * 1.5 / 100);
+
+            fee = 35000;
+            tax = 0;
 
             let total = (price == 0) ? 0 : (price == 1000) ? fee : (price + fee + tax);
             // if(product_name.value.includes('#ckfull')){ total = 0; }
