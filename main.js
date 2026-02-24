@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2025.11.20.3
+// @version      2026.02.24
 // @description  try to take over the world!
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -12,10 +12,7 @@
 // @require      https://code.jquery.com/jquery-3.7.1.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
 
-// @require      https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js
-// @require      https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js
-
-
+// @require      https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2
 
 // @match        *viettelpost.vn/*
 // @match        *.facebook.com/*
@@ -53,7 +50,6 @@ const isFBpage = window.location.host === 'www.facebook.com';
 const isMessPage = window.location.host === 'www.messenger.com' || window.location.pathname.includes('/messages/');
 const isViettelPage = window.location.host === 'viettelpost.vn'
 
-
 function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms||1000)) }
 function randomInteger(min, max) {return Math.floor(Math.random() * (max - min + 1)) + min};
 function isVNPhone(number) { return (/(03|05|07|08|09|01[2|6|8|9])+([0-9]{8})\b/).test(number) }
@@ -77,27 +73,40 @@ function makeid(length = 12) {
     const charactersLength = characters.length;
     let counter = 0;
     while (counter < length) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
-      counter += 1;
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        counter += 1;
     }
     return result;
 }
 
-/***
-(isMessPage || isFBpage) && GM_addValueChangeListener('change2reload', (key, oldValue, newValue, remote) => {
-    window.confirm('Đã cập nhật dữ liệu mới! \nEnter để tải lại trang!') && window.location.reload();
-});
-***/
+const Supabase = {
+    client: undefined,
+    init: async function(){
+        try {
+            const SUPABASE_PROJECT_REF = await GM_getValue('SUPABASE_PROJECT_REF', 'ehqzlnajcbixktlbmygb');
+            const SUPABASE_URL = `https://${SUPABASE_PROJECT_REF}.supabase.co`;
+            const SUPABASE_SERVICE_ROLE_KEY = await GM_getValue('SUPABASE_SERVICE_ROLE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVocXpsbmFqY2JpeGt0bGJteWdiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTU2MTkwMywiZXhwIjoyMDgxMTM3OTAzfQ.JuS8y3DmaHwPuKAubMPScYCeeYPTnF9Bj3tjuLNdsTE');
 
-function getSelectedText() {
-  let selectedText = '';
-  if (window.getSelection) {
-    selectedText = window.getSelection().toString();
-  } else if (document.selection && document.selection.createRange) { // For older IE versions
-    selectedText = document.selection.createRange().text;
-  }
-  return selectedText;
+            const { createClient } = supabase;
+            this.client = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+        } catch (e){
+
+        }
+    },
 }
+await Supabase.init();
+
+/**
+function getSelectedText() {
+    let selectedText = '';
+    if (window.getSelection) {
+        selectedText = window.getSelection().toString();
+    } else if (document.selection && document.selection.createRange) { // For older IE versions
+        selectedText = document.selection.createRange().text;
+    }
+    return selectedText;
+}
+*/
 
 /***********************************************************************************************************************************
 Facebook
@@ -150,7 +159,7 @@ Facebook
 
         'div[aria-label="Nhắn tin"][role="button"] { border: 2px dashed red; border-radius: 6px; }'+
         'div[role="list"] div[role="listitem"] span:hover { -webkit-line-clamp: 10 !important; }'+
-    '');
+        '');
 })();
 
 /***
@@ -568,6 +577,7 @@ const API = {
 /***
 * FB CUSTOMER MANAGER
 ***/
+
 const Customer_mng = {
     key: 'GM_customers_11',
     int: async function(){
@@ -652,6 +662,7 @@ const Customer_mng = {
 /***
 * FB INFO CARD
 ***/
+
 (function() {
     if(!isFBpage && !isMessPage) return !1;
 
@@ -1135,8 +1146,8 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         }
     });
 
-     $(document).on('change', 'form.create-order input#productPrice', updateCOD);
-     $(document).on('change', 'form.create-order input#autoAddress', _ => setTimeout(updateCOD, 1500));
+    $(document).on('change', 'form.create-order input#productPrice', updateCOD);
+    $(document).on('change', 'form.create-order input#autoAddress', _ => setTimeout(updateCOD, 1500));
 
     $(document).on('change', 'input#phoneNo', function(){
         if(this.value == TEST_PHONENUM) return;
@@ -1338,6 +1349,57 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
     });
 })();
 
+(async function(){
+    if(!isViettelPage) return;
+
+    new Promise(async (resolve, reject) => {
+        const now = new Date().getTime();
+        const tokenStorage = localStorage.getItem('vtp-token');
+        if(!tokenStorage) return reject('vtp-token NOT FOUND!');
+
+        const json = JSON.parse(tokenStorage);
+        const {tokenKey, UserId, tokenSso:{access_token}} = json;
+
+        const lastestUpdateToken = await GM_getValue('last_update_token', 0);
+        if(lastestUpdateToken < (now - (1000 * 60 * 60 * 1)) ){
+            let resp = await Supabase.client
+            .from('app_configs')
+            .upsert({
+                key: `vtp-token-key-${UserId}`,
+                value: tokenKey,
+                update_at: new Date().toISOString(),
+            }, { onConflict: 'key' })
+            .select();
+
+            if(resp.error) return reject(resp.error.message);
+            GM_setValue('last_update_token', now);
+        }
+
+        const lastestUpdateSSO = await GM_getValue('last_update_sso', 0);
+        if(lastestUpdateToken < (now - (1000 * 60 * 60 * 1)) ){
+            let resp = await Supabase.client
+            .from('app_configs')
+            .upsert({
+                key: `vtp-token-sso-${UserId}`,
+                value: access_token,
+                update_at: new Date().toISOString(),
+            }, { onConflict: 'key' })
+            .select();
+
+            if(resp.error) return reject(resp.error.message);
+            GM_setValue('last_update_sso', now);
+        }
+
+        return resolve('TOKENKEY UPDATE SUCCESS!');
+    }).then(res => {
+        console.log(`%c${res}`, 'color:yellow; background:green;')
+    }).catch(e => {
+        console.error(e)
+        // alert(e instanceof Error ? e.message : 'unknow error!');
+    })
+
+})();
+
 // bắn đơn viettel
 (function(){
     if(window.location.pathname != '/quan-ly-van-don') return;
@@ -1373,72 +1435,3 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
 
     });
 })();
-
-/***
-(function(){
-    if(!isViettelPage) return;
-
-    GM_addStyle('td.mat-column-ORDER_REFERENCE{cursor:pointer;} td.mat-column-ORDER_REFERENCE:hover{font-weight: 700; text-decoration: underline; color: blue !important;}')
-    if(window.location.origin != "https://viettelpost.vn") return;
-    $(document.body).on('click', 'td.mat-column-ORDER_REFERENCE', function(){
-        let fbid = this.innerText.match(/(\d)+/g)?.shift();
-        let url = 'https://fb.com/'+fbid;
-        window.open(url, '_blank');
-    });
-})();
-***/
-
-
-
-
-// "ORDER_NUMBER": "",
-// "SENDER_STREET_NAME": "Phố Thái Hà",
-// "SENDER_EMAIL": "",
-// "SENDER_LATITUDE": 0,
-// "SENDER_LONGITUDE": 0,
-// "RECEIVER_STREET_NAME": "",
-// "RECEIVER_LATITUDE": 0,
-// "RECEIVER_LONGITUDE": 0,
-// "PRODUCT_DESCRIPTION": "",
-// "PRODUCT_WIDTH": null,
-// "PRODUCT_HEIGHT": null,
-// "PRODUCT_LENGTH": null,
-// "DISPLAY_SERVICE_NAME": "Chuyển phát tiêu chuẩn",
-// "ORDER_SERVICE_ADD": "SMS",
-// "ORDER_TYPE_ADD": "",
-// "ORDER_VOUCHER": "",
-// "DELIVERY_CODE": -1,
-// "MONEY_FEECOD": 5000,
-// "MONEY_FEEVAS": 0,
-// "MONEY_FEEINSURRANCE": 0,
-// "MONEY_FEE": 0,
-// "MONEY_FEEOTHER": 0,
-// "MONEY_TOTALVAT": 1333,
-// "MONEY_TOTAL": 0,,
-// "LIST_ITEM": [
-//     {
-//         "ORDER_NUMBER_ITEM": 1,
-//         "PRODUCT_NAME": "ten hang hoa",
-//         "PRODUCT_QUANTITY": 1,
-//         "PRODUCT_WEIGHT": 1000,
-//         "PRODUCT_PRICE": 0
-//     }
-// ],
-// "SENDER_POST_OFFICE_CODE": "",
-// "SENDER_POST_OFFICE_NAME": "",
-// "SENDER_BRANCH_CODE": "",
-// "SENDER_POST_OFFICE_ADDRESS": "",
-// "PICKUP_DATE": null,
-// "PICKUP_TIME": null,
-// "REMOVE_PICKUP_DATE": true,
-// "OPTION_LOCATION": 0,
-// "SENDER_ADDRESS": "165 Thái Hà,, Phố Thái Hà",
-// "RECEIVER_ADDRESS": "đông la, hoài đưc , X.Đông La, H.Hoài Đức, TP.Hà Nội",
-// "XMG_EXTRA_MONEY": 0,
-// "deviceId": "wcfalna3z427py9o2v5ez"
-// "ORDER_TYPE": 1,
-// "MONEY_TOTAL": (collectMoney || 1000) * 1000,
-//"ORDER_REFERENCE": (user.uid + '-' + makeid(10)),
-// "RECEIVER_HOME_NO": "",
-// "RECEIVER_ADDRESS": rawAddr,
-// "MONEY_TOTALFEE": "",
