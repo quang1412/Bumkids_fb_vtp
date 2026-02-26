@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      2026.02.24
+// @version      260226.0
 // @description  try to take over the world!
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -1071,7 +1071,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         // nổi bật tên tỉnh/thành khi tạo đơn.
         'ng-select[formcontrolname="cityAddress"] span.ng-value-label { font-size: 110%; font-weight: 600; color: red; background: yellow; }'+
 
-        'div.vtp-bill-table *:is(.mat-column-SENDER_FULLNAME, .mat-column-PARTNER, .mat-column-COD_STATUS ):is(th, td) {display:none;}'+
+        // 'div.vtp-bill-table *:is(.mat-column-SENDER_FULLNAME, .mat-column-PARTNER, .mat-column-COD_STATUS ):is(th, td) {display:none;}'+
         'div.vtp-bill-table {  overflow-y: hidden !important; }'+
 
         'body.custom div.box-receiver div.card-body group small {color: red !important; font-size: 14px;}'+
@@ -1361,7 +1361,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         const {tokenKey, UserId, tokenSso:{access_token}} = json;
 
         const lastestUpdateToken = await GM_getValue('last_update_token', 0);
-        if(lastestUpdateToken < (now - (1000 * 60 * 60 * 1)) ){
+        if(lastestUpdateToken < (now - (1000 * 60 * 60 * 0)) ){
             let resp = await Supabase.client
             .from('app_configs')
             .upsert({
@@ -1376,7 +1376,7 @@ Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel Viettel 
         }
 
         const lastestUpdateSSO = await GM_getValue('last_update_sso', 0);
-        if(lastestUpdateToken < (now - (1000 * 60 * 60 * 1)) ){
+        if(lastestUpdateToken < (now - (1000 * 60 * 60 * 0)) ){
             let resp = await Supabase.client
             .from('app_configs')
             .upsert({
