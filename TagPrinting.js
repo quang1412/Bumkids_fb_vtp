@@ -7,8 +7,8 @@
 // @match        https://digitalize.viettelpost.vn/DigitalizePrint/report.do*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
 
-// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/viettel-billing-style.js
-// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/master/viettel-billing-style.js
+// @downloadURL  https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/refs/heads/main/TagPrinting.js
+// @updateURL    https://raw.githubusercontent.com/quang1412/Bumkids_fb_vtp/refs/heads/main/TagPrinting.js
 
 // @grant        GM_addElement
 // @grant        GM_addStyle
