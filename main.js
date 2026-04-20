@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bumkids Ext by Quang.TD
 // @author       Quang.TD
-// @version      260226.1
+// @version      260226.2
 // @description  try to take over the world!
 // @namespace    https://bumm.kids
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=viettelpost.vn
@@ -116,6 +116,8 @@ Facebook
 (function(){
     if(!isFBpage && !isMessPage) return !1;
 
+return false;
+      
     GM_addStyle(
         'body * {transition: unset !important; }'+
         'div[role="button"]:is([aria-label="Thêm bạn bè"], [aria-label="Theo dõi"]){display:none;}'+
@@ -666,6 +668,8 @@ const Customer_mng = {
 (function() {
     if(!isFBpage && !isMessPage) return !1;
 
+return false;
+      
     class InfoCard{
         constructor(container, info){
             this.container = container;
